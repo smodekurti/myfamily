@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Family documents - only members can access
+    match /families/{familyId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+      
+      // Allow creation if user is the creator
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.createdBy;
+    }
+    
+    // Family members subcollection
+    match /families/{familyId}/members/{userId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == userId || 
+         request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members);
+    }
+    
+    // Tasks - only family members can access
+    match /families/{familyId}/tasks/{taskId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+    }
+    
+    // Events - only family members can access
+    match /families/{familyId}/events/{eventId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+    }
+    
+    // Grocery masters - only family members can access
+    match /families/{familyId}/groceryMasters/{masterId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+      
+      // Grocery master items
+      match /items/{itemId} {
+        allow read, write: if request.auth != null && 
+          request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+      }
+    }
+    
+    // Grocery trips - only family members can access
+    match /families/{familyId}/groceryTrips/{tripId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+      
+      // Grocery trip items
+      match /items/{itemId} {
+        allow read, write: if request.auth != null && 
+          request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+      }
+    }
+    
+    // Activity logs - only family members can read, only functions can write
+    match /families/{familyId}/activity/{activityId} {
+      allow read: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+      allow write: if false; // Only Cloud Functions can write
+    }
+  }
+}

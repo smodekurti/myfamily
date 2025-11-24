@@ -1,0 +1,88 @@
+---
+alwaysApply: true
+---
+
+# MyFamily — Product Requirements Document (PRD)
+
+## 0. One-liner
+A playful, cross-platform family management app that makes day-to-day coordination effortless—tasks, calendar, groceries, finances, and habits—gamified to reduce friction.
+
+## 1. Goals
+- Reduce household overhead by 50% within 30 days.
+- Make grocery runs error-free via reusable master lists and per-trip instances.
+- Deliver a joyful, game-like experience to encourage consistent use.
+
+## 2. Non-Goals (v1)
+- No bank/PLAID integration (manual finances only).
+- No GPS tracking or location sharing.
+- No web app (mobile-only for v1).
+
+## 3. Personas
+- **Organizer (Ava, 34):** Planner, grocery manager, wants automation.
+- **Helper (Leo, 36):** Participates; wants low friction and gamification.
+- **Teen (Mia, 14):** Chores and habit streaks; motivated by points.
+
+## 4. Product Pillars
+1. **Clarity:** Shared single source of truth for all family tasks.
+2. **Speed:** One-tap templates, quick actions, real-time sync.
+3. **Motivation:** Gamified completion, streaks, and leaderboards.
+
+## 5. Core Features
+### Authentication & Family Setup
+- Firebase Auth (Google Sign-In for iOS/Android).
+- Create or join a family via invite link/code.
+
+### Home Dashboard
+- Daily snapshot: upcoming tasks, grocery status, weather, family points.
+- Layout matches the provided screenshots (light/dark/system theme).
+
+### Tasks & Chores
+- Assign to members; track status (Todo, In Progress, Done).
+- Support recurring tasks and point-based completion.
+
+### Calendar
+- Monthly + list views.
+- Color-coded events per member.
+
+### Grocery Management (Hero Feature)
+- **Master Lists/Templates:** Saved sets of groceries (by store/type).
+- **Trip Instances:** Spawn from template, assign to a member, allow ad-hoc adds.
+- Real-time sync; per-item notes, quantity, category, and completion.
+- Suggestions from previous trips.
+
+### Gamification
+- Points for completing tasks and grocery trips.
+- Streaks for habits.
+- Family leaderboard.
+
+### Settings
+- Profile, theme mode (system/light/dark), notifications toggle.
+- (v1.1) Export data as JSON.
+
+## 6. UX/UI
+- Replicate attached screenshots faithfully.
+- Use Material 3 with rounded, warm aesthetic.
+- Responsive: no overflow on any device; clamp text scaling between 0.9–1.3.
+- Support both portrait and landscape (tablet-friendly).
+
+## 7. Success Metrics
+- Activation: create/join family + add a task + start grocery trip (Day 1).
+- Retention: 30%+ 7-day retention.
+- Productivity: 3+ completed tasks per user weekly.
+
+## 8. Privacy & Security
+- Each user sees only their family data.
+- PII minimized; all analytics anonymized.
+
+## 9. Milestones
+- **M0 (Week 1):** Auth + family creation.
+- **M1 (Week 2):** Tasks + calendar MVP.
+- **M2 (Week 3):** Grocery templates + trip flow.
+- **M3 (Week 4):** Gamification, theming, QA, and internal release.
+
+## 10. Acceptance Criteria
+- App compiles on Android/iOS with Firebase config prompt.
+- Layout matches screenshots across device sizes.
+- Text never overflows; all screens safe-area compliant.
+- Grocery template/trip works offline and syncs on reconnect.
+

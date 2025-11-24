@@ -1,0 +1,102 @@
+---
+alwaysApply: true
+---
+# MyFamily — Architecture
+
+## 1. Tech Stack
+- **Flutter** (latest stable)
+- **State management:** Riverpod (hooks_riverpod)
+- **Routing:** go_router
+- **Data:** Firebase Auth, Firestore, Functions, Storage, Messaging, App Check
+- **UI/Responsive:** Material 3, flutter_screenutil, responsive_framework, auto_size_text
+- **Local cache:** Hive or SharedPreferences
+- **Testing:** flutter_test, golden_toolkit
+
+## 2. Folder Structure
+lib/
+app/
+features/
+auth/
+family/
+home/
+tasks/
+groceries/
+calendar/
+gamification/
+profile/
+settings/
+common/
+widgets/
+utils/
+responsive/
+data/
+models/
+repositories/
+sources/
+
+
+## 3. Firestore Schema
+/users/{uid}
+displayName, photoURL, email, families[], createdAt
+
+/families/{familyId}
+name, createdBy, members[], createdAt, themePref, points
+
+/families/{familyId}/members/{uid}
+role, avatar, points, notificationTokens[]
+
+/families/{familyId}/tasks/{taskId}
+title, desc, assignee, status, dueAt, repeat, points, createdBy, createdAt
+
+/families/{familyId}/events/{eventId}
+title, desc, startAt, endAt, attendees[], color
+
+/families/{familyId}/groceryMasters/{masterId}
+name, store, createdBy
+/families/{familyId}/groceryMasters/{masterId}/items/{itemId}
+name, category, defaultQty, notes
+
+/families/{familyId}/groceryTrips/{tripId}
+masterRef, assignee, store, status, startedAt, completedAt
+/families/{familyId}/groceryTrips/{tripId}/items/{itemId}
+name, category, qty, notes, checked
+
+/families/{familyId}/activity/{activityId}
+type, refId, actorUid, deltaPoints, createdAt
+
+
+## 4. Cloud Functions
+- onTaskCompleted → add points.
+- onTripCompleted → add points, log activity.
+- onInviteCreated → generate deep link.
+- onUserDelete → anonymize.
+
+## 5. Security
+- Restrict access to families where `uid ∈ members`.
+- Points only updated via Functions.
+
+## 6. Navigation
+- Root tabs: Home, Tasks, Groceries, Calendar, Profile.
+- Use go_router for nested routing and deep links.
+
+## 7. Theming
+- Light/Dark/System switch.
+- Seeded Material 3 color scheme.
+- Clamp `textScaleFactor` globally (0.9–1.3).
+
+## 8. Responsiveness
+- `ScreenUtilInit(designSize: Size(390, 844))`.
+- Breakpoints: MOBILE ≤450, TABLET ≤800, DESKTOP ≥801.
+- LayoutBuilder for adaptive components.
+
+## 9. Offline Sync
+- Firestore offline persistence enabled.
+- Optimistic updates + rollback.
+
+## 10. Analytics
+- Firebase Analytics + Crashlytics.
+- Log: task_created, trip_completed, template_used.
+
+## 11. CI/CD
+- Flutter analyze/test → build → deploy (fastlane, Firebase App Distribution).
+
