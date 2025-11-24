@@ -1,0 +1,553 @@
+# Flutter Best Practices & Coding Standards for MyFamily App
+
+## Core Principles
+
+### 1. NO HARDCODING - EVER
+- **NEVER** use hardcoded values for:
+  - Dimensions (width, height, padding, margin, font sizes)
+  - Colors (use theme colors)
+  - Strings (use localization or constants)
+  - API endpoints, keys, or configuration
+  - Magic numbers
+  - Device-specific values
+
+- **ALWAYS** use:
+  - `ResponsiveHelper` for all dimensions (w(), h(), sp(), r(), padding(), etc.)
+  - Theme colors: `Theme.of(context).colorScheme.*`
+  - Constants file for configuration values
+  - Environment variables for secrets
+  - Localization for user-facing strings
+
+### 2. Responsive Design Philosophy
+- **Device-Agnostic**: Code must work on phones, tablets, and desktops
+- **Screen Size Adaptation**: Use breakpoints and responsive helpers
+- **Orientation Support**: Handle portrait and landscape gracefully
+- **Dynamic Layouts**: Use LayoutBuilder, MediaQuery, and responsive widgets
+- **Flexible Widgets**: Prefer Expanded, Flexible, ConstrainedBox over fixed sizes
+
+### 3. Architecture & Code Organization
+- Follow **Clean Architecture** pattern:
+  - `features/` - Feature modules (presentation, domain, data)
+  - `core/` - Shared utilities, configs, providers, theme
+  - `common/` - Reusable widgets and helpers
+  - `data/` - Repositories, models, data sources
+
+- **File Naming**:
+  - Use snake_case: `user_profile_page.dart`
+  - Suffix pages: `*_page.dart`
+  - Suffix widgets: `*_widget.dart`
+  - Suffix providers: `*_provider.dart`
+  - Suffix models: `*_model.dart`
+  - Suffix repositories: `*_repository.dart`
+
+## Code Standards
+
+### Dimensions & Sizing
+```dart
+// ❌ BAD - Hardcoded
+Container(
+  width: 100,
+  height: 50,
+  padding: EdgeInsets.all(16),
+  margin: EdgeInsets.symmetric(horizontal: 20),
+)
+
+// ✅ GOOD - Responsive
+Container(
+  width: ResponsiveHelper.w(100),
+  height: ResponsiveHelper.h(50),
+  padding: ResponsiveHelper.padding(all: 16),
+  margin: ResponsiveHelper.padding(horizontal: 20),
+)
+
+// ✅ BETTER - Use LayoutBuilder for complex layouts
+LayoutBuilder(
+  builder: (context, constraints) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    return Container(
+      width: isMobile ? ResponsiveHelper.w(100) : ResponsiveHelper.w(200),
+      padding: ResponsiveHelper.padding(
+        all: isMobile ? 16 : 24,
+      ),
+    );
+  },
+)
+```
+
+### Colors
+```dart
+// ❌ BAD - Hardcoded colors
+Container(color: Colors.red)
+Text(style: TextStyle(color: Color(0xFF000000)))
+
+// ✅ GOOD - Theme colors
+Container(color: Theme.of(context).colorScheme.primary)
+Text(style: TextStyle(color: Theme.of(context).colorScheme.onSurface))
+
+// ✅ BETTER - Use theme with opacity
+Container(
+  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+)
+```
+
+### Typography
+```dart
+// ❌ BAD - Hardcoded font sizes
+Text('Hello', style: TextStyle(fontSize: 16))
+
+// ✅ GOOD - Responsive font sizes
+Text(
+  'Hello',
+  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+    fontSize: ResponsiveHelper.sp(16),
+  ),
+)
+
+// ✅ BETTER - Use theme text styles
+Text(
+  'Hello',
+  style: Theme.of(context).textTheme.titleMedium,
+)
+```
+
+### Spacing & Layout
+```dart
+// ❌ BAD - Hardcoded spacing
+SizedBox(height: 20)
+Padding(padding: EdgeInsets.all(16))
+
+// ✅ GOOD - Responsive spacing
+SizedBox(height: ResponsiveHelper.h(20))
+Padding(padding: ResponsiveHelper.padding(all: 16))
+
+// ✅ BETTER - Use responsive breakpoints
+SizedBox(
+  height: ResponsiveHelper.isMobile(context)
+    ? ResponsiveHelper.h(16)
+    : ResponsiveHelper.h(24),
+)
+```
+
+### Responsive Layouts
+```dart
+// ✅ ALWAYS use responsive patterns
+class ResponsiveLayout extends StatelessWidget {
+  final Widget mobile;
+  final Widget? tablet;
+  final Widget? desktop;
+
+  const ResponsiveLayout({
+    required this.mobile,
+    this.tablet,
+    this.desktop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (ResponsiveHelper.isDesktop(context) && desktop != null) {
+      return desktop!;
+    }
+    if (ResponsiveHelper.isTablet(context) && tablet != null) {
+      return tablet!;
+    }
+    return mobile;
+  }
+}
+
+// Usage
+ResponsiveLayout(
+  mobile: MobileView(),
+  tablet: TabletView(),
+  desktop: DesktopView(),
+)
+```
+
+### Grid & List Layouts
+```dart
+// ✅ Use responsive grid columns
+LayoutBuilder(
+  builder: (context, constraints) {
+    final crossAxisCount = ResponsiveHelper.isMobile(context)
+      ? 2
+      : ResponsiveHelper.isTablet(context)
+        ? 3
+        : 4;
+    
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: ResponsiveHelper.isMobile(context) ? 0.8 : 1.0,
+        crossAxisSpacing: ResponsiveHelper.w(16),
+        mainAxisSpacing: ResponsiveHelper.h(16),
+      ),
+      itemBuilder: (context, index) => ItemWidget(),
+    );
+  },
+)
+```
+
+## State Management
+
+### Riverpod Best Practices
+```dart
+// ✅ Use providers for state
+final currentUserProvider = Provider<User?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.when(
+    data: (state) => state.session?.user,
+    loading: () => null,
+    error: (_, __) => null,
+  );
+});
+
+// ✅ Use AsyncValue for async operations
+final familyEventsProvider = StreamProvider<List<Event>>((ref) {
+  final familyId = ref.watch(currentFamilyProvider)?.id;
+  if (familyId == null) return Stream.value([]);
+  return ref.watch(eventRepositoryProvider).getFamilyEvents(familyId);
+});
+
+// ✅ Handle loading/error states
+familyEventsProvider.when(
+  data: (events) => EventsList(events: events),
+  loading: () => CircularProgressIndicator(),
+  error: (error, stack) => ErrorWidget(error: error),
+)
+```
+
+## Error Handling
+
+```dart
+// ✅ ALWAYS handle errors gracefully
+try {
+  await someAsyncOperation();
+} catch (e, stackTrace) {
+  // Log error
+  logger.e('Operation failed: $e', error: e, stackTrace: stackTrace);
+  
+  // Show user-friendly message
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Operation failed. Please try again.'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+}
+```
+
+## Configuration Management
+
+### Constants File
+```dart
+// ✅ Create constants file for configuration
+class AppConstants {
+  // API Configuration
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api.example.com',
+  );
+  
+  // App Configuration
+  static const int maxImageSize = 5 * 1024 * 1024; // 5MB
+  static const List<String> supportedImageFormats = ['jpg', 'jpeg', 'png'];
+  
+  // UI Configuration
+  static const Duration animationDuration = Duration(milliseconds: 300);
+  static const Duration snackBarDuration = Duration(seconds: 3);
+  
+  // Feature Flags
+  static const bool enableAnalytics = bool.fromEnvironment(
+    'ENABLE_ANALYTICS',
+    defaultValue: false,
+  );
+}
+```
+
+### Environment Variables
+```dart
+// ✅ Use environment variables for secrets
+class SupabaseConfig {
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+  
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+}
+```
+
+## Widget Best Practices
+
+### Reusable Widgets
+```dart
+// ✅ Create reusable, responsive widgets
+class ResponsiveCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
+
+  const ResponsiveCard({
+    required this.child,
+    this.padding,
+    this.margin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
+    return Card(
+      margin: margin ?? ResponsiveHelper.padding(
+        all: isMobile ? 8 : 16,
+      ),
+      child: Padding(
+        padding: padding ?? ResponsiveHelper.padding(
+          all: isMobile ? 16 : 24,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+```
+
+### Conditional Rendering
+```dart
+// ✅ Use conditional rendering based on device
+if (ResponsiveHelper.isTablet(context))
+  TabletLayout()
+else
+  MobileLayout()
+
+// ✅ Or use LayoutBuilder
+LayoutBuilder(
+  builder: (context, constraints) {
+    if (constraints.maxWidth > ResponsiveHelper.tabletBreakpoint) {
+      return DesktopLayout();
+    } else if (constraints.maxWidth > ResponsiveHelper.mobileBreakpoint) {
+      return TabletLayout();
+    } else {
+      return MobileLayout();
+    }
+  },
+)
+```
+
+## Navigation
+
+```dart
+// ✅ Use go_router for navigation
+context.go('/profile');
+context.push('/profile/edit');
+context.pop();
+
+// ✅ Never hardcode routes
+// ❌ BAD: context.go('/profile')
+// ✅ GOOD: context.go(AppRoutes.profile)
+```
+
+## Accessibility
+
+```dart
+// ✅ ALWAYS add accessibility labels
+IconButton(
+  icon: Icon(Icons.delete),
+  onPressed: () {},
+  tooltip: 'Delete item',
+)
+
+Semantics(
+  label: 'User profile picture',
+  child: CircleAvatar(...),
+)
+
+// ✅ Use semantic labels
+TextButton(
+  onPressed: () {},
+  child: Text('Save'),
+  semanticsLabel: 'Save changes',
+)
+```
+
+## Performance
+
+```dart
+// ✅ Use const constructors where possible
+const SizedBox(height: 16)
+const Icon(Icons.home)
+
+// ✅ Use ListView.builder for long lists
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (context, index) => ItemWidget(item: items[index]),
+)
+
+// ✅ Use keys for stateful widgets in lists
+ListView.builder(
+  itemBuilder: (context, index) => ItemWidget(
+    key: ValueKey(items[index].id),
+    item: items[index],
+  ),
+)
+```
+
+## Testing Considerations
+
+```dart
+// ✅ Make widgets testable
+class UserProfileWidget extends StatelessWidget {
+  final User user;
+  final VoidCallback? onEdit;
+  
+  const UserProfileWidget({
+    required this.user,
+    this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Implementation
+  }
+}
+```
+
+## Code Review Checklist
+
+Before submitting code, ensure:
+- [ ] No hardcoded dimensions, colors, or strings
+- [ ] All UI uses ResponsiveHelper
+- [ ] All colors use Theme
+- [ ] Layouts adapt to different screen sizes
+- [ ] Error handling is implemented
+- [ ] Loading states are shown
+- [ ] Accessibility labels are added
+- [ ] Code follows clean architecture
+- [ ] Widgets are reusable and testable
+- [ ] No magic numbers
+- [ ] Configuration values are in constants
+- [ ] Secrets are in environment variables
+
+## Examples of What NOT to Do
+
+```dart
+// ❌ NEVER DO THIS:
+
+// Hardcoded dimensions
+Container(width: 100, height: 50)
+
+// Hardcoded colors
+Container(color: Colors.blue)
+Text(style: TextStyle(color: Color(0xFF000000)))
+
+// Hardcoded strings (unless in constants)
+Text('Welcome to MyFamily')
+
+// Hardcoded API endpoints
+final response = await http.get('https://api.example.com/users');
+
+// Magic numbers
+if (value > 100) { ... }
+
+// Device-specific code without checks
+if (Platform.isIOS) {
+  // iOS-specific code
+}
+```
+
+## Examples of What TO Do
+
+```dart
+// ✅ ALWAYS DO THIS:
+
+// Responsive dimensions
+Container(
+  width: ResponsiveHelper.w(100),
+  height: ResponsiveHelper.h(50),
+)
+
+// Theme colors
+Container(
+  color: Theme.of(context).colorScheme.primary,
+)
+
+// Localized or constant strings
+Text(AppStrings.welcomeMessage)
+
+// Configuration-based API calls
+final response = await http.get('${AppConstants.apiBaseUrl}/users');
+
+// Named constants
+if (value > AppConstants.maxValue) { ... }
+
+// Platform checks with fallbacks
+if (Platform.isIOS) {
+  // iOS-specific code
+} else {
+  // Fallback code
+}
+```
+
+## Responsive Design Patterns
+
+### Breakpoint-Based Layouts
+```dart
+// ✅ Use breakpoints for layout changes
+Widget buildLayout(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  
+  if (width > ResponsiveHelper.tabletBreakpoint) {
+    return DesktopLayout();
+  } else if (width > ResponsiveHelper.mobileBreakpoint) {
+    return TabletLayout();
+  } else {
+    return MobileLayout();
+  }
+}
+```
+
+### Flexible Grids
+```dart
+// ✅ Responsive grid columns
+int getGridColumns(BuildContext context) {
+  if (ResponsiveHelper.isDesktop(context)) return 4;
+  if (ResponsiveHelper.isTablet(context)) return 3;
+  return 2;
+}
+```
+
+### Adaptive Padding
+```dart
+// ✅ Responsive padding
+EdgeInsets getAdaptivePadding(BuildContext context) {
+  return ResponsiveHelper.padding(
+    all: ResponsiveHelper.isMobile(context) ? 16 : 24,
+    horizontal: ResponsiveHelper.isMobile(context) ? 16 : 32,
+  );
+}
+```
+
+## Summary
+
+**Remember:**
+1. **NO HARDCODING** - Use ResponsiveHelper, Theme, Constants
+2. **RESPONSIVE FIRST** - Design for all screen sizes
+3. **CLEAN ARCHITECTURE** - Follow feature-based structure
+4. **ERROR HANDLING** - Always handle errors gracefully
+5. **ACCESSIBILITY** - Add semantic labels
+6. **PERFORMANCE** - Use const, ListView.builder, keys
+7. **TESTABILITY** - Make widgets testable
+8. **CONFIGURATION** - Use constants and environment variables
+
+**Every line of code should be:**
+- Responsive
+- Theme-aware
+- Device-agnostic
+- Maintainable
+- Testable
+- Accessible
+
