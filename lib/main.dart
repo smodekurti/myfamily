@@ -44,7 +44,7 @@ class MyFamilyApp extends ConsumerStatefulWidget {
 }
 
 class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
-  @override5
+  @override
   void initState() {
     super.initState();
     // Load theme preference from user profile after first frame

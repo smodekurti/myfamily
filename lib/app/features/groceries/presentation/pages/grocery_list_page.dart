@@ -714,19 +714,6 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               tooltip: 'Delete item',
             ),
           ],
-          SizedBox(width: ResponsiveHelper.w(4)),
-          IconButton(
-            icon: Icon(
-              Icons.drag_handle,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              size: ResponsiveHelper.iconSize(20),
-            ),
-            onPressed: () {
-              // TODO: Enable reordering
-            },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
         ],
       ),
     );
