@@ -1311,7 +1311,6 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       }
     } catch (e) {
       // Silently fail - don't interrupt user experience
-      print('Error checking task completion: $e');
     }
   }
 

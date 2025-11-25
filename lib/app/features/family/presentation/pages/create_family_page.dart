@@ -224,8 +224,6 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
         creatorBirthdate: _selectedBirthdate,
       );
       
-      print('🎉 Family created successfully: ${createdFamily.id}');
-      
       // Invalidate the user families provider to force a refresh
       ref.invalidate(userFamiliesProvider(currentUser.id));
       
@@ -233,7 +231,6 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
       await Future.delayed(const Duration(seconds: 1));
       
       if (mounted) {
-        print('🔍 Navigating to home after family creation');
         context.go(AppConstants.routeHome);
       }
     } catch (e) {

@@ -40,17 +40,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppConstants.routeSplash,
     redirect: (context, state) {
-      print('🔍 Router redirect: ${state.matchedLocation}, routerState: $routerState');
-      
       // Allow splash screen to show
       if (state.matchedLocation == AppConstants.routeSplash) {
-        print('🔍 Router: on splash screen, allowing');
         return null;
       }
       
       switch (routerState) {
         case RouterState.unauthenticated:
-          print('🔍 Router: unauthenticated, redirecting to auth');
           // Redirect to auth pages
           if (state.matchedLocation.startsWith(AppConstants.routeAuth)) {
             return null;
@@ -58,7 +54,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AppConstants.routeAuth;
           
         case RouterState.loading:
-          print('🔍 Router: loading, staying on splash');
           // While loading, stay on splash or allow auth pages
           if (state.matchedLocation == AppConstants.routeSplash ||
               state.matchedLocation.startsWith(AppConstants.routeAuth)) {
@@ -67,7 +62,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AppConstants.routeSplash;
           
         case RouterState.authenticatedWithoutFamily:
-          print('🔍 Router: authenticatedWithoutFamily, checking consent');
           // Check if user needs consent (either no consent or version mismatch)
           final consentRepo = ref.watch(consentRepositoryProvider);
           final currentUser = ref.read(currentUserProvider);
@@ -96,7 +90,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AppConstants.routeGetStarted;
           
         case RouterState.authenticatedWithFamily:
-          print('🔍 Router: authenticatedWithFamily, checking consent');
           // Check if user needs consent (either no consent or version mismatch)
           final currentUser = ref.read(currentUserProvider);
           if (currentUser != null) {
@@ -113,7 +106,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             // For now, allow through - the consent page will handle version checks
           }
           // User has given consent, proceed with normal flow
-          print('🔍 Router: authenticatedWithFamily, redirecting to family-selection');
           // User has one or more families - always show family selection first
           
           // If user is trying to access auth/get-started/consent, redirect to family selection
@@ -134,7 +126,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           final familyId = ref.read(currentFamilyIdProvider);
           if (familyId == null) {
             // No family selected yet, redirect to family selection
-            print('🔍 Router: No family ID set, redirecting to family-selection');
             return AppConstants.routeFamilySelection;
           }
           

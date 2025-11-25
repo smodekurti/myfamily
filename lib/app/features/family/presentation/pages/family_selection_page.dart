@@ -98,8 +98,6 @@ class FamilySelectionPage extends ConsumerWidget {
                               onTap: () {
                                 // Set the selected family
                                 ref.read(currentFamilyIdProvider.notifier).state = family.id;
-                                print('🏠 Selected family: ${family.name} (${family.id})');
-                                print('🏠 Current family ID set to: ${family.id}');
                                 
                                 // Wait a moment for the state to update
                                 Future.delayed(const Duration(milliseconds: 100), () {
