@@ -291,6 +291,9 @@ class AppConstants {
   static const String routeCreateFamily = '/family-setup/create';
   static const String routeJoinFamily = '/family-setup/join';
   static const String routeFamilySettings = '/family-settings';
+  static const String routeSettings = '/settings';
+  static const String routeHelp = '/help';
+  static const String routeLeaderboard = '/leaderboard';
 
   // ============================================================================
   // Animation Durations

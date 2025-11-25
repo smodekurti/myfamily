@@ -8,11 +8,13 @@ class AppTheme {
   // Color scheme based on the UI screenshot (teal/cyan accent for dark theme)
   static const Color primaryColor = Color(0xFF14B8A6); // Teal/Cyan (from screenshot)
   static const Color secondaryColor = Color(0xFF06B6D4); // Cyan
-  static const Color surfaceColor = Color(0xFF102121); // Main background color
-  static const Color lightTealBackground = Color(0xFFE0F2F1); // Light teal background
+  static const Color surfaceColor = Color(0xFF102121); // Main background color (dark theme)
+  static const Color lightTealBackground = Color(0xFFF0F9F8); // Lighter, cleaner background for light theme
   static const Color errorColor = Color(0xFFEF4444); // Red for errors
-  static const Color cardColor = Color(0xFF1A2C2C); // Card and list item color
-  static const Color textColor = Color(0xFFF7FAFC); // White text
+  static const Color cardColor = Color(0xFF1A2C2C); // Card and list item color (dark theme)
+  static const Color lightCardColor = Color(0xFFFFFFFF); // White cards for light theme
+  static const Color textColor = Color(0xFFF7FAFC); // White text (dark theme)
+  static const Color lightTextColor = Color(0xFF1A202C); // Dark text for light theme
   
   /// Light theme configuration
   static ThemeData get lightTheme {
@@ -22,14 +24,23 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         brightness: Brightness.light,
+      ).copyWith(
         primary: primaryColor,
+        onPrimary: Colors.white,
         secondary: secondaryColor,
-        surface: lightTealBackground,
+        onSecondary: Colors.white,
         error: errorColor,
+        onError: Colors.white,
+        surface: lightCardColor, // White surface
+        onSurface: lightTextColor, // Dark text on light surface
+        surfaceContainerHighest: const Color(0xFFF7FAFC), // Very light gray for elevated surfaces
+        surfaceContainer: const Color(0xFFEDF2F7), // Light gray for containers
+        outline: const Color(0xFFCBD5E0), // Darker border color for better visibility
+        outlineVariant: const Color(0xFFA0AEC0), // Darker border variant
       ),
       textTheme: _buildTextTheme(Brightness.light),
       appBarTheme: _buildAppBarTheme(Brightness.light),
-      cardTheme: _buildCardTheme(),
+      cardTheme: _buildCardTheme(Brightness.light),
       elevatedButtonTheme: _buildElevatedButtonTheme(),
       outlinedButtonTheme: _buildOutlinedButtonTheme(),
       textButtonTheme: _buildTextButtonTheme(),
@@ -38,6 +49,7 @@ class AppTheme {
       floatingActionButtonTheme: _buildFloatingActionButtonTheme(),
       dividerTheme: _buildDividerTheme(Brightness.light),
       scaffoldBackgroundColor: lightTealBackground, // Light teal background
+      cardColor: lightCardColor, // White cards for light theme
     );
   }
   
@@ -62,7 +74,7 @@ class AppTheme {
       ),
       textTheme: _buildTextTheme(Brightness.dark),
       appBarTheme: _buildAppBarTheme(Brightness.dark),
-      cardTheme: _buildCardTheme(),
+      cardTheme: _buildCardTheme(Brightness.dark),
       elevatedButtonTheme: _buildElevatedButtonTheme(),
       outlinedButtonTheme: _buildOutlinedButtonTheme(),
       textButtonTheme: _buildTextButtonTheme(),
@@ -78,8 +90,8 @@ class AppTheme {
   /// Build text theme with responsive sizing
   static TextTheme _buildTextTheme(Brightness brightness) {
     final baseTextColor = brightness == Brightness.light 
-        ? const Color(0xFF2D3748) 
-        : const Color(0xFFF7FAFC);
+        ? lightTextColor // Use defined light text color for better contrast
+        : textColor;
     
     return TextTheme(
       displayLarge: TextStyle(
@@ -166,35 +178,47 @@ class AppTheme {
   static AppBarTheme _buildAppBarTheme(Brightness brightness) {
     return AppBarTheme(
       backgroundColor: brightness == Brightness.light 
-          ? lightTealBackground 
-          : surfaceColor, // Teal background
+          ? Colors.white // White app bar for better contrast
+          : surfaceColor, // Teal background for dark theme
       foregroundColor: brightness == Brightness.light 
-          ? const Color(0xFF2D3748) 
-          : textColor, // White text
-      elevation: 0,
+          ? lightTextColor // Dark text for light theme
+          : textColor, // White text for dark theme
+      elevation: brightness == Brightness.light ? 1 : 0, // Subtle shadow for light theme
       centerTitle: true,
       titleTextStyle: TextStyle(
         fontSize: 18.sp,
         fontWeight: FontWeight.w600,
         color: brightness == Brightness.light 
-            ? const Color(0xFF2D3748) 
-            : textColor, // White text
+            ? lightTextColor // Dark text for better contrast
+            : textColor, // White text for dark theme
       ),
       systemOverlayStyle: brightness == Brightness.light
-          ? SystemUiOverlayStyle.dark
-          : SystemUiOverlayStyle.light,
+          ? SystemUiOverlayStyle.dark // Dark icons for light theme
+          : SystemUiOverlayStyle.light, // Light icons for dark theme
+      shadowColor: brightness == Brightness.light 
+          ? Colors.black.withOpacity(0.05) 
+          : Colors.transparent,
     );
   }
   
   /// Build card theme
-  static CardThemeData _buildCardTheme() {
+  static CardThemeData _buildCardTheme(Brightness brightness) {
     return CardThemeData(
-      elevation: 0,
+      elevation: brightness == Brightness.light ? 1 : 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
+        side: brightness == Brightness.light
+            ? BorderSide(
+                color: const Color(0xFFE2E8F0), // Subtle border for cards
+                width: 1,
+              )
+            : BorderSide.none,
       ),
-      color: cardColor, // Dark gray cards
+      color: brightness == Brightness.light ? lightCardColor : cardColor,
       margin: EdgeInsets.zero,
+      shadowColor: brightness == Brightness.light 
+          ? Colors.black.withOpacity(0.05) 
+          : Colors.transparent,
     );
   }
   
@@ -269,16 +293,18 @@ class AppTheme {
         borderRadius: BorderRadius.circular(8.r),
         borderSide: BorderSide(
           color: brightness == Brightness.light 
-              ? const Color(0xFFE2E8F0) 
+              ? const Color(0xFFCBD5E0) // Darker border for better visibility
               : const Color(0xFF4A5568),
+          width: brightness == Brightness.light ? 1.5 : 1,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8.r),
         borderSide: BorderSide(
           color: brightness == Brightness.light 
-              ? const Color(0xFFE2E8F0) 
+              ? const Color(0xFFCBD5E0) // Darker border for better visibility
               : const Color(0xFF4A5568),
+          width: brightness == Brightness.light ? 1.5 : 1,
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -318,14 +344,14 @@ class AppTheme {
   static BottomNavigationBarThemeData _buildBottomNavigationBarTheme(Brightness brightness) {
     return BottomNavigationBarThemeData(
       backgroundColor: brightness == Brightness.light 
-          ? lightTealBackground 
-          : surfaceColor, // Teal background
+          ? Colors.white // White nav bar for better contrast
+          : surfaceColor, // Teal background for dark theme
       selectedItemColor: primaryColor, // Teal
       unselectedItemColor: brightness == Brightness.light 
-          ? const Color(0xFF718096) 
-          : const Color(0xFFA0AEC0), // Light gray
+          ? const Color(0xFF718096) // Medium gray for better visibility
+          : const Color(0xFFA0AEC0), // Light gray for dark theme
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: brightness == Brightness.light ? 8 : 0,
       selectedLabelStyle: TextStyle(
         fontSize: 12.sp,
         fontWeight: FontWeight.w600,
@@ -353,9 +379,9 @@ class AppTheme {
   static DividerThemeData _buildDividerTheme(Brightness brightness) {
     return DividerThemeData(
       color: brightness == Brightness.light 
-          ? const Color(0xFFE2E8F0) 
+          ? const Color(0xFFCBD5E0) // Darker divider for better visibility
           : const Color(0xFF4A5568),
-      thickness: 1,
+      thickness: brightness == Brightness.light ? 1.5 : 1,
       space: 1,
     );
   }

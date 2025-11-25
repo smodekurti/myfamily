@@ -29,6 +29,9 @@ import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/family/presentation/pages/family_settings_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/settings/presentation/pages/help_page.dart';
+import '../../features/gamification/presentation/pages/leaderboard_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final routerState = ref.watch(routerStateProvider);
@@ -135,7 +138,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             return AppConstants.routeFamilySelection;
           }
           
-          // Allow access to main app routes (including Tasks, Profile, Family Settings)
+          // Allow access to main app routes (including Tasks, Profile, Family Settings, Settings, Help, Leaderboard)
           if (state.matchedLocation.startsWith(AppConstants.routeHome) ||
               state.matchedLocation.startsWith(AppConstants.routeTasks) ||
               state.matchedLocation.startsWith(AppConstants.routeGroceries) ||
@@ -143,7 +146,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation.startsWith('/grocery-template') ||
               state.matchedLocation.startsWith(AppConstants.routeCalendar) ||
               state.matchedLocation.startsWith(AppConstants.routeProfile) ||
-              state.matchedLocation == AppConstants.routeFamilySettings) {
+              state.matchedLocation == AppConstants.routeFamilySettings ||
+              state.matchedLocation == AppConstants.routeSettings ||
+              state.matchedLocation == AppConstants.routeHelp ||
+              state.matchedLocation == AppConstants.routeLeaderboard) {
             return null;
           }
           
@@ -306,6 +312,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppConstants.routeFamilySettings,
             name: 'family-settings',
             builder: (context, state) => const FamilySettingsPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeSettings,
+            name: 'settings',
+            builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeHelp,
+            name: 'help',
+            builder: (context, state) => const HelpPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeLeaderboard,
+            name: 'leaderboard',
+            builder: (context, state) => const LeaderboardPage(),
           ),
         ],
       ),
@@ -609,10 +630,7 @@ class MainShell extends ConsumerWidget {
                     title: const Text('Settings'),
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to settings
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Settings coming soon!')),
-                      );
+                      context.push(AppConstants.routeSettings);
                     },
                   ),
                   ListTile(
@@ -623,10 +641,7 @@ class MainShell extends ConsumerWidget {
                     title: const Text('Help & Support'),
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to help
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Help & Support coming soon!')),
-                      );
+                      context.push(AppConstants.routeHelp);
                     },
                   ),
                   const Divider(),

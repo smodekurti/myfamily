@@ -362,4 +362,35 @@ class AuthRepository {
       return false;
     }
   }
+
+  /// Update user preferences (theme, notifications, etc.)
+  Future<void> updateUserPreferences({
+    String? themePreference,
+    bool? notificationsEnabled,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user');
+
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (themePreference != null) {
+        updates['theme_preference'] = themePreference;
+      }
+      
+      if (notificationsEnabled != null) {
+        updates['notifications_enabled'] = notificationsEnabled;
+      }
+
+      if (updates.isNotEmpty) {
+        await _supabase.from('users').update(updates).eq('id', user.id);
+        _logger.i('User preferences updated successfully');
+      }
+    } catch (e) {
+      _logger.e('Update user preferences error: $e');
+      rethrow;
+    }
+  }
 }
