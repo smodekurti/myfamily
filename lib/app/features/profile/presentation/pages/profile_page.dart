@@ -456,31 +456,16 @@ class ProfilePage extends ConsumerWidget {
                           icon: Icons.family_restroom,
                           title: 'Family Settings',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Family settings feature coming soon!')),
-                            );
+                            context.push(AppConstants.routeFamilySettings);
                           },
                         ),
                         
                         _buildProfileOption(
                           context,
-                          icon: Icons.notifications,
-                          title: 'Notifications',
+                          icon: Icons.settings,
+                          title: 'Settings',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Notification settings coming soon!')),
-                            );
-                          },
-                        ),
-                        
-                        _buildProfileOption(
-                          context,
-                          icon: Icons.dark_mode,
-                          title: 'Theme',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Theme settings coming soon!')),
-                            );
+                            context.push(AppConstants.routeSettings);
                           },
                         ),
                         
@@ -489,20 +474,7 @@ class ProfilePage extends ConsumerWidget {
                           icon: Icons.help,
                           title: 'Help & Support',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Help & support coming soon!')),
-                            );
-                          },
-                        ),
-                
-                        _buildProfileOption(
-                          context,
-                          icon: Icons.info,
-                          title: 'About',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('About page coming soon!')),
-                            );
+                            context.push(AppConstants.routeHelp);
                           },
                         ),
                       ],

@@ -198,8 +198,8 @@ enum RouterState {
   authenticatedWithFamily,
 }
 
-/// Theme provider
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+/// Theme provider - defaults to dark theme
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
 
 /// Navigation provider
 final navigationIndexProvider = StateProvider<int>((ref) => 0);

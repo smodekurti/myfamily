@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/router/app_router.dart';
+import 'app/core/providers/providers.dart';
 import 'app/common/responsive/responsive_helper.dart';
 
 void main() async {
@@ -35,11 +36,42 @@ void main() async {
   runApp(const ProviderScope(child: MyFamilyApp()));
 }
 
-class MyFamilyApp extends ConsumerWidget {
+class MyFamilyApp extends ConsumerStatefulWidget {
   const MyFamilyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyFamilyApp> createState() => _MyFamilyAppState();
+}
+
+class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Load theme preference from user profile after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadThemePreference();
+    });
+  }
+
+  void _loadThemePreference() {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser != null) {
+      final userProfileAsync = ref.read(userProfileProvider(currentUser.id));
+      userProfileAsync.whenData((profile) {
+        if (profile != null && profile.themePreference != 'system') {
+          final themeMode = profile.themePreference == 'light'
+              ? ThemeMode.light
+              : profile.themePreference == 'dark'
+                  ? ThemeMode.dark
+                  : ThemeMode.system;
+          ref.read(themeModeProvider.notifier).state = themeMode;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     
     return ScreenUtilInit(
@@ -60,13 +92,18 @@ class MyFamilyApp extends ConsumerWidget {
               FocusScope.of(context).unfocus();
             },
             behavior: HitTestBehavior.opaque,
-            child: MaterialApp.router(
-              title: 'MyFamily',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: ThemeMode.dark, // Default to dark theme to match screenshot
-              routerConfig: router,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final themeMode = ref.watch(themeModeProvider);
+                return MaterialApp.router(
+                  title: 'MyFamily',
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: themeMode,
+                  routerConfig: router,
+                );
+              },
             ),
           ),
         );
