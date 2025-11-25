@@ -116,6 +116,29 @@ class GroceryListRepository {
         });
   }
 
+  /// Stream all grocery lists for a family (both standalone and task-linked)
+  Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId) {
+    return _supabase
+        .from('grocery_lists')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .map((data) {
+          // Include all lists (both standalone and task-linked)
+          return data
+              .map((json) => _fromSupabase(json))
+              .toList();
+        })
+        .map((lists) {
+          // Sort by updated_at descending
+          lists.sort((a, b) {
+            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+            return bDate.compareTo(aDate);
+          });
+          return lists;
+        });
+  }
+
   /// Get grocery list for a task
   Future<GroceryListModel?> getListForTask(String taskId) async {
     try {
@@ -365,8 +388,80 @@ class GroceryListRepository {
   }
 
   /// Delete list
+  /// If the list is referenced by tasks, creates a copy for each task before deleting
   Future<void> deleteList(String listId) async {
     try {
+      // Check if list is referenced by any tasks via categoryData
+      final list = await getListById(listId);
+      if (list == null) {
+        _logger.w('List not found: $listId');
+        return;
+      }
+
+      // Find tasks that reference this list in their categoryData
+      // Query all grocery tasks and filter in memory (Supabase JSONB queries are limited)
+      final tasksResponse = await _supabase
+          .from('tasks')
+          .select('id, category_data')
+          .eq('category', 'grocery');
+
+      final tasksWithList = <String>[];
+      for (final task in tasksResponse as List) {
+        final categoryData = task['category_data'] as Map<String, dynamic>?;
+        if (categoryData != null && categoryData['groceryListId'] == listId) {
+          tasksWithList.add(task['id'] as String);
+        }
+      }
+
+      // If list is referenced by tasks, create a copy for each task
+      if (tasksWithList.isNotEmpty) {
+        _logger.i('List $listId is referenced by ${tasksWithList.length} task(s). Creating copies...');
+        
+        // Get all items from the original list
+        final originalItems = await getListItems(listId);
+        
+        // Create a copy for each task
+        for (final taskId in tasksWithList) {
+          // Create a new list for this task (copy)
+          final copiedList = await createList(
+            taskId: taskId,
+            familyId: list.familyId,
+            name: '${list.name} (Copy)',
+            createdBy: list.createdBy,
+          );
+          
+          // Copy all items to the new list
+          for (final item in originalItems) {
+            final newItem = await addItem(
+              listId: copiedList.id,
+              name: item.name,
+              category: item.category,
+              qty: item.qty,
+              notes: item.notes,
+              unit: item.unit,
+              source: item.source ?? 'manual',
+            );
+            
+            // If item was checked, mark it as checked in the copy
+            if (item.checked) {
+              await toggleItem(newItem.id, true);
+            }
+          }
+          
+          // Update the task's categoryData to point to the new list
+          await _supabase
+              .from('tasks')
+              .update({
+                'category_data': {'groceryListId': copiedList.id},
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', taskId);
+          
+          _logger.i('Created copy ${copiedList.id} for task $taskId');
+        }
+      }
+
+      // Now safe to delete the original list
       await _supabase
           .from('grocery_lists')
           .delete()

@@ -1,10 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/task_model.dart';
+import 'family_repository.dart';
 
 class TaskRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
+  final FamilyRepository _familyRepo = FamilyRepository();
 
   /// Create a new task
   Future<TaskModel> createTask({
@@ -67,6 +69,37 @@ class TaskRepository {
     int? points,
   }) async {
     try {
+      // Get current task state to handle points properly
+      final currentTaskResponse = await _supabase
+          .from('tasks')
+          .select('status, points, assigned_to, family_id')
+          .eq('id', taskId)
+          .single();
+
+      final currentStatus = currentTaskResponse['status'] as String;
+      final taskPoints = currentTaskResponse['points'] as int;
+      final taskAssignedTo = currentTaskResponse['assigned_to'] as String;
+      final taskFamilyId = currentTaskResponse['family_id'] as String;
+
+      // Handle points when status changes
+      if (status != null) {
+        if (status == 'completed' && currentStatus != 'completed') {
+          // Task is being marked as complete - award points
+          await _familyRepo.awardPointsToMember(
+            familyId: taskFamilyId,
+            userId: taskAssignedTo,
+            points: taskPoints,
+          );
+        } else if (status != 'completed' && currentStatus == 'completed') {
+          // Task is being uncompleted - remove points
+          await _familyRepo.removePointsFromMember(
+            familyId: taskFamilyId,
+            userId: taskAssignedTo,
+            points: taskPoints,
+          );
+        }
+      }
+
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -84,6 +117,9 @@ class TaskRepository {
       // If marking as completed, set completed_at
       if (status == 'completed') {
         updates['completed_at'] = DateTime.now().toIso8601String();
+      } else if (status != null && status != 'completed') {
+        // If uncompleting, clear completed_at
+        updates['completed_at'] = null;
       }
 
       final response = await _supabase
@@ -213,14 +249,27 @@ class TaskRepository {
   /// Mark a task as completed and award points
   Future<TaskModel> completeTask(String taskId) async {
     try {
-      // First get the task to get the points
+      // First get the task to get the points, assignedTo, and familyId
       final taskResponse = await _supabase
           .from('tasks')
-          .select('points')
+          .select('points, assigned_to, family_id, status')
           .eq('id', taskId)
           .single();
 
       final points = taskResponse['points'] as int;
+      final assignedTo = taskResponse['assigned_to'] as String;
+      final familyId = taskResponse['family_id'] as String;
+      final currentStatus = taskResponse['status'] as String;
+
+      // Only award points if task wasn't already completed
+      if (currentStatus != 'completed') {
+        // Award points to the assigned user
+        await _familyRepo.awardPointsToMember(
+          familyId: familyId,
+          userId: assignedTo,
+          points: points,
+        );
+      }
 
       // Update the task status
       final now = DateTime.now();
@@ -237,10 +286,7 @@ class TaskRepository {
           .select()
           .single();
 
-      _logger.i('Task completed successfully: $taskId, points awarded: $points');
-      
-      // TODO: Award points to user (will implement with gamification)
-      // await _awardPointsToUser(assignedTo, points);
+      _logger.i('Task completed successfully: $taskId, points awarded: $points to user $assignedTo');
 
       return TaskModelHelpers.fromSupabase(response);
     } catch (e) {

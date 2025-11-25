@@ -468,6 +468,104 @@ class FamilyRepository {
     }
   }
 
+  /// Award points to a family member
+  Future<void> awardPointsToMember({
+    required String familyId,
+    required String userId,
+    required int points,
+  }) async {
+    try {
+      // Get current points - handle case where column might not exist yet
+      int currentPoints = 0;
+      try {
+        final memberResponse = await _supabase
+            .from('family_members')
+            .select('points')
+            .eq('family_id', familyId)
+            .eq('user_id', userId)
+            .single();
+
+        currentPoints = (memberResponse['points'] as int?) ?? 0;
+      } catch (e) {
+        // If points column doesn't exist, log warning and use 0
+        _logger.w('Points column may not exist yet. Please run add_family_members_points_column.sql migration. Error: $e');
+        currentPoints = 0;
+      }
+
+      final newPoints = currentPoints + points;
+
+      // Update points - handle case where column might not exist yet
+      try {
+        await _supabase
+            .from('family_members')
+            .update({
+              'points': newPoints,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('family_id', familyId)
+            .eq('user_id', userId);
+
+        _logger.i('Awarded $points points to user $userId in family $familyId (new total: $newPoints)');
+      } catch (e) {
+        _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
+        // Don't rethrow - allow the app to continue functioning
+        // Points will be awarded once the migration is run
+      }
+    } catch (e) {
+      _logger.e('Award points error: $e');
+      // Don't rethrow - allow the app to continue functioning
+    }
+  }
+
+  /// Remove points from a family member (when task is uncompleted)
+  Future<void> removePointsFromMember({
+    required String familyId,
+    required String userId,
+    required int points,
+  }) async {
+    try {
+      // Get current points - handle case where column might not exist yet
+      int currentPoints = 0;
+      try {
+        final memberResponse = await _supabase
+            .from('family_members')
+            .select('points')
+            .eq('family_id', familyId)
+            .eq('user_id', userId)
+            .single();
+
+        currentPoints = (memberResponse['points'] as int?) ?? 0;
+      } catch (e) {
+        // If points column doesn't exist, log warning and use 0
+        _logger.w('Points column may not exist yet. Please run add_family_members_points_column.sql migration. Error: $e');
+        currentPoints = 0;
+      }
+
+      final newPoints = (currentPoints - points).clamp(0, double.infinity).toInt(); // Don't go below 0
+
+      // Update points - handle case where column might not exist yet
+      try {
+        await _supabase
+            .from('family_members')
+            .update({
+              'points': newPoints,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('family_id', familyId)
+            .eq('user_id', userId);
+
+        _logger.i('Removed $points points from user $userId in family $familyId (new total: $newPoints)');
+      } catch (e) {
+        _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
+        // Don't rethrow - allow the app to continue functioning
+        // Points will be updated once the migration is run
+      }
+    } catch (e) {
+      _logger.e('Remove points error: $e');
+      // Don't rethrow - allow the app to continue functioning
+    }
+  }
+
   /// Remove family member
   Future<void> removeFamilyMember({
     required String familyId,

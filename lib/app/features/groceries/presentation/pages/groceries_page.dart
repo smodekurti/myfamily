@@ -23,7 +23,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
     final groceryListsAsync = currentFamily != null
-        ? ref.watch(standaloneGroceryListsProvider(currentFamily.id))
+        ? ref.watch(allGroceryListsProvider(currentFamily.id))
         : const AsyncValue.data(<GroceryListModel>[]);
 
     return BackgroundWidget(
@@ -293,6 +293,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
           if (familyId != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && context.mounted) {
+                ref.invalidate(allGroceryListsProvider(familyId));
                 ref.invalidate(standaloneGroceryListsProvider(familyId));
                 // Navigate after invalidation
                 if (context.mounted) {
@@ -400,6 +401,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
           if (familyId != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && context.mounted) {
+                ref.invalidate(allGroceryListsProvider(familyId));
                 ref.invalidate(standaloneGroceryListsProvider(familyId));
               }
             });

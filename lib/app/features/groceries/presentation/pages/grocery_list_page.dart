@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/utils/grocery_category_mapper.dart';
 import '../../../../data/models/grocery_template_model.dart';
 import '../../../../data/models/family_model.dart';
 import '../../../../data/models/task_model.dart';
@@ -11,10 +12,12 @@ import '../../../../data/repositories/grocery_template_repository.dart';
 
 class GroceryListPage extends ConsumerStatefulWidget {
   final String listId;
+  final String? from; // 'task' if navigated from task, null if from Shopping tab
   
   const GroceryListPage({
     super.key,
     required this.listId,
+    this.from,
   });
 
   @override
@@ -55,14 +58,14 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Template Section: Show for standalone lists, hide for task-linked lists
+                      // Template Section: Show only when viewing from Shopping tab, hide when from task
                       groceryList.when(
                         data: (list) {
-                          // Show template section only if list is NOT linked to a task (standalone list)
                           if (list == null) return const SizedBox.shrink();
-                          return list.taskId == null 
-                              ? _buildTemplateSection(context, currentFamily?.id)
-                              : const SizedBox.shrink();
+                          // Hide template section if navigated from task
+                          if (widget.from == 'task') return const SizedBox.shrink();
+                          // Show template section when viewing from Shopping tab
+                          return _buildTemplateSection(context, currentFamily?.id);
                         },
                         loading: () => const SizedBox.shrink(),
                         error: (_, __) => const SizedBox.shrink(),
@@ -317,7 +320,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'START A NEW LIST FROM A TEMPLATE',
+              'IMPORT ITEMS FROM TEMPLATE',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 letterSpacing: 1.2,
@@ -1263,10 +1266,11 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         if (task.status != 'completed') {
           await taskActions.completeTask(task.id);
           
-          // Invalidate task providers immediately to refresh UI
+          // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
             ref.invalidate(familyTasksProvider(currentFamily.id));
             ref.invalidate(tasksDueTodayProvider(currentFamily.id));
+            ref.invalidate(familyMembersProvider(currentFamily.id));
           }
           
           if (mounted) {
@@ -1287,10 +1291,11 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             status: 'pending',
           );
           
-          // Invalidate task providers immediately to refresh UI
+          // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
             ref.invalidate(familyTasksProvider(currentFamily.id));
             ref.invalidate(tasksDueTodayProvider(currentFamily.id));
+            ref.invalidate(familyMembersProvider(currentFamily.id));
           }
           
           if (mounted) {
@@ -1997,15 +2002,45 @@ class _AddItemDialogState extends State<_AddItemDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.item?.name ?? widget.initialName ?? '');
+    final initialName = widget.item?.name ?? widget.initialName ?? '';
+    _nameController = TextEditingController(text: initialName);
     _notesController = TextEditingController(text: widget.item?.notes ?? '');
     _qtyController = TextEditingController(text: widget.item?.qty.toString() ?? '1');
     _unitController = TextEditingController(text: widget.item?.unit ?? '');
-    _selectedCategory = widget.item?.category ?? 'other';
+    
+    // Auto-categorize if editing existing item or if initial name is provided
+    if (widget.item != null) {
+      _selectedCategory = widget.item!.category;
+    } else if (initialName.isNotEmpty) {
+      _selectedCategory = GroceryCategoryMapper.categorizeItem(initialName);
+    } else {
+      _selectedCategory = 'other';
+    }
+    
+    // Listen to name changes and auto-categorize (only when adding new items)
+    if (widget.item == null) {
+      _nameController.addListener(_onNameChanged);
+    }
+  }
+  
+  void _onNameChanged() {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      final autoCategory = GroceryCategoryMapper.categorizeItem(name);
+      if (mounted && _selectedCategory != autoCategory) {
+        setState(() {
+          _selectedCategory = autoCategory;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    // Remove listener before disposing controller
+    if (widget.item == null) {
+      _nameController.removeListener(_onNameChanged);
+    }
     _nameController.dispose();
     _notesController.dispose();
     _qtyController.dispose();
@@ -2341,4 +2376,10 @@ final groceryTemplatesProvider = StreamProvider.family<List<GroceryTemplateModel
 final standaloneGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
   final listRepo = ref.watch(groceryListRepositoryProvider);
   return listRepo.streamStandaloneListsForFamily(familyId);
+});
+
+/// Provider for all grocery lists (both standalone and task-linked)
+final allGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
+  final listRepo = ref.watch(groceryListRepositoryProvider);
+  return listRepo.streamAllListsForFamily(familyId);
 });

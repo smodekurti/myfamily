@@ -478,63 +478,63 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       ),
       elevation: 0,
       color: Theme.of(context).cardColor,
-      child: InkWell(
-        onTap: () {
-          // Navigate to grocery list if grocery task, else task detail
-          if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
-            context.push('/grocery-list/${task.categoryData!['groceryListId']}');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Task: ${task.title}')),
-            );
-          }
-        },
-        borderRadius: ResponsiveHelper.borderRadius(12),
-        child: Row(
-          children: [
-            // Colored ribbon on the left
-            Container(
-              width: ResponsiveHelper.w(4),
-              decoration: BoxDecoration(
-                color: ribbonColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(ResponsiveHelper.r(12)),
-                  bottomLeft: Radius.circular(ResponsiveHelper.r(12)),
-                ),
+      child: Row(
+        children: [
+          // Colored ribbon on the left
+          Container(
+            width: ResponsiveHelper.w(4),
+            decoration: BoxDecoration(
+              color: ribbonColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(ResponsiveHelper.r(12)),
+                bottomLeft: Radius.circular(ResponsiveHelper.r(12)),
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: ResponsiveHelper.padding(all: 16),
-                child: Row(
-                  children: [
-              // Checkbox
-              Checkbox(
-                value: task.status == 'completed',
-                onChanged: (value) async {
-                  final taskActions = ref.read(taskActionsProvider);
-                  if (value == true) {
-                    await taskActions.completeTask(task.id);
-                  } else {
-                    await taskActions.updateTask(taskId: task.id, status: 'pending');
-                  }
-                  // Refresh the list
-                  // Invalidate both providers to ensure home screen updates
-                  ref.invalidate(familyTasksProvider(familyId));
-                  ref.invalidate(tasksDueTodayProvider(familyId));
-                },
-                activeColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: ResponsiveHelper.borderRadius(4),
-                ),
-              ),
-              SizedBox(width: ResponsiveHelper.w(12)),
-              
-              // Task details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          ),
+          Expanded(
+            child: Padding(
+              padding: ResponsiveHelper.padding(all: 16),
+              child: Row(
+                children: [
+                  // Checkbox - outside InkWell to prevent tap interference
+                  Checkbox(
+                    value: task.status == 'completed',
+                    onChanged: (value) async {
+                      final taskActions = ref.read(taskActionsProvider);
+                      if (value == true) {
+                        await taskActions.completeTask(task.id);
+                      } else {
+                        await taskActions.updateTask(taskId: task.id, status: 'pending');
+                      }
+                      // Refresh the list and family members (for points update)
+                      ref.invalidate(familyTasksProvider(familyId));
+                      ref.invalidate(tasksDueTodayProvider(familyId));
+                      ref.invalidate(familyMembersProvider(familyId));
+                    },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: ResponsiveHelper.borderRadius(4),
+                    ),
+                  ),
+                  SizedBox(width: ResponsiveHelper.w(12)),
+                  
+                  // Task details - wrapped in InkWell for tap navigation
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        // Navigate to grocery list if grocery task, else task detail
+                        if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+                          context.push('/grocery-list/${task.categoryData!['groceryListId']}?from=task');
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Task: ${task.title}')),
+                          );
+                        }
+                      },
+                      borderRadius: ResponsiveHelper.borderRadius(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     Text(
                       task.title,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -555,13 +555,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              
-              // Assigned person avatar (smaller size)
-              // Always show avatar if task has assignedTo, even if member not found in list
-              if (task.assignedTo.isNotEmpty)
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Assigned person avatar (smaller size)
+                  // Always show avatar if task has assignedTo, even if member not found in list
+                  if (task.assignedTo.isNotEmpty)
                 Builder(
                   builder: (context) {
                     debugPrint('🔄 Building avatar Consumer for task ${task.id}, assignedTo: ${task.assignedTo}');
@@ -672,45 +673,44 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     );
                   },
                 )
-              else
-                CircleAvatar(
-                  radius: ResponsiveHelper.r(16),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: Icon(
-                    Icons.person,
-                    size: ResponsiveHelper.iconSize(16),
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                ),
-              
-              // Edit button (only show if user can edit: created by OR assigned to AND task is not completed)
-              if (currentUserId != null && 
-                  (task.createdBy == currentUserId || task.assignedTo == currentUserId) &&
-                  task.status != 'completed')
-                IconButton(
-                  icon: Icon(
-                    Icons.edit,
-                    size: ResponsiveHelper.iconSize(20),
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                  onPressed: () {
-                    // Navigate to edit page with task data
-                    final taskJson = TaskModelHelpers.toSupabase(task);
-                    context.push(
-                      AppConstants.routeEditTask,
-                      extra: taskJson,
-                    );
-                  },
-                  tooltip: 'Edit chore',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                  ],
-                ),
+                  else
+                    CircleAvatar(
+                      radius: ResponsiveHelper.r(16),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Icon(
+                        Icons.person,
+                        size: ResponsiveHelper.iconSize(16),
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                  
+                  // Edit button (only show if user can edit: created by OR assigned to AND task is not completed)
+                  if (currentUserId != null && 
+                      (task.createdBy == currentUserId || task.assignedTo == currentUserId) &&
+                      task.status != 'completed')
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit,
+                        size: ResponsiveHelper.iconSize(20),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      onPressed: () {
+                        // Navigate to edit page with task data
+                        final taskJson = TaskModelHelpers.toSupabase(task);
+                        context.push(
+                          AppConstants.routeEditTask,
+                          extra: taskJson,
+                        );
+                      },
+                      tooltip: 'Edit chore',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
