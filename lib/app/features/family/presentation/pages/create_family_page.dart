@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
@@ -214,7 +215,7 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
       }
 
       final familyRepo = ref.read(familyRepositoryProvider);
-      final createdFamily = await familyRepo.createFamily(
+      await familyRepo.createFamily(
         name: _nameController.text.trim(),
         createdBy: currentUser.id,
         address: _addressController.text.trim().isEmpty 
@@ -336,17 +337,6 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
                       labelText: 'Family Address (Optional)',
                       hintText: 'e.g., 123 Main Street, Anytown, USA',
                       prefixIcon: const Icon(Icons.location_on),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.map),
-                        onPressed: () {
-                          // TODO: Open map picker
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Map picker coming soon!'),
-                            ),
-                          );
-                        },
-                      ),
                     ),
                     maxLines: 2,
                   ),
@@ -385,13 +375,16 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.copy),
-                              onPressed: () {
-                                // TODO: Copy to clipboard
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Family code copied!'),
-                                  ),
-                                );
+                              onPressed: () async {
+                                final code = _generateFamilyCode();
+                                await Clipboard.setData(ClipboardData(text: code));
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Family code copied to clipboard'),
+                                    ),
+                                  );
+                                }
                               },
                             ),
                           ],

@@ -445,16 +445,6 @@ class MainShell extends ConsumerWidget {
       title: Text(title),
       centerTitle: true,
           actions: [
-            // Notifications icon
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // TODO: Show notifications
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications coming soon!')),
-                );
-              },
-            ),
             // Profile icon
             GestureDetector(
               onTap: () => context.go(AppConstants.routeProfile),
@@ -537,39 +527,6 @@ class MainShell extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: Icon(
-                      Icons.home,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: const Text('Home'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(AppConstants.routeHome);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.task,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: const Text('My Tasks'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(AppConstants.routeTasks);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.shopping_cart,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: const Text('Shopping'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(AppConstants.routeGroceries);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
                       Icons.shopping_bag,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -577,17 +534,6 @@ class MainShell extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppConstants.routeGroceryTemplatesManage);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.calendar_today,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: const Text('Calendar'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(AppConstants.routeCalendar);
                     },
                   ),
                   const Divider(),

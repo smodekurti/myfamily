@@ -181,26 +181,6 @@ class HomePage extends ConsumerWidget {
                   thickness: ResponsiveHelper.w(1),
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                 ),
-                SizedBox(height: ResponsiveHelper.h(12)),
-                
-                _buildSummaryCard(
-                  context,
-                  icon: Icons.chat_bubble_outline,
-                  iconColor: Theme.of(context).colorScheme.secondary,
-                  title: 'Family Chat',
-                  count: 0,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Family Chat coming soon!')),
-                    );
-                  },
-                ),
-                SizedBox(height: ResponsiveHelper.h(12)),
-                Divider(
-                  height: ResponsiveHelper.h(1),
-                  thickness: ResponsiveHelper.w(1),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                ),
                 
                 SizedBox(height: ResponsiveHelper.h(32)),
                 
