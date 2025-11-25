@@ -260,7 +260,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'grocery-list',
             builder: (context, state) {
               final listId = state.pathParameters['listId']!;
-              return GroceryListPage(listId: listId);
+              final from = state.uri.queryParameters['from'];
+              return GroceryListPage(listId: listId, from: from);
             },
           ),
           GoRoute(
