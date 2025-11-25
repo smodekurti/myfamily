@@ -65,26 +65,20 @@ class _SplashPageState extends ConsumerState<SplashPage>
   void _navigateToNext() {
     Future.delayed(AppConstants.splashDisplayDuration, () {
       if (mounted) {
-        print('🔍 Splash: Navigation timer completed (5 seconds)');
-        
         // Check router state and navigate accordingly
         final routerState = ref.read(routerStateProvider);
-        print('🔍 Splash: Current router state: $routerState');
         
         switch (routerState) {
           case RouterState.unauthenticated:
-            print('🔍 Splash: Navigating to login');
             context.go(AppConstants.routeAuth);
             break;
           case RouterState.loading:
-            print('🔍 Splash: Still loading, staying on splash');
+            // Still loading, stay on splash
             break;
           case RouterState.authenticatedWithoutFamily:
-            print('🔍 Splash: Navigating to get-started');
             context.go(AppConstants.routeGetStarted);
             break;
           case RouterState.authenticatedWithFamily:
-            print('🔍 Splash: Navigating to family-selection');
             context.go(AppConstants.routeFamilySelection);
             break;
         }

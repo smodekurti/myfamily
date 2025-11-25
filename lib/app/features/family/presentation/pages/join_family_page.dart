@@ -41,8 +41,6 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
         userId: currentUser.id,
       );
       
-      print('🎉 Joined family successfully: ${joinedFamily?.id}');
-      
       // Invalidate the user families provider to force a refresh
       ref.invalidate(userFamiliesProvider(currentUser.id));
       
@@ -50,7 +48,6 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
       await Future.delayed(const Duration(seconds: 1));
       
       if (mounted) {
-        print('🔍 Navigating to home after joining family');
         context.go(AppConstants.routeHome);
       }
     } catch (e) {

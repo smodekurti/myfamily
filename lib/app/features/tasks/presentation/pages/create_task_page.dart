@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/extensions/user_extensions.dart';
+import '../../../../core/models/task_category.dart';
 import '../../../../data/models/family_model.dart';
 import '../../../../data/models/grocery_template_model.dart';
 import '../../../../data/repositories/grocery_list_repository.dart';
@@ -183,6 +184,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
       final taskActions = ref.read(taskActionsProvider);
       
+      // Get default points for the selected category
+      final category = TaskCategories.getById(_selectedCategory);
+      final defaultPoints = category?.defaultPoints ?? 10;
+      
       // Create task (don't set categoryData yet - we'll set it after linking the list)
       final task = await taskActions.createTask(
         title: _titleController.text.trim(),
@@ -195,6 +200,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         category: _selectedCategory,
         categoryData: null, // Will be set after linking the list
         dueDate: _selectedDueDate,
+        points: defaultPoints,
       );
 
       // If grocery category, handle grocery list
@@ -466,6 +472,21 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   }
 
   Widget _buildCategorySelector() {
+    // Get priority categories (most commonly used)
+    final priorityCategories = [
+      TaskCategories.chore,
+      TaskCategories.grocery,
+      TaskCategories.cleaning,
+      TaskCategories.laundry,
+      TaskCategories.personalCare,
+      TaskCategories.homework,
+    ];
+
+    // Get all other categories
+    final otherCategories = TaskCategories.all
+        .where((cat) => !priorityCategories.contains(cat))
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -475,39 +496,115 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        Row(
-          children: [
-            Expanded(
-              child: ChoiceChip(
-                label: const Text('Chore'),
-                selected: _selectedCategory == 'chore',
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() {
-                      _selectedCategory = 'chore';
+        SizedBox(height: ResponsiveHelper.h(12)),
+        
+        // Priority categories (most common)
+        Wrap(
+          spacing: ResponsiveHelper.w(8),
+          runSpacing: ResponsiveHelper.h(8),
+          children: priorityCategories.map((category) {
+            final isSelected = _selectedCategory == category.id;
+            return ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    category.icon,
+                    size: ResponsiveHelper.iconSize(16),
+                    color: isSelected
+                        ? Colors.white
+                        : category.color,
+                  ),
+                  SizedBox(width: ResponsiveHelper.w(6)),
+                  Text(category.name),
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedCategory = category.id;
+                    // Clear grocery list selection if not grocery category
+                    if (category.id != 'grocery') {
                       _selectedGroceryListId = null;
-                    });
-                  }
-                },
+                    }
+                  });
+                }
+              },
+              selectedColor: category.color,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : category.color,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
-            ),
-            SizedBox(width: ResponsiveHelper.w(12)),
-            Expanded(
-              child: ChoiceChip(
-                label: const Text('Grocery'),
-                selected: _selectedCategory == 'grocery',
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() {
-                      _selectedCategory = 'grocery';
-                    });
-                  }
-                },
+              side: BorderSide(
+                color: isSelected ? category.color : category.color.withOpacity(0.3),
+                width: isSelected ? 2 : 1,
               ),
-            ),
-          ],
+            );
+          }).toList(),
         ),
+        
+        // Show "More Categories" expandable section if there are other categories
+        if (otherCategories.isNotEmpty) ...[
+          SizedBox(height: ResponsiveHelper.h(12)),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(
+              'More Categories',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            children: [
+              Wrap(
+                spacing: ResponsiveHelper.w(8),
+                runSpacing: ResponsiveHelper.h(8),
+                children: otherCategories.map((category) {
+                  final isSelected = _selectedCategory == category.id;
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          category.icon,
+                          size: ResponsiveHelper.iconSize(16),
+                          color: isSelected
+                              ? Colors.white
+                              : category.color,
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(6)),
+                        Text(category.name),
+                      ],
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _selectedCategory = category.id;
+                          // Clear grocery list selection if not grocery category
+                          if (category.id != 'grocery') {
+                            _selectedGroceryListId = null;
+                          }
+                        });
+                      }
+                    },
+                    selectedColor: category.color,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : category.color,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? category.color : category.color.withOpacity(0.3),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: ResponsiveHelper.h(8)),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -528,10 +625,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         SizedBox(height: ResponsiveHelper.h(12)),
         familyMembers.when(
           data: (members) {
-            debugPrint('👥 CreateTask: Got ${members.length} family members');
             // If no members, show current user as the only option
             if (members.isEmpty) {
-              debugPrint('👥 CreateTask: No members found, showing current user only');
               return Consumer(
                 builder: (context, ref, child) {
                   final currentUser = ref.watch(currentUserProvider);
@@ -602,7 +697,6 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             }
             
             // Show all members for selection (1 or more)
-            debugPrint('👥 CreateTask: Showing ${members.length} members for selection');
             // Auto-select first member if none selected
             if (_selectedAssignee == null && members.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -619,7 +713,6 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               runSpacing: ResponsiveHelper.h(12),
               children: members.map((member) {
                 final isSelected = _selectedAssignee == member.uid;
-                debugPrint('👥 CreateTask: Member ${member.uid}, displayName: ${member.displayName}, photoURL: ${member.photoURL}, isSelected: $isSelected');
                 return GestureDetector(
                   onTap: () {
                     setState(() {
@@ -672,11 +765,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             );
           },
           loading: () {
-            debugPrint('👥 CreateTask: Family members loading...');
             return const CircularProgressIndicator();
           },
           error: (error, stackTrace) {
-            debugPrint('👥 CreateTask: Error loading family members: $error');
             // On error, show current user as fallback
             return Consumer(
               builder: (context, ref, child) {

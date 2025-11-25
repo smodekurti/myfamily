@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/extensions/user_extensions.dart';
+import '../../../../core/models/task_category.dart';
 import '../../../../data/models/family_model.dart';
 import '../../../../data/models/task_model.dart';
 import 'package:intl/intl.dart';
@@ -313,6 +314,21 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   }
 
   Widget _buildCategorySelector() {
+    // Get priority categories (most commonly used)
+    final priorityCategories = [
+      TaskCategories.chore,
+      TaskCategories.grocery,
+      TaskCategories.cleaning,
+      TaskCategories.laundry,
+      TaskCategories.personalCare,
+      TaskCategories.homework,
+    ];
+
+    // Get all other categories
+    final otherCategories = TaskCategories.all
+        .where((cat) => !priorityCategories.contains(cat))
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,39 +338,115 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        Row(
-          children: [
-            Expanded(
-              child: ChoiceChip(
-                label: const Text('Chore'),
-                selected: _selectedCategory == 'chore',
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() {
-                      _selectedCategory = 'chore';
+        SizedBox(height: ResponsiveHelper.h(12)),
+        
+        // Priority categories (most common)
+        Wrap(
+          spacing: ResponsiveHelper.w(8),
+          runSpacing: ResponsiveHelper.h(8),
+          children: priorityCategories.map((category) {
+            final isSelected = _selectedCategory == category.id;
+            return ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    category.icon,
+                    size: ResponsiveHelper.iconSize(16),
+                    color: isSelected
+                        ? Colors.white
+                        : category.color,
+                  ),
+                  SizedBox(width: ResponsiveHelper.w(6)),
+                  Text(category.name),
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedCategory = category.id;
+                    // Clear grocery list selection if not grocery category
+                    if (category.id != 'grocery') {
                       _selectedGroceryListId = null;
-                    });
-                  }
-                },
+                    }
+                  });
+                }
+              },
+              selectedColor: category.color,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : category.color,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
-            ),
-            SizedBox(width: ResponsiveHelper.w(12)),
-            Expanded(
-              child: ChoiceChip(
-                label: const Text('Grocery'),
-                selected: _selectedCategory == 'grocery',
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() {
-                      _selectedCategory = 'grocery';
-                    });
-                  }
-                },
+              side: BorderSide(
+                color: isSelected ? category.color : category.color.withOpacity(0.3),
+                width: isSelected ? 2 : 1,
               ),
-            ),
-          ],
+            );
+          }).toList(),
         ),
+        
+        // Show "More Categories" expandable section if there are other categories
+        if (otherCategories.isNotEmpty) ...[
+          SizedBox(height: ResponsiveHelper.h(12)),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(
+              'More Categories',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            children: [
+              Wrap(
+                spacing: ResponsiveHelper.w(8),
+                runSpacing: ResponsiveHelper.h(8),
+                children: otherCategories.map((category) {
+                  final isSelected = _selectedCategory == category.id;
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          category.icon,
+                          size: ResponsiveHelper.iconSize(16),
+                          color: isSelected
+                              ? Colors.white
+                              : category.color,
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(6)),
+                        Text(category.name),
+                      ],
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _selectedCategory = category.id;
+                          // Clear grocery list selection if not grocery category
+                          if (category.id != 'grocery') {
+                            _selectedGroceryListId = null;
+                          }
+                        });
+                      }
+                    },
+                    selectedColor: category.color,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : category.color,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? category.color : category.color.withOpacity(0.3),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: ResponsiveHelper.h(8)),
+            ],
+          ),
+        ],
       ],
     );
   }

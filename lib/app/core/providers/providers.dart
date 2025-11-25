@@ -117,25 +117,20 @@ final generateChildInviteCodeProvider = FutureProvider.family<String?, String>((
 
 final currentFamilyProvider = Provider((ref) {
   final familyId = ref.watch(currentFamilyIdProvider);
-  print('🔍 CurrentFamilyProvider: familyId = $familyId');
   
   if (familyId == null) {
-    print('🔍 CurrentFamilyProvider: No family ID set, returning null');
     return null;
   }
   
   final familyAsync = ref.watch(familyProvider(familyId));
   return familyAsync.when(
     data: (family) {
-      print('🔍 CurrentFamilyProvider: Got family data: ${family?.name} (${family?.id})');
       return family;
     },
     loading: () {
-      print('🔍 CurrentFamilyProvider: Loading family data...');
       return null;
     },
     error: (error, stack) {
-      print('🔍 CurrentFamilyProvider: Error loading family: $error');
       return null;
     },
   );
@@ -165,14 +160,12 @@ final routerStateProvider = Provider<RouterState>((ref) {
   final isAuthenticated = currentUser != null;
   
   if (!isAuthenticated) {
-    print('🔍 RouterState: unauthenticated');
     return RouterState.unauthenticated;
   }
   
   final userFamilies = ref.watch(userFamiliesProvider(currentUser.id));
   return userFamilies.when(
     data: (families) {
-      print('🔍 RouterState: authenticated, families count: ${families.length}');
       if (families.isEmpty) {
         return RouterState.authenticatedWithoutFamily;
       } else {
@@ -181,11 +174,9 @@ final routerStateProvider = Provider<RouterState>((ref) {
       }
     },
     loading: () {
-      print('🔍 RouterState: loading');
       return RouterState.loading;
     },
     error: (error, stack) {
-      print('🔍 RouterState: error - $error');
       return RouterState.authenticatedWithoutFamily;
     },
   );

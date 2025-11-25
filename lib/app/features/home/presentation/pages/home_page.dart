@@ -6,6 +6,7 @@ import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/task_model.dart';
+import '../../../groceries/presentation/pages/grocery_list_page.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -84,14 +85,50 @@ class HomePage extends ConsumerWidget {
                 ),
                 SizedBox(height: ResponsiveHelper.h(12)),
                 
-                _buildSummaryCard(
-                  context,
-                  icon: Icons.calendar_today,
-                  iconColor: Theme.of(context).colorScheme.secondary,
-                  title: 'Family Calendar',
-                  count: 2,
-                  onTap: () => context.go(AppConstants.routeCalendar),
-                ),
+                // Family Calendar with actual events count
+                currentFamily != null
+                    ? ref.watch(familyEventsProvider(currentFamily.id)).when(
+                        data: (events) {
+                          // Count upcoming events (not past events)
+                          final now = DateTime.now();
+                          final upcomingEvents = events.where((event) {
+                            return event.startTime.isAfter(now) || 
+                                   event.startTime.isAtSameMomentAs(now);
+                          }).toList();
+                          return _buildSummaryCard(
+                            context,
+                            icon: Icons.calendar_today,
+                            iconColor: Theme.of(context).colorScheme.secondary,
+                            title: 'Family Calendar',
+                            count: upcomingEvents.length,
+                            onTap: () => context.go(AppConstants.routeCalendar),
+                          );
+                        },
+                        loading: () => _buildSummaryCard(
+                          context,
+                          icon: Icons.calendar_today,
+                          iconColor: Theme.of(context).colorScheme.secondary,
+                          title: 'Family Calendar',
+                          count: 0,
+                          onTap: () => context.go(AppConstants.routeCalendar),
+                        ),
+                        error: (_, __) => _buildSummaryCard(
+                          context,
+                          icon: Icons.calendar_today,
+                          iconColor: Theme.of(context).colorScheme.secondary,
+                          title: 'Family Calendar',
+                          count: 0,
+                          onTap: () => context.go(AppConstants.routeCalendar),
+                        ),
+                      )
+                    : _buildSummaryCard(
+                        context,
+                        icon: Icons.calendar_today,
+                        iconColor: Theme.of(context).colorScheme.secondary,
+                        title: 'Family Calendar',
+                        count: 0,
+                        onTap: () => context.go(AppConstants.routeCalendar),
+                      ),
                 SizedBox(height: ResponsiveHelper.h(12)),
                 Divider(
                   height: ResponsiveHelper.h(1),
@@ -100,14 +137,44 @@ class HomePage extends ConsumerWidget {
                 ),
                 SizedBox(height: ResponsiveHelper.h(12)),
                 
-                _buildSummaryCard(
-                  context,
-                  icon: Icons.shopping_cart,
-                  iconColor: Theme.of(context).colorScheme.secondary,
-                  title: 'Family Shopping',
-                  count: 3,
-                  onTap: () => context.go(AppConstants.routeGroceries),
-                ),
+                // Family Shopping with actual grocery lists count
+                currentFamily != null
+                    ? ref.watch(allGroceryListsProvider(currentFamily.id)).when(
+                        data: (lists) {
+                          return _buildSummaryCard(
+                            context,
+                            icon: Icons.shopping_cart,
+                            iconColor: Theme.of(context).colorScheme.secondary,
+                            title: 'Family Shopping',
+                            count: lists.length,
+                            onTap: () => context.go(AppConstants.routeGroceries),
+                          );
+                        },
+                        loading: () => _buildSummaryCard(
+                          context,
+                          icon: Icons.shopping_cart,
+                          iconColor: Theme.of(context).colorScheme.secondary,
+                          title: 'Family Shopping',
+                          count: 0,
+                          onTap: () => context.go(AppConstants.routeGroceries),
+                        ),
+                        error: (_, __) => _buildSummaryCard(
+                          context,
+                          icon: Icons.shopping_cart,
+                          iconColor: Theme.of(context).colorScheme.secondary,
+                          title: 'Family Shopping',
+                          count: 0,
+                          onTap: () => context.go(AppConstants.routeGroceries),
+                        ),
+                      )
+                    : _buildSummaryCard(
+                        context,
+                        icon: Icons.shopping_cart,
+                        iconColor: Theme.of(context).colorScheme.secondary,
+                        title: 'Family Shopping',
+                        count: 0,
+                        onTap: () => context.go(AppConstants.routeGroceries),
+                      ),
                 SizedBox(height: ResponsiveHelper.h(12)),
                 Divider(
                   height: ResponsiveHelper.h(1),
@@ -121,7 +188,7 @@ class HomePage extends ConsumerWidget {
                   icon: Icons.chat_bubble_outline,
                   iconColor: Theme.of(context).colorScheme.secondary,
                   title: 'Family Chat',
-                  count: 2,
+                  count: 0,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Family Chat coming soon!')),

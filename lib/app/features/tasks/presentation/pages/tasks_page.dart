@@ -6,12 +6,16 @@ import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/models/task_category.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../../data/models/family_model.dart';
 import 'package:intl/intl.dart';
 
 // Filter state provider
 final taskFilterProvider = StateProvider<String>((ref) => 'all');
+
+// View mode provider: 'list', 'grid', 'grouped_category', 'grouped_assignee', 'grouped_due_date'
+final taskViewModeProvider = StateProvider<String>((ref) => 'list');
 
 class TasksPage extends ConsumerStatefulWidget {
   final String? filter;
@@ -50,10 +54,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('📋 TasksPage: Building...');
     final currentFamily = ref.watch(currentFamilyProvider);
     final currentUser = ref.watch(currentUserProvider);
-    debugPrint('📋 TasksPage: currentFamily = ${currentFamily?.name}, currentUser = ${currentUser?.id}');
     final filter = ref.watch(taskFilterProvider);
     
     if (currentFamily == null) {
@@ -88,6 +90,11 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 // Filter Buttons
                 _buildFilterButtons(context, filter),
                 
+                SizedBox(height: ResponsiveHelper.h(12)),
+                
+                // View Mode Selector
+                _buildViewModeSelector(context),
+                
                 SizedBox(height: ResponsiveHelper.h(16)),
                 
                 // Upcoming Chores Section
@@ -99,12 +106,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
                 
-                // Tasks List
+                // Tasks List with different view modes
                 familyTasks.when(
                   data: (tasks) {
-                    debugPrint('📋 TasksPage: Got ${tasks.length} tasks');
                     final filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
-                    debugPrint('📋 TasksPage: Filtered to ${filteredTasks.length} tasks');
                     final isEmpty = filteredTasks.isEmpty;
                     
                     if (isEmpty) {
@@ -113,24 +118,21 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     
                     final members = familyMembers.when(
                       data: (m) {
-                        debugPrint('📋 TasksPage: Got ${m.length} family members');
                         return m;
                       },
                       loading: () => <FamilyMemberModel>[],
                       error: (_, __) => <FamilyMemberModel>[],
                     );
-                    return Column(
-                      children: filteredTasks.map((task) {
-                        debugPrint('📋 TasksPage: Building card for task ${task.id}, assignedTo: ${task.assignedTo}');
-                        return _buildChoreCard(
-                          context,
-                          ref,
-                          task,
-                          members,
-                          currentFamily.id,
-                          currentUser?.id,
-                        );
-                      }).toList(),
+                    
+                    final viewMode = ref.watch(taskViewModeProvider);
+                    return _buildTasksView(
+                      context,
+                      ref,
+                      filteredTasks,
+                      members,
+                      currentFamily.id,
+                      currentUser?.id,
+                      viewMode,
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
@@ -411,11 +413,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     String familyId,
     String? currentUserId,
   ) {
-    debugPrint('🏗️ _buildChoreCard: Building card for task ${task.id}, assignedTo: ${task.assignedTo}, members count: ${members.length}');
     final assignedMember = members.firstWhere(
       (m) => m.uid == task.assignedTo,
       orElse: () {
-        debugPrint('⚠️ _buildChoreCard: No member found for ${task.assignedTo}, using fallback');
         return const FamilyMemberModel(
           uid: '',
           displayName: '',
@@ -424,8 +424,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         );
       },
     );
-    
-    debugPrint('👤 _buildChoreCard: assignedMember.uid = ${assignedMember.uid}, displayName = ${assignedMember.displayName}, photoURL = ${assignedMember.photoURL}');
     
     // Use assignedMember.photoURL as initial fallback
     // The Consumer will watch the userProfileProvider and update when it loads
@@ -468,9 +466,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
 
     return Card(
-      margin: ResponsiveHelper.padding(bottom: 12),
+      margin: ResponsiveHelper.padding(bottom: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
+        borderRadius: ResponsiveHelper.borderRadius(8),
         side: BorderSide(
           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
           width: ResponsiveHelper.w(1),
@@ -482,21 +480,21 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         children: [
           // Colored ribbon on the left
           Container(
-            width: ResponsiveHelper.w(4),
+            width: ResponsiveHelper.w(3),
             decoration: BoxDecoration(
               color: ribbonColor,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(ResponsiveHelper.r(12)),
-                bottomLeft: Radius.circular(ResponsiveHelper.r(12)),
+                topLeft: Radius.circular(ResponsiveHelper.r(8)),
+                bottomLeft: Radius.circular(ResponsiveHelper.r(8)),
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: ResponsiveHelper.padding(all: 16),
-              child: Row(
-                children: [
-                  // Checkbox - outside InkWell to prevent tap interference
+                  Expanded(
+                    child: Padding(
+                      padding: ResponsiveHelper.padding(horizontal: 10, vertical: 10),
+                      child: Row(
+                        children: [
+                          // Checkbox - outside InkWell to prevent tap interference
                   Checkbox(
                     value: task.status == 'completed',
                     onChanged: (value) async {
@@ -512,11 +510,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       ref.invalidate(familyMembersProvider(familyId));
                     },
                     activeColor: Theme.of(context).colorScheme.primary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
                       borderRadius: ResponsiveHelper.borderRadius(4),
                     ),
                   ),
-                  SizedBox(width: ResponsiveHelper.w(12)),
+                  SizedBox(width: ResponsiveHelper.w(8)),
                   
                   // Task details - wrapped in InkWell for tap navigation
                   Expanded(
@@ -534,11 +534,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       borderRadius: ResponsiveHelper.borderRadius(8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                     Text(
                       task.title,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        fontSize: ResponsiveHelper.sp(14),
                         decoration: task.status == 'completed'
                             ? TextDecoration.lineThrough
                             : null,
@@ -546,11 +548,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
                             : Theme.of(context).colorScheme.onSurface,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: ResponsiveHelper.h(4)),
+                    SizedBox(height: ResponsiveHelper.h(2)),
                     Text(
                       statusText,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: ResponsiveHelper.sp(11),
                         color: statusColor,
                         fontWeight: FontWeight.w500,
                       ),
@@ -565,7 +570,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   if (task.assignedTo.isNotEmpty)
                 Builder(
                   builder: (context) {
-                    debugPrint('🔄 Building avatar Consumer for task ${task.id}, assignedTo: ${task.assignedTo}');
                     return Consumer(
                       builder: (context, ref, child) {
                         // Watch the user profile provider to get latest avatar URL
@@ -574,8 +578,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         String displayName = assignedMember.displayName.isNotEmpty
                             ? assignedMember.displayName
                             : '?';
-                        
-                        debugPrint('👤 Consumer built for task ${task.id}, assignedTo: ${task.assignedTo}, state: ${userProfileAsync.hasValue ? "hasValue" : userProfileAsync.isLoading ? "loading" : "error"}');
                         
                         // Use when() to handle all states and ensure proper rebuilds
                         return userProfileAsync.when(
@@ -588,17 +590,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           displayName = profile.displayName;
                         }
                         
-                        debugPrint('🖼️ Avatar DATA for task ${task.id}, assignedTo: ${task.assignedTo}, hasPhoto: $hasPhoto, avatarUrl: $avatarUrl, displayName: $displayName');
-                        
                         final photoUrl = avatarUrl; // Local variable for type safety
                         return CircleAvatar(
-                          radius: ResponsiveHelper.r(16),
+                          radius: ResponsiveHelper.r(14),
                           backgroundColor: Theme.of(context).colorScheme.primary,
                           backgroundImage: hasPhoto && photoUrl != null
                               ? NetworkImage(photoUrl)
                               : null,
                           onBackgroundImageError: (exception, stackTrace) {
-                            debugPrint('❌ Failed to load avatar image for ${task.assignedTo}: $exception');
+                            // Image failed to load, will show fallback
                           },
                           child: hasPhoto
                               ? null
@@ -607,7 +607,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(12),
+                                    fontSize: ResponsiveHelper.sp(11),
                                   ),
                                 ),
                         );
@@ -616,17 +616,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         final avatarUrl = initialAvatarUrl;
                         final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                         
-                        debugPrint('🖼️ Avatar LOADING for task ${task.id}, assignedTo: ${task.assignedTo}, hasPhoto: $hasPhoto, avatarUrl: $avatarUrl');
-                        
                         final photoUrl = avatarUrl; // Local variable for type safety
                         return CircleAvatar(
-                          radius: ResponsiveHelper.r(16),
+                          radius: ResponsiveHelper.r(14),
                           backgroundColor: Theme.of(context).colorScheme.primary,
                           backgroundImage: hasPhoto && photoUrl != null
                               ? NetworkImage(photoUrl)
                               : null,
                           onBackgroundImageError: (exception, stackTrace) {
-                            debugPrint('❌ Failed to load avatar image (loading) for ${task.assignedTo}: $exception');
+                            // Image failed to load, will show fallback
                           },
                           child: hasPhoto
                               ? null
@@ -635,7 +633,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(12),
+                                    fontSize: ResponsiveHelper.sp(11),
                                   ),
                                 ),
                         );
@@ -644,17 +642,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         final avatarUrl = initialAvatarUrl;
                         final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                         
-                        debugPrint('🖼️ Avatar ERROR for task ${task.id}, assignedTo: ${task.assignedTo}, error: $error, hasPhoto: $hasPhoto, avatarUrl: $avatarUrl');
-                        
                         final photoUrl = avatarUrl; // Local variable for type safety
                         return CircleAvatar(
-                          radius: ResponsiveHelper.r(16),
+                          radius: ResponsiveHelper.r(14),
                           backgroundColor: Theme.of(context).colorScheme.primary,
                           backgroundImage: hasPhoto && photoUrl != null
                               ? NetworkImage(photoUrl)
                               : null,
                           onBackgroundImageError: (exception, stackTrace) {
-                            debugPrint('❌ Failed to load avatar image (error) for ${task.assignedTo}: $exception');
+                            // Image failed to load, will show fallback
                           },
                           child: hasPhoto
                               ? null
@@ -663,7 +659,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(12),
+                                    fontSize: ResponsiveHelper.sp(11),
                                   ),
                                 ),
                         );
@@ -675,7 +671,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 )
                   else
                     CircleAvatar(
-                      radius: ResponsiveHelper.r(16),
+                      radius: ResponsiveHelper.r(14),
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       child: Icon(
                         Icons.person,
@@ -712,6 +708,722 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildViewModeSelector(BuildContext context) {
+    final viewMode = ref.watch(taskViewModeProvider);
+    
+    return Container(
+      padding: ResponsiveHelper.padding(all: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: ResponsiveHelper.borderRadius(12),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildViewModeButton(
+              context,
+              icon: Icons.view_list,
+              label: 'List',
+              mode: 'list',
+              isSelected: viewMode == 'list',
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            _buildViewModeButton(
+              context,
+              icon: Icons.grid_view,
+              label: 'Grid',
+              mode: 'grid',
+              isSelected: viewMode == 'grid',
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            _buildViewModeButton(
+              context,
+              icon: Icons.category,
+              label: 'Category',
+              mode: 'grouped_category',
+              isSelected: viewMode == 'grouped_category',
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            _buildViewModeButton(
+              context,
+              icon: Icons.person,
+              label: 'Assignee',
+              mode: 'grouped_assignee',
+              isSelected: viewMode == 'grouped_assignee',
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            _buildViewModeButton(
+              context,
+              icon: Icons.calendar_today,
+              label: 'Due Date',
+              mode: 'grouped_due_date',
+              isSelected: viewMode == 'grouped_due_date',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewModeButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String mode,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        ref.read(taskViewModeProvider.notifier).state = mode;
+      },
+      borderRadius: ResponsiveHelper.borderRadius(8),
+      child: Container(
+        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          borderRadius: ResponsiveHelper.borderRadius(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: ResponsiveHelper.iconSize(16),
+              color: isSelected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+            SizedBox(width: ResponsiveHelper.w(6)),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTasksView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+    String viewMode,
+  ) {
+    switch (viewMode) {
+      case 'grid':
+        return _buildGridView(context, ref, tasks, members, familyId, currentUserId);
+      case 'grouped_category':
+        return _buildGroupedByCategoryView(context, ref, tasks, members, familyId, currentUserId);
+      case 'grouped_assignee':
+        return _buildGroupedByAssigneeView(context, ref, tasks, members, familyId, currentUserId);
+      case 'grouped_due_date':
+        return _buildGroupedByDueDateView(context, ref, tasks, members, familyId, currentUserId);
+      case 'list':
+      default:
+        return _buildListView(context, ref, tasks, members, familyId, currentUserId);
+    }
+  }
+
+  Widget _buildListView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    return Column(
+      children: tasks.map((task) {
+        return _buildChoreCard(
+          context,
+          ref,
+          task,
+          members,
+          familyId,
+          currentUserId,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildGridView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+        final childAspectRatio = constraints.maxWidth > 600 ? 0.9 : 0.85;
+        
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            crossAxisSpacing: ResponsiveHelper.w(12),
+            mainAxisSpacing: ResponsiveHelper.h(12),
+          ),
+          itemCount: tasks.length,
+          itemBuilder: (context, index) {
+            final task = tasks[index];
+            return _buildGridCard(
+              context,
+              ref,
+              task,
+              members,
+              familyId,
+              currentUserId,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildGridCard(
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    final category = TaskCategories.getById(task.category);
+    final assignedMember = members.firstWhere(
+      (m) => m.uid == task.assignedTo,
+      orElse: () => const FamilyMemberModel(
+        uid: '',
+        displayName: '',
+        role: 'member',
+        points: 0,
+      ),
+    );
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+            context.push('/grocery-list/${task.categoryData!['groceryListId']}?from=task');
+          }
+        },
+        borderRadius: ResponsiveHelper.borderRadius(12),
+        child: Padding(
+          padding: ResponsiveHelper.padding(all: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Category and checkbox row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (category != null)
+                    Container(
+                      padding: ResponsiveHelper.padding(all: 6),
+                      decoration: BoxDecoration(
+                        color: category.color.withOpacity(0.1),
+                        borderRadius: ResponsiveHelper.borderRadius(6),
+                      ),
+                      child: Icon(
+                        category.icon,
+                        size: ResponsiveHelper.iconSize(16),
+                        color: category.color,
+                      ),
+                    ),
+                  Checkbox(
+                    value: task.status == 'completed',
+                    onChanged: (value) async {
+                      final taskActions = ref.read(taskActionsProvider);
+                      if (value == true) {
+                        await taskActions.completeTask(task.id);
+                      } else {
+                        await taskActions.updateTask(taskId: task.id, status: 'pending');
+                      }
+                      ref.invalidate(familyTasksProvider(familyId));
+                      ref.invalidate(tasksDueTodayProvider(familyId));
+                      ref.invalidate(familyMembersProvider(familyId));
+                    },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              SizedBox(height: ResponsiveHelper.h(8)),
+              // Task title
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    decoration: task.status == 'completed'
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.h(8)),
+              // Points and assignee
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: ResponsiveHelper.borderRadius(6),
+                    ),
+                    child: Text(
+                      '${task.points} pts',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (assignedMember.uid.isNotEmpty)
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final userProfileAsync = ref.watch(userProfileProvider(assignedMember.uid));
+                        final avatarUrl = userProfileAsync.when(
+                          data: (profile) => profile?.photoURL ?? assignedMember.photoURL,
+                          loading: () => assignedMember.photoURL,
+                          error: (_, __) => assignedMember.photoURL,
+                        );
+                        
+                        return CircleAvatar(
+                          radius: ResponsiveHelper.r(12),
+                          backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          child: avatarUrl == null
+                              ? Text(
+                                  assignedMember.displayName.isNotEmpty
+                                      ? assignedMember.displayName[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    fontSize: ResponsiveHelper.sp(10),
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedByCategoryView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    // Group tasks by category
+    final groupedTasks = <String, List<TaskModel>>{};
+    for (final task in tasks) {
+      final category = task.category;
+      if (!groupedTasks.containsKey(category)) {
+        groupedTasks[category] = [];
+      }
+      groupedTasks[category]!.add(task);
+    }
+
+    // Sort categories by name
+    final sortedCategories = groupedTasks.keys.toList()
+      ..sort((a, b) {
+        final catA = TaskCategories.getById(a);
+        final catB = TaskCategories.getById(b);
+        return (catA?.name ?? a).compareTo(catB?.name ?? b);
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: sortedCategories.map((categoryId) {
+        final categoryTasks = groupedTasks[categoryId]!;
+        final category = TaskCategories.getById(categoryId);
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category header
+            Padding(
+              padding: ResponsiveHelper.padding(vertical: 8),
+              child: Row(
+                children: [
+                  if (category != null) ...[
+                    Icon(
+                      category.icon,
+                      size: ResponsiveHelper.iconSize(20),
+                      color: category.color,
+                    ),
+                    SizedBox(width: ResponsiveHelper.w(8)),
+                  ],
+                  Text(
+                    category?.name ?? categoryId.categoryDisplayName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: category?.color,
+                    ),
+                  ),
+                  SizedBox(width: ResponsiveHelper.w(8)),
+                  Container(
+                    padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (category?.color ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
+                      borderRadius: ResponsiveHelper.borderRadius(8),
+                    ),
+                    child: Text(
+                      '${categoryTasks.length}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: category?.color ?? Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Tasks in this category
+            ...categoryTasks.map((task) {
+              return _buildChoreCard(
+                context,
+                ref,
+                task,
+                members,
+                familyId,
+                currentUserId,
+              );
+            }),
+            SizedBox(height: ResponsiveHelper.h(16)),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildGroupedByAssigneeView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    // Group tasks by assignee
+    final groupedTasks = <String, List<TaskModel>>{};
+    for (final task in tasks) {
+      final assigneeId = task.assignedTo;
+      if (!groupedTasks.containsKey(assigneeId)) {
+        groupedTasks[assigneeId] = [];
+      }
+      groupedTasks[assigneeId]!.add(task);
+    }
+
+    // Sort by member name
+    final sortedAssignees = groupedTasks.keys.toList()
+      ..sort((a, b) {
+        final memberA = members.firstWhere(
+          (m) => m.uid == a,
+          orElse: () => const FamilyMemberModel(uid: '', displayName: 'Unknown', role: 'member', points: 0),
+        );
+        final memberB = members.firstWhere(
+          (m) => m.uid == b,
+          orElse: () => const FamilyMemberModel(uid: '', displayName: 'Unknown', role: 'member', points: 0),
+        );
+        return memberA.displayName.compareTo(memberB.displayName);
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: sortedAssignees.map((assigneeId) {
+        final assigneeTasks = groupedTasks[assigneeId]!;
+        final member = members.firstWhere(
+          (m) => m.uid == assigneeId,
+          orElse: () => const FamilyMemberModel(uid: '', displayName: 'Unknown', role: 'member', points: 0),
+        );
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Assignee header
+            Padding(
+              padding: ResponsiveHelper.padding(vertical: 8),
+              child: Row(
+                children: [
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final userProfileAsync = ref.watch(userProfileProvider(assigneeId));
+                      final avatarUrl = userProfileAsync.when(
+                        data: (profile) => profile?.photoURL ?? member.photoURL,
+                        loading: () => member.photoURL,
+                        error: (_, __) => member.photoURL,
+                      );
+                      
+                      return CircleAvatar(
+                        radius: ResponsiveHelper.r(16),
+                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: avatarUrl == null
+                            ? Text(
+                                member.displayName.isNotEmpty
+                                    ? member.displayName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  fontSize: ResponsiveHelper.sp(14),
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                  SizedBox(width: ResponsiveHelper.w(12)),
+                  Expanded(
+                    child: Text(
+                      member.displayName.isNotEmpty ? member.displayName : 'Unassigned',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: ResponsiveHelper.borderRadius(8),
+                    ),
+                    child: Text(
+                      '${assigneeTasks.length}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Tasks for this assignee
+            ...assigneeTasks.map((task) {
+              return _buildChoreCard(
+                context,
+                ref,
+                task,
+                members,
+                familyId,
+                currentUserId,
+              );
+            }),
+            SizedBox(height: ResponsiveHelper.h(16)),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildGroupedByDueDateView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Group tasks by due date
+    final todayTasks = <TaskModel>[];
+    final tomorrowTasks = <TaskModel>[];
+    final thisWeekTasks = <TaskModel>[];
+    final laterTasks = <TaskModel>[];
+    final noDueDateTasks = <TaskModel>[];
+    
+    for (final task in tasks) {
+      if (task.dueDate == null) {
+        noDueDateTasks.add(task);
+      } else {
+        final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        final difference = due.difference(today).inDays;
+        
+        if (difference < 0) {
+          // Overdue - add to today
+          todayTasks.add(task);
+        } else if (difference == 0) {
+          todayTasks.add(task);
+        } else if (difference == 1) {
+          tomorrowTasks.add(task);
+        } else if (difference <= 7) {
+          thisWeekTasks.add(task);
+        } else {
+          laterTasks.add(task);
+        }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (todayTasks.isNotEmpty) ...[
+          _buildDueDateGroup(
+            context,
+            ref,
+            'Today',
+            todayTasks,
+            members,
+            familyId,
+            currentUserId,
+            Colors.orange,
+          ),
+          SizedBox(height: ResponsiveHelper.h(16)),
+        ],
+        if (tomorrowTasks.isNotEmpty) ...[
+          _buildDueDateGroup(
+            context,
+            ref,
+            'Tomorrow',
+            tomorrowTasks,
+            members,
+            familyId,
+            currentUserId,
+            Colors.blue,
+          ),
+          SizedBox(height: ResponsiveHelper.h(16)),
+        ],
+        if (thisWeekTasks.isNotEmpty) ...[
+          _buildDueDateGroup(
+            context,
+            ref,
+            'This Week',
+            thisWeekTasks,
+            members,
+            familyId,
+            currentUserId,
+            Theme.of(context).colorScheme.primary,
+          ),
+          SizedBox(height: ResponsiveHelper.h(16)),
+        ],
+        if (laterTasks.isNotEmpty) ...[
+          _buildDueDateGroup(
+            context,
+            ref,
+            'Later',
+            laterTasks,
+            members,
+            familyId,
+            currentUserId,
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          ),
+          SizedBox(height: ResponsiveHelper.h(16)),
+        ],
+        if (noDueDateTasks.isNotEmpty) ...[
+          _buildDueDateGroup(
+            context,
+            ref,
+            'No Due Date',
+            noDueDateTasks,
+            members,
+            familyId,
+            currentUserId,
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDueDateGroup(
+    BuildContext context,
+    WidgetRef ref,
+    String title,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Due date header
+        Padding(
+          padding: ResponsiveHelper.padding(vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: ResponsiveHelper.iconSize(18),
+                color: color,
+              ),
+              SizedBox(width: ResponsiveHelper.w(8)),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.w(8)),
+              Container(
+                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: ResponsiveHelper.borderRadius(8),
+                ),
+                child: Text(
+                  '${tasks.length}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Tasks in this group
+        ...tasks.map((task) {
+          return _buildChoreCard(
+            context,
+            ref,
+            task,
+            members,
+            familyId,
+            currentUserId,
+          );
+        }),
+      ],
     );
   }
 
