@@ -420,16 +420,20 @@ class MainShell extends ConsumerWidget {
     
     // Get page title based on route
     String title = 'Member Hub';
+    bool showSearch = false;
     if (currentRoute == AppConstants.routeHome) {
       title = 'Member Hub';
     } else if (currentRoute == AppConstants.routeTasks) {
       title = 'Household Chores';
+      showSearch = true;
     } else if (currentRoute == AppConstants.routeCreateTask) {
       title = 'New Chore';
     } else if (currentRoute == AppConstants.routeGroceries) {
       title = 'Shopping';
+      showSearch = true;
     } else if (currentRoute == AppConstants.routeCalendar) {
       title = 'Calendar';
+      showSearch = true;
     } else if (currentRoute == AppConstants.routeProfile || 
                currentRoute == AppConstants.routeEditProfile) {
       title = 'Profile';
@@ -444,29 +448,47 @@ class MainShell extends ConsumerWidget {
       ),
       title: Text(title),
       centerTitle: true,
-          actions: [
-            // Profile icon
-            GestureDetector(
-              onTap: () => context.go(AppConstants.routeProfile),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  backgroundImage: currentUser?.avatarUrl != null
-                      ? NetworkImage(currentUser!.avatarUrl!)
-                      : null,
-                  child: currentUser?.avatarUrl == null
-                      ? Icon(
-                          Icons.person,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        )
-                      : null,
-                ),
-              ),
+      actions: [
+        // Search icon (only on searchable pages)
+        if (showSearch)
+          Consumer(
+            builder: (context, ref, child) {
+              final searchMode = ref.watch(searchModeProvider);
+              return IconButton(
+                icon: Icon(searchMode ? Icons.close : Icons.search),
+                onPressed: () {
+                  // Toggle search mode
+                  ref.read(searchModeProvider.notifier).state = !searchMode;
+                  if (!searchMode) {
+                    // Clear search when closing
+                    ref.read(searchQueryProvider.notifier).state = '';
+                  }
+                },
+              );
+            },
+          ),
+        // Profile icon
+        GestureDetector(
+          onTap: () => context.go(AppConstants.routeProfile),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundImage: currentUser?.avatarUrl != null
+                  ? NetworkImage(currentUser!.avatarUrl!)
+                  : null,
+              child: currentUser?.avatarUrl == null
+                  ? Icon(
+                      Icons.person,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    )
+                  : null,
             ),
-          ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -525,6 +547,18 @@ class MainShell extends ConsumerWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  ListTile(
+                    leading: Icon(
+                      Icons.emoji_events,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Leaderboard'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppConstants.routeLeaderboard);
+                    },
+                  ),
+                  const Divider(),
                   ListTile(
                     leading: Icon(
                       Icons.shopping_bag,

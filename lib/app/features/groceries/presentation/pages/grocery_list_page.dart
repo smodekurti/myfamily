@@ -26,14 +26,17 @@ class GroceryListPage extends ConsumerStatefulWidget {
 
 class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   final TextEditingController _itemController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _showCompleted = true;
   String? _selectedTemplateId;
   bool _isListView = false; // false = category view, true = list view
   Set<String> _selectedCategories = {}; // Empty set = show all categories
+  bool _isSearchMode = false;
 
   @override
   void dispose() {
     _itemController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -52,60 +55,152 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               // Custom App Bar
               _buildCustomAppBar(context, groceryList, currentFamily),
               
+              // Search bar (shown when search mode is active)
+              if (_isSearchMode)
+                Container(
+                  padding: ResponsiveHelper.padding(all: 16),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'Search items...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            ),
+                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (value) {
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      SizedBox(width: ResponsiveHelper.w(8)),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isSearchMode = false;
+                            _searchController.clear();
+                          });
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                ),
+              
               Expanded(
                 child: SingleChildScrollView(
                   padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Template Section: Show only when viewing from Shopping tab, hide when from task
-                      groceryList.when(
-                        data: (list) {
-                          if (list == null) return const SizedBox.shrink();
-                          // Hide template section if navigated from task
-                          if (widget.from == 'task') return const SizedBox.shrink();
-                          // Show template section when viewing from Shopping tab
-                          return _buildTemplateSection(context, currentFamily?.id);
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
+                      // Template Section: Show only when viewing from Shopping tab, hide when from task (hide when searching)
+                      if (!_isSearchMode)
+                        groceryList.when(
+                          data: (list) {
+                            if (list == null) return const SizedBox.shrink();
+                            // Hide template section if navigated from task
+                            if (widget.from == 'task') return const SizedBox.shrink();
+                            // Show template section when viewing from Shopping tab
+                            return _buildTemplateSection(context, currentFamily?.id);
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
                       
-                      // Category Filters (only in category view)
-                      listItems.when(
-                        data: (items) {
-                          if (items.isEmpty) {
-                            return _buildEmptyState(context);
-                          }
-                          
-                          if (!_isListView) {
-                            // Show category filters
-                            final allCategories = items.map((item) => item.category).toSet().toList()..sort();
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildCategoryFilters(context, allCategories),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
+                      // Category Filters (only in category view, hide when searching)
+                      if (!_isSearchMode)
+                        listItems.when(
+                          data: (items) {
+                            if (items.isEmpty) {
+                              return _buildEmptyState(context);
+                            }
+                            
+                            if (!_isListView) {
+                              // Show category filters
+                              final allCategories = items.map((item) => item.category).toSet().toList()..sort();
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCategoryFilters(context, allCategories),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                ],
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      
+                      // Section title
+                      if (_isSearchMode)
+                        Padding(
+                          padding: ResponsiveHelper.padding(bottom: 16),
+                          child: Text(
+                            'Search Results',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       
                       // Grocery Items - Category View or List View
                       listItems.when(
                         data: (items) {
-                          if (items.isEmpty) {
-                            return const SizedBox.shrink();
+                          if (items.isEmpty && !_isSearchMode) {
+                            return _buildEmptyState(context);
                           }
                           
-                          // Apply category filter
-                          final filteredItems = _selectedCategories.isEmpty
-                              ? items
-                              : items.where((item) => _selectedCategories.contains(item.category)).toList();
+                          var filteredItems = items;
+                          
+                          // Apply search filter if in search mode
+                          if (_isSearchMode && _searchController.text.isNotEmpty) {
+                            filteredItems = _searchGroceryItems(filteredItems, _searchController.text);
+                          } else if (!_isSearchMode) {
+                            // Apply category filter (only when not searching)
+                            if (_selectedCategories.isNotEmpty) {
+                              filteredItems = filteredItems.where((item) => _selectedCategories.contains(item.category)).toList();
+                            }
+                          }
+                          
+                          if (filteredItems.isEmpty) {
+                            return Padding(
+                              padding: ResponsiveHelper.padding(vertical: 32),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.search_off,
+                                      size: ResponsiveHelper.iconSize(48),
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    ),
+                                    SizedBox(height: ResponsiveHelper.h(16)),
+                                    Text(
+                                      _isSearchMode ? 'No items found' : 'No items',
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
                           
                           if (_isListView) {
                             // List View - all items in one list
@@ -213,19 +308,36 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               ],
             ),
           ),
-          // View Toggle Button
+          // Search Button
           IconButton(
             icon: Icon(
-              _isListView ? Icons.view_module : Icons.view_list,
+              _isSearchMode ? Icons.close : Icons.search,
               color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () {
               setState(() {
-                _isListView = !_isListView;
+                _isSearchMode = !_isSearchMode;
+                if (!_isSearchMode) {
+                  _searchController.clear();
+                }
               });
             },
-            tooltip: _isListView ? 'Category View' : 'List View',
+            tooltip: _isSearchMode ? 'Close Search' : 'Search',
           ),
+          // View Toggle Button (hide when searching)
+          if (!_isSearchMode)
+            IconButton(
+              icon: Icon(
+                _isListView ? Icons.view_module : Icons.view_list,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isListView = !_isListView;
+                });
+              },
+              tooltip: _isListView ? 'Category View' : 'List View',
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             iconColor: Theme.of(context).colorScheme.onSurface,
@@ -769,60 +881,146 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   }
 
   Widget _buildBottomInput(BuildContext context) {
-    return Container(
-      padding: ResponsiveHelper.padding(all: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: Offset(0, -ResponsiveHelper.h(2)),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: ResponsiveHelper.borderRadius(12),
-              ),
-              child: TextField(
-                controller: _itemController,
-                decoration: InputDecoration(
-                  hintText: 'Add an item...',
-                  hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+    final currentFamily = ref.watch(currentFamilyProvider);
+    final suggestions = currentFamily != null
+        ? ref.watch(grocerySuggestionsProvider(currentFamily.id))
+        : const AsyncValue.data(<Map<String, dynamic>>[]);
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Suggestions section
+        suggestions.when(
+          data: (suggestionsList) {
+            if (suggestionsList.isEmpty) return const SizedBox.shrink();
+            
+            // Get current list items to filter out already added items
+            final currentItems = ref.watch(groceryListItemsProvider(widget.listId));
+            final existingItemKeys = currentItems.when(
+              data: (items) => items.map((item) => 
+                '${item.name.toLowerCase()}_${item.category.toLowerCase()}'
+              ).toSet(),
+              loading: () => <String>{},
+              error: (_, __) => <String>{},
+            );
+            
+            // Filter suggestions to only show items not already in the list
+            final filteredSuggestions = suggestionsList.where((suggestion) {
+              final key = '${(suggestion['name'] as String).toLowerCase()}_${(suggestion['category'] as String).toLowerCase()}';
+              return !existingItemKeys.contains(key);
+            }).take(8).toList();
+            
+            if (filteredSuggestions.isEmpty) return const SizedBox.shrink();
+            
+            return Container(
+              height: ResponsiveHelper.h(60),
+              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Suggestions',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                  SizedBox(height: ResponsiveHelper.h(4)),
+                  Expanded(
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: filteredSuggestions.map((suggestion) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: ResponsiveHelper.w(8)),
+                          child: ActionChip(
+                            label: Text(
+                              suggestion['name'] as String,
+                              style: TextStyle(fontSize: ResponsiveHelper.sp(12)),
+                            ),
+                            onPressed: () {
+                              _addItem(
+                                context,
+                                suggestion['name'] as String,
+                                category: suggestion['category'] as String,
+                                qty: suggestion['qty'] as int? ?? 1,
+                                unit: suggestion['unit'] as String?,
+                              );
+                            },
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            labelStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+        // Input field
+        Container(
+          padding: ResponsiveHelper.padding(all: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: Offset(0, -ResponsiveHelper.h(2)),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: ResponsiveHelper.borderRadius(12),
+                  ),
+                  child: TextField(
+                    controller: _itemController,
+                    decoration: InputDecoration(
+                      hintText: 'Add an item...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty) {
+                        _addItem(context, value.trim());
+                      }
+                    },
+                  ),
                 ),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    _addItem(context, value.trim());
+              ),
+              SizedBox(width: ResponsiveHelper.w(12)),
+              FloatingActionButton(
+                onPressed: () {
+                  if (_itemController.text.trim().isNotEmpty) {
+                    _addItem(context, _itemController.text.trim());
                   }
                 },
+                mini: true,
+                backgroundColor: Colors.orange,
+                child: const Icon(Icons.add, color: Colors.white),
               ),
-            ),
+            ],
           ),
-          SizedBox(width: ResponsiveHelper.w(12)),
-          FloatingActionButton(
-            onPressed: () {
-              if (_itemController.text.trim().isNotEmpty) {
-                _addItem(context, _itemController.text.trim());
-              }
-            },
-            mini: true,
-            backgroundColor: Colors.orange,
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -856,6 +1054,24 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ),
       ),
     );
+  }
+
+  List<GroceryListItemModel> _searchGroceryItems(List<GroceryListItemModel> items, String query) {
+    if (query.isEmpty) return items;
+    
+    final lowerQuery = query.toLowerCase();
+    return items.where((item) {
+      // Search in name
+      if (item.name.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in category
+      if (item.category.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in notes
+      if (item.notes != null && item.notes!.toLowerCase().contains(lowerQuery)) return true;
+      
+      return false;
+    }).toList();
   }
 
   Map<String, List<GroceryListItemModel>> _groupItemsByCategory(
@@ -935,8 +1151,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
     
     return InkWell(
-      onTap: () => _showAddItemDialog(context, item: item),
-      child: Container(
+        onTap: () => _showAddItemDialog(context, item: item),
+        child: Container(
         padding: ResponsiveHelper.padding(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           border: isLast
@@ -1062,8 +1278,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 constraints: const BoxConstraints(),
                 tooltip: 'Delete item',
               ),
-            ],
           ],
+        ],
         ),
       ),
     );
@@ -1129,9 +1345,45 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     );
   }
 
-  Future<void> _addItem(BuildContext context, String itemName) async {
-    // Show dialog to add item with notes
-    _showAddItemDialog(context, initialName: itemName);
+  Future<void> _addItem(
+    BuildContext context,
+    String itemName, {
+    String? category,
+    int? qty,
+    String? unit,
+  }) async {
+    // If category is provided, add directly without dialog
+    if (category != null) {
+      final listRepo = ref.read(groceryListRepositoryProvider);
+      try {
+        await listRepo.addItem(
+          listId: widget.listId,
+          name: itemName,
+          category: category,
+          qty: qty ?? 1,
+          unit: unit,
+          source: 'suggestion',
+        );
+        _itemController.clear();
+        // Invalidate to refresh suggestions
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          ref.invalidate(grocerySuggestionsProvider(currentFamily.id));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error adding item: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } else {
+      // Show dialog to add item with notes
+      _showAddItemDialog(context, initialName: itemName);
+    }
   }
 
   Future<void> _showAddItemDialog(

@@ -37,6 +37,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     }
 
     final familyMembers = ref.watch(familyMembersProvider(currentFamily.id));
+    final weeklyPoints = ref.watch(weeklyPointsProvider(currentFamily.id));
 
     return BackgroundWidget(
       child: Scaffold(
@@ -95,9 +96,19 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                 );
               }
 
-              // Sort members by points (descending)
-              final sortedMembers = List<FamilyMemberModel>.from(members)
-                ..sort((a, b) => b.points.compareTo(a.points));
+              // Get weekly points data
+              final weeklyPointsData = weeklyPoints.valueOrNull ?? <String, int>{};
+              
+              // Create member list with weekly or all-time points
+              final membersWithPoints = members.map((member) {
+                final points = _showWeekly 
+                    ? weeklyPointsData[member.uid] ?? 0
+                    : member.points;
+                return (member: member, points: points);
+              }).toList();
+              
+              // Sort by points (descending)
+              membersWithPoints.sort((a, b) => b.points.compareTo(a.points));
 
               return SingleChildScrollView(
                 padding: ResponsiveHelper.padding(all: 16),
@@ -121,15 +132,16 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                     SizedBox(height: ResponsiveHelper.h(24)),
                     
                     // Leaderboard list
-                    ...sortedMembers.asMap().entries.map((entry) {
+                    ...membersWithPoints.asMap().entries.map((entry) {
                       final index = entry.key;
-                      final member = entry.value;
-                      final isCurrentUser = currentUser?.id == member.uid;
+                      final memberData = entry.value;
+                      final isCurrentUser = currentUser?.id == memberData.member.uid;
                       
                       return _buildLeaderboardItem(
                         context,
                         rank: index + 1,
-                        member: member,
+                        member: memberData.member,
+                        points: memberData.points,
                         isCurrentUser: isCurrentUser,
                       );
                     }),
@@ -151,6 +163,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     BuildContext context, {
     required int rank,
     required FamilyMemberModel member,
+    required int points,
     required bool isCurrentUser,
   }) {
     // Medal icons for top 3
@@ -259,7 +272,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
           ],
         ),
         subtitle: Text(
-          '${member.points} points',
+          '$points points',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.primary,
             fontWeight: FontWeight.w600,

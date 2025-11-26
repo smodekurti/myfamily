@@ -268,44 +268,6 @@ class HomePage extends ConsumerWidget {
                             ),
                             SizedBox(height: ResponsiveHelper.h(12)),
                             
-                            // Leaderboard Link
-                            SizedBox(height: ResponsiveHelper.h(12)),
-                            InkWell(
-                              onTap: () => context.push(AppConstants.routeLeaderboard),
-                              borderRadius: ResponsiveHelper.borderRadius(8),
-                              child: Container(
-                                padding: ResponsiveHelper.padding(all: 12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: ResponsiveHelper.borderRadius(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.emoji_events,
-                                      color: Theme.of(context).colorScheme.primary,
-                                      size: ResponsiveHelper.iconSize(24),
-                                    ),
-                                    SizedBox(width: ResponsiveHelper.w(12)),
-                                    Expanded(
-                                      child: Text(
-                                        'View Leaderboard',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.chevron_right,
-                                      color: Theme.of(context).colorScheme.primary,
-                                      size: ResponsiveHelper.iconSize(20),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            
                             // Family Statistics
                             _buildFamilyStats(context, ref, currentFamily.id),
                           ],

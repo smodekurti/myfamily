@@ -265,6 +265,71 @@ class GroceryListRepository {
         .map((data) => data.map((json) => _itemFromSupabase(json)).toList());
   }
 
+  /// Get suggested items from previous completed lists
+  /// Returns items that were checked in previous lists, ordered by frequency
+  Future<List<Map<String, dynamic>>> getSuggestedItems(String familyId, {int limit = 20}) async {
+    try {
+      // Get all lists for the family
+      final listsResponse = await _supabase
+          .from('grocery_lists')
+          .select('id')
+          .eq('family_id', familyId);
+
+      if (listsResponse.isEmpty) {
+        return [];
+      }
+
+      final listIds = (listsResponse as List).map((list) => list['id'] as String).toList();
+
+      // Get all checked items from these lists
+      // Note: Supabase Flutter doesn't have inFilter, so we'll fetch all items and filter in memory
+      final allItemsResponse = await _supabase
+          .from('grocery_list_items')
+          .select('list_id, name, category, unit, qty, checked')
+          .eq('checked', true);
+      
+      // Filter items that belong to our lists
+      final itemsResponse = allItemsResponse.where((item) {
+        return listIds.contains(item['list_id'] as String);
+      }).toList();
+
+      if (itemsResponse.isEmpty) {
+        return [];
+      }
+
+      // Count frequency of each item (by name and category)
+      final itemCounts = <String, Map<String, dynamic>>{};
+      
+      for (final item in itemsResponse as List) {
+        final name = (item['name'] as String).toLowerCase().trim();
+        final category = (item['category'] as String).toLowerCase().trim();
+        final key = '$name|$category';
+        
+        if (itemCounts.containsKey(key)) {
+          itemCounts[key]!['count'] = (itemCounts[key]!['count'] as int) + 1;
+        } else {
+          itemCounts[key] = {
+            'name': item['name'] as String,
+            'category': item['category'] as String,
+            'unit': item['unit'] as String?,
+            'qty': item['qty'] as int? ?? 1,
+            'count': 1,
+          };
+        }
+      }
+
+      // Convert to list and sort by frequency (most frequent first)
+      final suggestions = itemCounts.values.toList();
+      suggestions.sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+
+      // Return top suggestions
+      return suggestions.take(limit).toList();
+    } catch (e) {
+      _logger.e('Get suggested items error: $e');
+      return [];
+    }
+  }
+
   /// Toggle item checked status
   Future<GroceryListItemModel> toggleItem(String itemId, bool checked) async {
     try {

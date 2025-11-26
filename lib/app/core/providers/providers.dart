@@ -312,3 +312,35 @@ final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((re
   final calendarRepo = ref.watch(calendarRepositoryProvider);
   return calendarRepo.streamFamilyEvents(familyId);
 });
+
+/// Weekly points provider - calculates points earned in the last 7 days
+final weeklyPointsProvider = FutureProvider.family<Map<String, int>, String>((ref, familyId) async {
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  final now = DateTime.now();
+  final weekAgo = now.subtract(const Duration(days: 7));
+  
+  // Get all completed tasks in the last 7 days
+  final allTasks = await taskRepo.getTasksForFamily(familyId);
+  final weeklyTasks = allTasks.where((task) {
+    if (task.status != 'completed' || task.completedAt == null) return false;
+    return task.completedAt!.isAfter(weekAgo);
+  }).toList();
+  
+  // Calculate points per user
+  final weeklyPoints = <String, int>{};
+  for (final task in weeklyTasks) {
+    weeklyPoints[task.assignedTo] = (weeklyPoints[task.assignedTo] ?? 0) + task.points;
+  }
+  
+  return weeklyPoints;
+});
+
+/// Grocery suggestions provider - suggests items from previous completed lists
+final grocerySuggestionsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, familyId) async {
+  final listRepo = ref.watch(groceryListRepositoryProvider);
+  return await listRepo.getSuggestedItems(familyId);
+});
+
+// Search state providers
+final searchModeProvider = StateProvider<bool>((ref) => false);
+final searchQueryProvider = StateProvider<String>((ref) => '');
