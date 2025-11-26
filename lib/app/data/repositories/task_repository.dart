@@ -3,6 +3,9 @@ import 'package:logger/logger.dart';
 import '../models/task_model.dart';
 import 'family_repository.dart';
 import 'achievement_repository.dart';
+import '../../core/utils/streak_calculator.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/services/push_notification_service.dart';
 
 class TaskRepository {
   final _supabase = Supabase.instance.client;
@@ -49,8 +52,44 @@ class TaskRepository {
           .select()
           .single();
 
-      _logger.i('Task created successfully: ${response['id']}');
-      return TaskModelHelpers.fromSupabase(response);
+      final createdTask = TaskModelHelpers.fromSupabase(response);
+      _logger.i('Task created successfully: ${createdTask.id}');
+
+      // Send push notification for task assignment if assigned to someone else
+      if (assignedTo != createdBy) {
+        try {
+          // Send push notification to assignee
+          await PushNotificationService().sendNotificationToUser(
+            userId: assignedTo,
+            title: 'New Task Assigned',
+            body: '$title has been assigned to you',
+            data: {
+              'type': 'task',
+              'task_id': createdTask.id,
+              'action': 'view_task',
+            },
+          );
+          
+          _logger.i('Push notification sent for task assignment');
+        } catch (e) {
+          _logger.w('Failed to send task assignment notification: $e');
+        }
+      }
+
+      // Schedule due date reminder if due date is set
+      if (dueDate != null) {
+        try {
+          await NotificationService().scheduleTaskDueReminder(
+            taskId: createdTask.id,
+            taskTitle: title,
+            dueDate: dueDate,
+          );
+        } catch (e) {
+          _logger.w('Failed to schedule task reminder: $e');
+        }
+      }
+
+      return createdTask;
     } catch (e) {
       _logger.e('Create task error: $e');
       rethrow;
@@ -153,8 +192,47 @@ class TaskRepository {
           .select()
           .single();
 
+      final updatedTask = TaskModelHelpers.fromSupabase(response);
       _logger.i('Task updated successfully: $taskId');
-      return TaskModelHelpers.fromSupabase(response);
+
+      // Handle notifications for task updates
+      try {
+        // If assignee changed, notify new assignee
+        if (assignedTo != null && assignedTo != taskAssignedTo) {
+          // Send push notification to new assignee
+          await PushNotificationService().sendNotificationToUser(
+            userId: assignedTo,
+            title: 'Task Assigned to You',
+            body: '${updatedTask.title} has been assigned to you',
+            data: {
+              'type': 'task',
+              'task_id': taskId,
+              'action': 'view_task',
+            },
+          );
+          
+          _logger.i('Push notification sent for task reassignment');
+        }
+
+        // If due date changed, update reminder
+        if (dueDate != null) {
+          // Cancel old reminder
+          await NotificationService().cancelTaskNotifications(taskId);
+          // Schedule new reminder
+          await NotificationService().scheduleTaskDueReminder(
+            taskId: taskId,
+            taskTitle: updatedTask.title,
+            dueDate: dueDate,
+          );
+        } else if (dueDate == null && updates.containsKey('due_date')) {
+          // Due date was removed, cancel reminder
+          await NotificationService().cancelTaskNotifications(taskId);
+        }
+      } catch (e) {
+        _logger.w('Failed to update task notifications: $e');
+      }
+
+      return updatedTask;
     } catch (e) {
       _logger.e('Update task error: $e');
       rethrow;
@@ -348,6 +426,23 @@ class TaskRepository {
         familyId: familyId,
         completedTask: completedTask,
       );
+      
+      // Check streak achievements
+      final completedTasks = await getCompletedTasksForUser(assignedTo, familyId);
+      final streaks = StreakCalculator.calculateStreaks(completedTasks);
+      final currentStreak = streaks['currentStreak'] ?? 0;
+      await _achievementRepo.checkStreakAchievements(
+        userId: assignedTo,
+        familyId: familyId,
+        currentStreak: currentStreak,
+      );
+
+      // Cancel due date reminder since task is completed
+      try {
+        await NotificationService().cancelTaskNotifications(taskId);
+      } catch (e) {
+        _logger.w('Failed to cancel task reminder: $e');
+      }
 
       // Check if this is a recurring task and create the next occurrence
       if (categoryData != null && categoryData['recurrenceType'] != null) {

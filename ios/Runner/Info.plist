@@ -49,8 +49,18 @@
 	<string>667205355253-2m542escb9oc8rrjhaajhm537j1n8gh4.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to show weather information for your area.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show weather information for your area.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>We need permission to send you notifications about tasks and events.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

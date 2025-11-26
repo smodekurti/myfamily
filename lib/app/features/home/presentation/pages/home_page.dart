@@ -7,6 +7,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../groceries/presentation/pages/grocery_list_page.dart';
+import '../widgets/weather_widget.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -30,6 +31,10 @@ class HomePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: ResponsiveHelper.h(8)),
+                
+                // Weather Widget
+                const WeatherWidget(),
+                SizedBox(height: ResponsiveHelper.h(16)),
                 
                 // Today's Summary Section
                 Text(

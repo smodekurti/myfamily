@@ -33,6 +33,7 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/help_page.dart';
 import '../../features/gamification/presentation/pages/leaderboard_page.dart';
 import '../../features/gamification/presentation/pages/points_history_page.dart';
+import '../../features/gamification/presentation/pages/achievements_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final routerState = ref.watch(routerStateProvider);
@@ -326,6 +327,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'points-history',
             builder: (context, state) => const PointsHistoryPage(),
           ),
+          GoRoute(
+            path: AppConstants.routeAchievements,
+            name: 'achievements',
+            builder: (context, state) => const AchievementsPage(),
+          ),
         ],
       ),
     ],
@@ -563,6 +569,17 @@ class MainShell extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppConstants.routeLeaderboard);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.military_tech,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Achievements'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppConstants.routeAchievements);
                     },
                   ),
                   const Divider(),
