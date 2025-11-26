@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/router/app_router.dart';
@@ -16,11 +17,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase (required for FCM)
-  // Note: If you haven't set up Firebase yet, run: flutterfire configure
   try {
-    // Try to initialize with firebase_options if available
-    // Otherwise, initialize without options (will use default)
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     // If Firebase is not configured, continue without it
     // Push notifications will fail gracefully
