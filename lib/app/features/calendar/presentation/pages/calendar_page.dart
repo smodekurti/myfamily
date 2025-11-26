@@ -15,11 +15,19 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
+  final TextEditingController _searchController = TextEditingController();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   String _viewMode = 'Month'; // 'Month', 'Week', 'Day', 'List'
   String? _selectedMemberId; // null means "All Members"
+  bool _isSearchMode = false;
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   // Color palette for events
   final List<Color> _eventColors = [
@@ -42,6 +50,26 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final hash = event.id.hashCode;
     return _eventColors[hash.abs() % _eventColors.length];
   }
+  
+  List<EventModel> _searchEvents(List<EventModel> events, String query) {
+    if (query.isEmpty) return events;
+    
+    final lowerQuery = query.toLowerCase();
+    return events.where((event) {
+      // Search in title
+      if (event.title.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in description
+      if (event.description != null && 
+          event.description!.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in location
+      if (event.location != null && 
+          event.location!.toLowerCase().contains(lowerQuery)) return true;
+      
+      return false;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,12 +87,60 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               // View Selector (Month/Week/Day/List)
               _buildViewSelector(context),
               
-              // Member Filter
-              _buildMemberFilter(context),
+              // Search bar (shown when search mode is active)
+              if (_isSearchMode)
+                Container(
+                  padding: ResponsiveHelper.padding(all: 16),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'Search events...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            ),
+                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (value) {
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      SizedBox(width: ResponsiveHelper.w(8)),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isSearchMode = false;
+                            _searchController.clear();
+                          });
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // Member Filter (hide when searching)
+              if (!_isSearchMode)
+                _buildMemberFilter(context),
               
               // Calendar Widget or List View
               Expanded(
-                child: _viewMode == 'List'
+                child: _viewMode == 'List' || _isSearchMode
                     ? _buildEventsList(context, eventsAsync)
                     : SingleChildScrollView(
                         child: Column(
@@ -536,23 +612,23 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget _buildEventsList(BuildContext context, AsyncValue<List<EventModel>> eventsAsync) {
     return eventsAsync.when(
       data: (events) {
-        // Filter events by selected member (show events created by the selected member)
-        final filteredEvents = _selectedMemberId == null
-            ? events
-            : events.where((event) {
-                // Show event if it was created by the selected member
-                return event.createdBy == _selectedMemberId;
-              }).toList();
+        var filteredEvents = events;
+        
+        // Apply search filter if in search mode
+        if (_isSearchMode && _searchController.text.isNotEmpty) {
+          filteredEvents = _searchEvents(filteredEvents, _searchController.text);
+        }
+        
+        // Filter events by selected member (show events created by the selected member) - only when not searching
+        if (!_isSearchMode && _selectedMemberId != null) {
+          filteredEvents = filteredEvents.where((event) {
+            // Show event if it was created by the selected member
+            return event.createdBy == _selectedMemberId;
+          }).toList();
+        }
         
         // Sort events by start time
         filteredEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
-        
-        // Group events by date
-        final Map<String, List<EventModel>> eventsByDate = {};
-        for (final event in filteredEvents) {
-          final dateKey = DateFormat('yyyy-MM-dd').format(event.startTime);
-          eventsByDate.putIfAbsent(dateKey, () => []).add(event);
-        }
         
         if (filteredEvents.isEmpty) {
           return Center(
@@ -562,13 +638,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.event_busy,
+                    _isSearchMode ? Icons.search_off : Icons.event_busy,
                     size: ResponsiveHelper.iconSize(64),
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                   ),
                   SizedBox(height: ResponsiveHelper.h(16)),
                   Text(
-                    'No events found',
+                    _isSearchMode ? 'No events found' : 'No events',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
@@ -579,42 +655,67 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           );
         }
         
-        return ListView.builder(
-          padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
-          itemCount: eventsByDate.length,
-          itemBuilder: (context, index) {
-            final dateKey = eventsByDate.keys.elementAt(index);
-            final dateEvents = eventsByDate[dateKey]!;
-            final date = DateTime.parse(dateKey);
-            
-            // Determine if this date is today
-            final today = DateTime.now();
-            final isToday = date.year == today.year &&
-                date.month == today.month &&
-                date.day == today.day;
-            
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Date header
-                Padding(
-                  padding: ResponsiveHelper.padding(vertical: 12, horizontal: 4),
-                  child: Text(
-                    isToday
-                        ? 'Today, ${DateFormat('MMMM d, yyyy').format(date)}'
-                        : DateFormat('EEEE, MMMM d, yyyy').format(date),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+        // Group events by date
+        final Map<String, List<EventModel>> eventsByDate = {};
+        for (final event in filteredEvents) {
+          final dateKey = DateFormat('yyyy-MM-dd').format(event.startTime);
+          eventsByDate.putIfAbsent(dateKey, () => []).add(event);
+        }
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Show search results title if searching
+            if (_isSearchMode)
+              Padding(
+                padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+                child: Text(
+                  'Search Results',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                // Events for this date
-                ...dateEvents.map((event) => _buildEventCard(context, event)),
-                SizedBox(height: ResponsiveHelper.h(8)),
-              ],
-            );
-          },
+              ),
+            Expanded(
+              child: ListView.builder(
+                padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+                itemCount: eventsByDate.length,
+                itemBuilder: (context, index) {
+                  final dateKey = eventsByDate.keys.elementAt(index);
+                  final dateEvents = eventsByDate[dateKey]!;
+                  final date = DateTime.parse(dateKey);
+                  
+                  // Determine if this date is today
+                  final today = DateTime.now();
+                  final isToday = date.year == today.year &&
+                      date.month == today.month &&
+                      date.day == today.day;
+                  
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date header
+                      Padding(
+                        padding: ResponsiveHelper.padding(vertical: 12, horizontal: 4),
+                        child: Text(
+                          isToday
+                              ? 'Today, ${DateFormat('MMMM d, yyyy').format(date)}'
+                              : DateFormat('EEEE, MMMM d, yyyy').format(date),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      // Events for this date
+                      ...dateEvents.map((event) => _buildEventCard(context, event)),
+                      SizedBox(height: ResponsiveHelper.h(8)),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

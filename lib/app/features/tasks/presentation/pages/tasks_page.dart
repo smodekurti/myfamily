@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +26,8 @@ class TasksPage extends ConsumerStatefulWidget {
 }
 
 class _TasksPageState extends ConsumerState<TasksPage> {
+  final TextEditingController _searchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
@@ -38,6 +39,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         }
       });
     }
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -57,6 +64,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final currentFamily = ref.watch(currentFamilyProvider);
     final currentUser = ref.watch(currentUserProvider);
     final filter = ref.watch(taskFilterProvider);
+    final searchMode = ref.watch(searchModeProvider);
+    final searchQuery = ref.watch(searchQueryProvider);
+    
+    // Sync search controller with provider
+    if (_searchController.text != searchQuery) {
+      _searchController.text = searchQuery;
+    }
     
     if (currentFamily == null) {
       return BackgroundWidget(
@@ -77,73 +91,129 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // This Week's Progress Section
-                _buildProgressSection(context, ref, currentFamily.id),
-                
-                SizedBox(height: ResponsiveHelper.h(16)),
-                
-                // Filter Buttons
-                _buildFilterButtons(context, filter),
-                
-                SizedBox(height: ResponsiveHelper.h(12)),
-                
-                // View Mode Selector
-                _buildViewModeSelector(context),
-                
-                SizedBox(height: ResponsiveHelper.h(16)),
-                
-                // Upcoming Chores Section
-                Text(
-                  'Upcoming Chores',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+          child: Column(
+            children: [
+              // Search bar (shown when search mode is active)
+              if (searchMode)
+                Container(
+                  padding: ResponsiveHelper.padding(all: 16),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'Search tasks...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      ref.read(searchQueryProvider.notifier).state = '';
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            ),
+                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (value) {
+                            ref.read(searchQueryProvider.notifier).state = value;
+                          },
+                        ),
+                      ),
+                      SizedBox(width: ResponsiveHelper.w(8)),
+                      TextButton(
+                        onPressed: () {
+                          ref.read(searchModeProvider.notifier).state = false;
+                          ref.read(searchQueryProvider.notifier).state = '';
+                          _searchController.clear();
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: ResponsiveHelper.h(16)),
-                
-                // Tasks List with different view modes
-                familyTasks.when(
-                  data: (tasks) {
-                    final filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
-                    final isEmpty = filteredTasks.isEmpty;
-                    
-                    if (isEmpty) {
-                      return _buildEmptyState(context);
-                    }
-                    
-                    final members = familyMembers.when(
-                      data: (m) {
-                        return m;
-                      },
-                      loading: () => <FamilyMemberModel>[],
-                      error: (_, __) => <FamilyMemberModel>[],
-                    );
-                    
-                    final viewMode = ref.watch(taskViewModeProvider);
-                    return _buildTasksView(
-                      context,
-                      ref,
-                      filteredTasks,
-                      members,
-                      currentFamily.id,
-                      currentUser?.id,
-                      viewMode,
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Text('Error: $error'),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // This Week's Progress Section (hide when searching)
+                      if (!searchMode) ...[
+                        _buildProgressSection(context, ref, currentFamily.id),
+                        SizedBox(height: ResponsiveHelper.h(16)),
+                      ],
+                      
+                      // Filter Buttons (hide when searching)
+                      if (!searchMode) ...[
+                        _buildFilterButtons(context, filter),
+                        SizedBox(height: ResponsiveHelper.h(12)),
+                        _buildViewModeSelector(context),
+                        SizedBox(height: ResponsiveHelper.h(16)),
+                      ],
+                      
+                      // Section title
+                      Text(
+                        searchMode ? 'Search Results' : 'Upcoming Chores',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(16)),
+                      
+                      // Tasks List with different view modes
+                      familyTasks.when(
+                        data: (tasks) {
+                          var filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
+                          
+                          // Apply search filter if in search mode
+                          if (searchMode && searchQuery.isNotEmpty) {
+                            filteredTasks = _searchTasks(filteredTasks, searchQuery);
+                          }
+                          
+                          final isEmpty = filteredTasks.isEmpty;
+                          
+                          if (isEmpty) {
+                            return _buildEmptyState(context);
+                          }
+                          
+                          final members = familyMembers.when(
+                            data: (m) {
+                              return m;
+                            },
+                            loading: () => <FamilyMemberModel>[],
+                            error: (_, __) => <FamilyMemberModel>[],
+                          );
+                          
+                          final viewMode = ref.watch(taskViewModeProvider);
+                          return _buildTasksView(
+                            context,
+                            ref,
+                            filteredTasks,
+                            members,
+                            currentFamily.id,
+                            currentUser?.id,
+                            viewMode,
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (error, _) => Center(
+                          child: Text('Error: $error'),
+                        ),
+                      ),
+                      
+                      SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
+                    ],
                   ),
                 ),
-                
-                SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         floatingActionButton: familyTasks.when(
@@ -344,6 +414,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       {'id': 'all', 'label': 'All Chores'},
       {'id': 'my', 'label': 'My Chores'},
       {'id': 'today', 'label': 'Due Today'},
+      {'id': 'high', 'label': 'High Priority'},
       {'id': 'completed', 'label': 'Completed'},
     ];
 
@@ -397,11 +468,85 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           final due = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
           return due == today && t.status != 'completed';
         }).toList();
+      case 'high':
+        return tasks.where((t) => t.priority == 'high' && t.status != 'completed').toList();
       case 'completed':
         return tasks.where((t) => t.status == 'completed').toList();
       default:
         // "All Chores" - show all tasks including completed
         return tasks;
+    }
+  }
+  
+  List<TaskModel> _searchTasks(List<TaskModel> tasks, String query) {
+    if (query.isEmpty) return tasks;
+    
+    final lowerQuery = query.toLowerCase();
+    return tasks.where((task) {
+      // Search in title
+      if (task.title.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in description
+      if (task.description != null && 
+          task.description!.toLowerCase().contains(lowerQuery)) return true;
+      
+      // Search in category
+      if (task.category.toLowerCase().contains(lowerQuery)) return true;
+      
+      return false;
+    }).toList();
+  }
+  
+  /// Check if a grocery task has all items checked
+  Future<bool> _checkGroceryTaskComplete(BuildContext context, TaskModel task) async {
+    // Only check for grocery tasks
+    if (task.category != 'grocery' || task.categoryData?['groceryListId'] == null) {
+      return true; // Not a grocery task, allow completion
+    }
+    
+    try {
+      final groceryListId = task.categoryData!['groceryListId'] as String;
+      final groceryRepo = ref.read(groceryListRepositoryProvider);
+      final items = await groceryRepo.getListItems(groceryListId);
+      
+      if (items.isEmpty) {
+        // No items, allow completion
+        return true;
+      }
+      
+      // Check if all items are checked
+      return items.every((item) => item.checked);
+    } catch (e) {
+      // If there's an error, allow completion to avoid blocking the user
+      return true;
+    }
+  }
+  
+  // Helper to get priority color
+  Color _getPriorityColor(BuildContext context, String priority) {
+    switch (priority) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+    }
+  }
+  
+  // Helper to get priority icon
+  IconData _getPriorityIcon(String priority) {
+    switch (priority) {
+      case 'high':
+        return Icons.priority_high;
+      case 'medium':
+        return Icons.remove;
+      case 'low':
+        return Icons.arrow_downward;
+      default:
+        return Icons.circle;
     }
   }
 
@@ -466,17 +611,17 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
 
     return Card(
-      margin: ResponsiveHelper.padding(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(8),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-          width: ResponsiveHelper.w(1),
+        margin: ResponsiveHelper.padding(bottom: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: ResponsiveHelper.borderRadius(8),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            width: ResponsiveHelper.w(1),
+          ),
         ),
-      ),
-      elevation: 0,
-      color: Theme.of(context).cardColor,
-      child: Row(
+        elevation: 0,
+        color: Theme.of(context).cardColor,
+        child: Row(
         children: [
           // Colored ribbon on the left
           Container(
@@ -500,6 +645,20 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     onChanged: (value) async {
                       final taskActions = ref.read(taskActionsProvider);
                       if (value == true) {
+                        // Check if grocery task has all items checked
+                        final canComplete = await _checkGroceryTaskComplete(context, task);
+                        if (!canComplete) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Please check all items in the grocery list before completing this task.'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                          return; // Don't complete the task
+                        }
                         await taskActions.completeTask(task.id);
                       } else {
                         await taskActions.updateTask(taskId: task.id, status: 'pending');
@@ -552,13 +711,31 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: ResponsiveHelper.h(2)),
-                    Text(
-                      statusText,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: ResponsiveHelper.sp(11),
-                        color: statusColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    Row(
+                      children: [
+                        // Priority indicator - show for all priorities
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _getPriorityIcon(task.priority),
+                              size: ResponsiveHelper.iconSize(12),
+                              color: _getPriorityColor(context, task.priority),
+                            ),
+                            SizedBox(width: ResponsiveHelper.w(4)),
+                          ],
+                        ),
+                        Expanded(
+                          child: Text(
+                            statusText,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: ResponsiveHelper.sp(11),
+                              color: statusColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                         ],
                       ),
@@ -956,6 +1133,20 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     onChanged: (value) async {
                       final taskActions = ref.read(taskActionsProvider);
                       if (value == true) {
+                        // Check if grocery task has all items checked
+                        final canComplete = await _checkGroceryTaskComplete(context, task);
+                        if (!canComplete) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Please check all items in the grocery list before completing this task.'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                          return; // Don't complete the task
+                        }
                         await taskActions.completeTask(task.id);
                       } else {
                         await taskActions.updateTask(taskId: task.id, status: 'pending');

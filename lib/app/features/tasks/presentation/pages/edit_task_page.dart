@@ -28,6 +28,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   
   String? _selectedAssignee;
   String _selectedCategory = 'chore';
+  String _selectedPriority = 'medium';
   DateTime? _selectedDueDate;
   String? _selectedGroceryListId;
   bool _isLoading = false;
@@ -39,6 +40,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
     _notesController = TextEditingController(text: widget.task.description ?? '');
     _selectedAssignee = widget.task.assignedTo;
     _selectedCategory = widget.task.category;
+    _selectedPriority = widget.task.priority;
     _selectedDueDate = widget.task.dueDate;
     _selectedGroceryListId = widget.task.categoryData?['groceryListId'] as String?;
   }
@@ -133,6 +135,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
             : _notesController.text.trim(),
         assignedTo: assignee,
         category: _selectedCategory,
+        priority: _selectedPriority,
         categoryData: _selectedGroceryListId != null
             ? {'groceryListId': _selectedGroceryListId}
             : null,
@@ -215,6 +218,10 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
                         
                         // Assign To
                         _buildAssignToSection(context, familyMembers),
+                        SizedBox(height: ResponsiveHelper.h(24)),
+                        
+                        // Priority
+                        _buildPrioritySelector(context),
                         SizedBox(height: ResponsiveHelper.h(24)),
                         
                         // Due Date
@@ -649,6 +656,123 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
               },
             );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrioritySelector(BuildContext context) {
+    Color getPriorityColor(String priority) {
+      switch (priority) {
+        case 'high':
+          return Colors.red;
+        case 'medium':
+          return Colors.orange;
+        case 'low':
+          return Colors.green;
+        default:
+          return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+      }
+    }
+    
+    IconData getPriorityIcon(String priority) {
+      switch (priority) {
+        case 'high':
+          return Icons.priority_high;
+        case 'medium':
+          return Icons.remove;
+        case 'low':
+          return Icons.arrow_downward;
+        default:
+          return Icons.circle;
+      }
+    }
+    
+    String getPriorityLabel(String priority) {
+      switch (priority) {
+        case 'high':
+          return 'High';
+        case 'medium':
+          return 'Med';
+        case 'low':
+          return 'Low';
+        default:
+          return 'Med';
+      }
+    }
+    
+    return Row(
+      children: [
+        Text(
+          'Priority:',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(width: ResponsiveHelper.w(12)),
+        Expanded(
+          child: Row(
+            children: ['low', 'medium', 'high'].map((priority) {
+              final isSelected = _selectedPriority == priority;
+              final priorityColor = getPriorityColor(priority);
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: priority != 'high' ? ResponsiveHelper.w(6) : 0,
+                  ),
+                  child: Material(
+                    color: isSelected
+                        ? priorityColor.withOpacity(0.1)
+                        : Theme.of(context).cardColor,
+                    borderRadius: ResponsiveHelper.borderRadius(8),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedPriority = priority;
+                        });
+                      },
+                      borderRadius: ResponsiveHelper.borderRadius(8),
+                      child: Container(
+                        padding: ResponsiveHelper.padding(vertical: 8, horizontal: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected
+                                ? priorityColor
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                            width: ResponsiveHelper.w(isSelected ? 2 : 1),
+                          ),
+                          borderRadius: ResponsiveHelper.borderRadius(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              getPriorityIcon(priority),
+                              size: ResponsiveHelper.iconSize(16),
+                              color: isSelected
+                                  ? priorityColor
+                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                            SizedBox(width: ResponsiveHelper.w(4)),
+                            Text(
+                              getPriorityLabel(priority),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: isSelected
+                                    ? priorityColor
+                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                fontSize: ResponsiveHelper.sp(11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
