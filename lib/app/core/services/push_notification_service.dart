@@ -52,6 +52,11 @@ class PushNotificationService {
         ),
       );
 
+      // Create Android notification channels
+      if (Platform.isAndroid) {
+        await _createAndroidNotificationChannels();
+      }
+
       // Set up background message handler
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -127,6 +132,27 @@ class PushNotificationService {
     if (Platform.isAndroid) return 'android';
     if (Platform.isIOS) return 'ios';
     return 'unknown';
+  }
+
+  /// Create Android notification channels
+  Future<void> _createAndroidNotificationChannels() async {
+    if (!Platform.isAndroid) return;
+
+    // Create push notifications channel
+    const pushChannel = AndroidNotificationChannel(
+      'push_notifications',
+      'Push Notifications',
+      description: 'Notifications from Supabase',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(pushChannel);
+
+    _logger.i('Android notification channels created');
   }
 
   /// Handle foreground messages (when app is open)
