@@ -7,16 +7,12 @@ import '../models/user_model.dart';
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final Logger _logger = Logger();
-  
+
   // Lazy initialize GoogleSignIn to avoid early crashes
   GoogleSignIn? _googleSignInInstance;
   GoogleSignIn get _googleSignIn {
     _googleSignInInstance ??= GoogleSignIn(
-      scopes: [
-        'email',
-        'profile',
-        'openid',
-      ],
+      scopes: ['email', 'profile', 'openid'],
     );
     return _googleSignInInstance!;
   }
@@ -37,11 +33,11 @@ class AuthRepository {
         email: email,
         password: password,
       );
-      
+
       if (response.user != null) {
         await _createOrUpdateUserProfile(response.user!);
       }
-      
+
       return response;
     } on AuthException catch (e) {
       _logger.e('Email sign in error: ${e.message}');
@@ -64,13 +60,13 @@ class AuthRepository {
         password: password,
         data: {'display_name': displayName},
       );
-      
+
       // Try to create profile, but don't fail the sign-up if it fails
       if (response.user != null) {
         // Don't await - let it run in background
         _createOrUpdateUserProfile(response.user!);
       }
-      
+
       return response;
     } on AuthException catch (e) {
       _logger.e('Email sign up error: ${e.message}');
@@ -81,53 +77,54 @@ class AuthRepository {
     }
   }
 
-  /// Sign in with Google
+  /// Sign in with Google using native Google Sign-In SDK
+  /// This provides a native UI experience on both iOS and Android
   Future<AuthResponse?> signInWithGoogle() async {
     try {
-      _logger.i('=== Starting Google Sign-In ===');
+      _logger.i('=== Starting Native Google Sign-In ===');
       _logger.i('Initializing GoogleSignIn instance...');
-      
-      // Initialize and sign in
+
+      // Initialize and sign in with native Google Sign-In SDK
       final googleUser = await _googleSignIn.signIn().catchError((error) {
         _logger.e('GoogleSignIn.signIn() error: $error');
         throw Exception('Failed to open Google Sign-In: $error');
       });
-      
+
       if (googleUser == null) {
         _logger.w('Google sign in cancelled by user');
         return null;
       }
-      
+
       _logger.i('✓ Google user obtained: ${googleUser.email}');
       _logger.i('Getting authentication tokens...');
-      
+
       // Get the authentication details
       final googleAuth = await googleUser.authentication;
-      
+
       _logger.i('✓ Got authentication tokens');
       _logger.i('ID Token present: ${googleAuth.idToken != null}');
       _logger.i('Access Token present: ${googleAuth.accessToken != null}');
-      
+
       if (googleAuth.idToken == null) {
         throw Exception('No ID token received from Google');
       }
-      
+
       _logger.i('Authenticating with Supabase...');
-      
+
       // Sign in to Supabase with the Google ID token
       // Note: For native iOS/Android sign-in, "Skip nonce checks" must be enabled in Supabase
       final response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
       );
-      
+
       _logger.i('✓ Supabase authentication successful!');
       _logger.i('User: ${response.user?.email}');
-      
+
       if (response.user != null) {
         await _createOrUpdateUserProfile(response.user!);
       }
-      
+
       return response;
     } catch (e, stackTrace) {
       _logger.e('=== Google Sign-In Failed ===');
@@ -151,7 +148,7 @@ class AuthRepository {
         provider: OAuthProvider.apple,
         idToken: appleCredential.identityToken!,
       );
-      
+
       if (response.user != null) {
         await _createOrUpdateUserProfile(response.user!);
       }
@@ -198,10 +195,8 @@ class AuthRepository {
       final currentMetadata = user.userMetadata ?? {};
       final updatedMetadata = {...currentMetadata, ...metadata};
 
-      await _supabase.auth.updateUser(
-        UserAttributes(data: updatedMetadata),
-      );
-      
+      await _supabase.auth.updateUser(UserAttributes(data: updatedMetadata));
+
       _logger.i('User metadata updated successfully');
     } catch (e) {
       _logger.e('Update user metadata error: $e');
@@ -213,7 +208,7 @@ class AuthRepository {
   String? getUserConsentVersion() {
     final user = _supabase.auth.currentUser;
     if (user == null) return null;
-    
+
     final metadata = user.userMetadata;
     return metadata?['consent_version'] as String?;
   }
@@ -241,7 +236,7 @@ class AuthRepository {
       };
       if (displayName != null) dbUpdates['display_name'] = displayName;
       if (photoURL != null) dbUpdates['avatar_url'] = photoURL;
-      
+
       if (dbUpdates.isNotEmpty) {
         try {
           await _supabase.from('users').update(dbUpdates).eq('id', user.id);
@@ -285,15 +280,18 @@ class AuthRepository {
     try {
       // Wait a bit to ensure the user is fully authenticated
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       final userModel = UserModel(
         uid: user.id,
         email: user.email ?? '',
-        displayName: user.userMetadata?['display_name'] as String? ?? 
-                     user.userMetadata?['name'] as String? ?? 
-                     user.email?.split('@')[0] ?? 'User',
-        photoURL: user.userMetadata?['avatar_url'] as String? ?? 
-                  user.userMetadata?['picture'] as String?,
+        displayName:
+            user.userMetadata?['display_name'] as String? ??
+            user.userMetadata?['name'] as String? ??
+            user.email?.split('@')[0] ??
+            'User',
+        photoURL:
+            user.userMetadata?['avatar_url'] as String? ??
+            user.userMetadata?['picture'] as String?,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -305,7 +303,10 @@ class AuthRepository {
       } catch (insertError) {
         // If insert fails (user already exists), try update
         _logger.w('Insert failed, trying update: $insertError');
-        await _supabase.from('users').update(userModel.toSupabase()).eq('id', user.id);
+        await _supabase
+            .from('users')
+            .update(userModel.toSupabase())
+            .eq('id', user.id);
         _logger.i('User profile updated successfully');
       }
     } catch (e) {
@@ -323,9 +324,9 @@ class AuthRepository {
           .select()
           .eq('id', uid)
           .maybeSingle();
-      
+
       if (response == null) return null;
-      
+
       return UserModelSupabase.fromSupabase(response);
     } catch (e) {
       _logger.e('Get user profile error: $e');
@@ -335,14 +336,12 @@ class AuthRepository {
 
   /// Stream user profile from database
   Stream<UserModel?> streamUserProfile(String uid) {
-    return _supabase
-        .from('users')
-        .stream(primaryKey: ['id'])
-        .eq('id', uid)
-        .map((data) {
-          if (data.isEmpty) return null;
-          return UserModelSupabase.fromSupabase(data.first);
-        });
+    return _supabase.from('users').stream(primaryKey: ['id']).eq('id', uid).map(
+      (data) {
+        if (data.isEmpty) return null;
+        return UserModelSupabase.fromSupabase(data.first);
+      },
+    );
   }
 
   /// Check if user exists
@@ -355,7 +354,7 @@ class AuthRepository {
           .select('id')
           .eq('email', email)
           .maybeSingle();
-      
+
       return response != null;
     } catch (e) {
       _logger.e('Check user exists error: $e');
@@ -375,11 +374,11 @@ class AuthRepository {
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
-      
+
       if (themePreference != null) {
         updates['theme_preference'] = themePreference;
       }
-      
+
       if (notificationsEnabled != null) {
         updates['notifications_enabled'] = notificationsEnabled;
       }

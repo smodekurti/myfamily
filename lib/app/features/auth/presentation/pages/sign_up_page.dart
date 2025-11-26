@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -343,33 +344,34 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       
                       SizedBox(height: ResponsiveHelper.h(16)),
                       
-                      // Apple sign up
-                      SizedBox(
-                        width: double.infinity,
-                        height: ResponsiveHelper.buttonHeight(56),
-                        child: OutlinedButton.icon(
-                          onPressed: _isLoading ? null : _signUpWithApple,
-                          icon: Icon(
-                            Icons.apple,
-                            size: ResponsiveHelper.iconSize(20),
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          label: Text(
-                            'Sign up with Apple',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                      // Apple sign up (iOS only)
+                      if (Platform.isIOS)
+                        SizedBox(
+                          width: double.infinity,
+                          height: ResponsiveHelper.buttonHeight(56),
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : _signUpWithApple,
+                            icon: Icon(
+                              Icons.apple,
+                              size: ResponsiveHelper.iconSize(20),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
+                            label: Text(
+                              'Sign up with Apple',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: ResponsiveHelper.borderRadius(12),
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   
