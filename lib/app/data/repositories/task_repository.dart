@@ -2,11 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/task_model.dart';
 import 'family_repository.dart';
+import 'achievement_repository.dart';
 
 class TaskRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
   final FamilyRepository _familyRepo = FamilyRepository();
+  final AchievementRepository _achievementRepo = AchievementRepository();
 
   /// Create a new task
   Future<TaskModel> createTask({
@@ -83,12 +85,23 @@ class TaskRepository {
 
       // Handle points when status changes
       if (status != null) {
+        // Get task title for history
+        final taskTitleResponse = await _supabase
+            .from('tasks')
+            .select('title')
+            .eq('id', taskId)
+            .single();
+        final taskTitle = taskTitleResponse['title'] as String?;
+        
         if (status == 'completed' && currentStatus != 'completed') {
           // Task is being marked as complete - award points
           await _familyRepo.awardPointsToMember(
             familyId: taskFamilyId,
             userId: taskAssignedTo,
             points: taskPoints,
+            reason: 'task_completed',
+            taskId: taskId,
+            taskTitle: taskTitle,
           );
         } else if (status != 'completed' && currentStatus == 'completed') {
           // Task is being uncompleted - remove points
@@ -96,6 +109,9 @@ class TaskRepository {
             familyId: taskFamilyId,
             userId: taskAssignedTo,
             points: taskPoints,
+            reason: 'task_uncompleted',
+            taskId: taskId,
+            taskTitle: taskTitle,
           );
         }
       }
@@ -110,7 +126,15 @@ class TaskRepository {
       if (status != null) updates['status'] = status;
       if (priority != null) updates['priority'] = priority;
       if (category != null) updates['category'] = category;
-      if (categoryData != null) updates['category_data'] = categoryData;
+      // Handle categoryData: if it's an empty map, set to null to clear it
+      // Otherwise, update it if provided
+      if (categoryData != null) {
+        if (categoryData.isEmpty) {
+          updates['category_data'] = null;
+        } else {
+          updates['category_data'] = categoryData;
+        }
+      }
       if (dueDate != null) updates['due_date'] = dueDate.toIso8601String();
       if (points != null) updates['points'] = points;
 
@@ -246,13 +270,34 @@ class TaskRepository {
             .toList());
   }
 
+  /// Get completed tasks for a user to calculate streaks
+  Future<List<TaskModel>> getCompletedTasksForUser(String userId, String familyId) async {
+    try {
+      final response = await _supabase
+          .from('tasks')
+          .select()
+          .eq('family_id', familyId)
+          .eq('assigned_to', userId)
+          .eq('status', 'completed')
+          .not('completed_at', 'is', null)
+          .order('completed_at', ascending: false);
+
+      return (response as List)
+          .map((json) => TaskModelHelpers.fromSupabase(json))
+          .toList();
+    } catch (e) {
+      _logger.e('Get completed tasks for user error: $e');
+      rethrow;
+    }
+  }
+
   /// Mark a task as completed and award points
   Future<TaskModel> completeTask(String taskId) async {
     try {
-      // First get the task to get the points, assignedTo, and familyId
+      // First get the full task to check for recurrence
       final taskResponse = await _supabase
           .from('tasks')
-          .select('points, assigned_to, family_id, status')
+          .select('*')
           .eq('id', taskId)
           .single();
 
@@ -260,14 +305,22 @@ class TaskRepository {
       final assignedTo = taskResponse['assigned_to'] as String;
       final familyId = taskResponse['family_id'] as String;
       final currentStatus = taskResponse['status'] as String;
+      final categoryData = taskResponse['category_data'] as Map<String, dynamic>?;
+      final dueDate = taskResponse['due_date'] != null 
+          ? DateTime.parse(taskResponse['due_date'] as String)
+          : null;
 
       // Only award points if task wasn't already completed
       if (currentStatus != 'completed') {
+        final taskTitle = taskResponse['title'] as String?;
         // Award points to the assigned user
         await _familyRepo.awardPointsToMember(
           familyId: familyId,
           userId: assignedTo,
           points: points,
+          reason: 'task_completed',
+          taskId: taskId,
+          taskTitle: taskTitle,
         );
       }
 
@@ -288,10 +341,115 @@ class TaskRepository {
 
       _logger.i('Task completed successfully: $taskId, points awarded: $points to user $assignedTo');
 
+      // Check and unlock achievements
+      final completedTask = TaskModelHelpers.fromSupabase(response);
+      await _achievementRepo.checkAchievementsAfterTaskCompletion(
+        userId: assignedTo,
+        familyId: familyId,
+        completedTask: completedTask,
+      );
+
+      // Check if this is a recurring task and create the next occurrence
+      if (categoryData != null && categoryData['recurrenceType'] != null) {
+        final recurrenceType = categoryData['recurrenceType'] as String;
+        if (recurrenceType != 'none') {
+          await _createNextRecurrence(
+            originalTask: TaskModelHelpers.fromSupabase(taskResponse),
+            recurrenceType: recurrenceType,
+            recurrenceEndDate: categoryData['recurrenceEndDate'] != null
+                ? DateTime.parse(categoryData['recurrenceEndDate'] as String)
+                : null,
+            originalDueDate: dueDate,
+          );
+        }
+      }
+
       return TaskModelHelpers.fromSupabase(response);
     } catch (e) {
       _logger.e('Complete task error: $e');
       rethrow;
+    }
+  }
+
+  /// Create the next occurrence of a recurring task
+  Future<void> _createNextRecurrence({
+    required TaskModel originalTask,
+    required String recurrenceType,
+    DateTime? recurrenceEndDate,
+    DateTime? originalDueDate,
+  }) async {
+    try {
+      // Calculate next due date based on recurrence type
+      DateTime? nextDueDate;
+      if (originalDueDate != null) {
+        switch (recurrenceType) {
+          case 'daily':
+            nextDueDate = originalDueDate.add(const Duration(days: 1));
+            break;
+          case 'weekly':
+            nextDueDate = originalDueDate.add(const Duration(days: 7));
+            break;
+          case 'monthly':
+            // Add one month
+            nextDueDate = DateTime(
+              originalDueDate.year,
+              originalDueDate.month + 1,
+              originalDueDate.day,
+            );
+            break;
+        }
+      } else {
+        // If no original due date, use today + recurrence interval
+        final today = DateTime.now();
+        switch (recurrenceType) {
+          case 'daily':
+            nextDueDate = today.add(const Duration(days: 1));
+            break;
+          case 'weekly':
+            nextDueDate = today.add(const Duration(days: 7));
+            break;
+          case 'monthly':
+            nextDueDate = DateTime(today.year, today.month + 1, today.day);
+            break;
+        }
+      }
+
+      // Check if we've passed the recurrence end date
+      if (recurrenceEndDate != null && nextDueDate != null) {
+        if (nextDueDate.isAfter(recurrenceEndDate)) {
+          _logger.i('Recurrence end date reached, not creating next occurrence');
+          return;
+        }
+      }
+
+      // Create the next occurrence
+      final now = DateTime.now();
+      final nextCategoryData = Map<String, dynamic>.from(originalTask.categoryData ?? {});
+      
+      final nextTaskData = {
+        'family_id': originalTask.familyId,
+        'title': originalTask.title,
+        'description': originalTask.description,
+        'assigned_to': originalTask.assignedTo,
+        'created_by': originalTask.createdBy,
+        'status': 'pending',
+        'priority': originalTask.priority,
+        'category': originalTask.category,
+        'category_data': nextCategoryData,
+        'due_date': nextDueDate?.toIso8601String(),
+        'points': originalTask.points,
+        'created_at': now.toIso8601String(),
+        'updated_at': now.toIso8601String(),
+      };
+
+      await _supabase
+          .from('tasks')
+          .insert(nextTaskData);
+
+      _logger.i('Next recurrence created for task: ${originalTask.id}');
+    } catch (e) {
+      _logger.e('Error creating next recurrence: $e');
+      // Don't rethrow - we don't want to fail task completion if recurrence creation fails
     }
   }
 

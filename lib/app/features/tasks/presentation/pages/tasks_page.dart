@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
@@ -27,6 +28,7 @@ class TasksPage extends ConsumerStatefulWidget {
 
 class _TasksPageState extends ConsumerState<TasksPage> {
   final TextEditingController _searchController = TextEditingController();
+  final Logger _logger = Logger();
   
   @override
   void initState() {
@@ -45,17 +47,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh family members when page becomes visible to ensure avatars are up to date
-    final currentFamily = ref.read(currentFamilyProvider);
-    if (currentFamily != null) {
-      // Invalidate to force refresh of family members (which fetches latest user data)
-      ref.invalidate(familyMembersProvider(currentFamily.id));
-    }
   }
 
 
@@ -145,10 +136,19 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // This Week's Progress Section (hide when searching)
-                      if (!searchMode) ...[
-                        _buildProgressSection(context, ref, currentFamily.id),
-                        SizedBox(height: ResponsiveHelper.h(16)),
-                      ],
+                      if (!searchMode)
+                        familyTasks.when(
+                          data: (tasks) {
+                            return Column(
+                              children: [
+                                _buildProgressSection(context, ref, tasks),
+                                SizedBox(height: ResponsiveHelper.h(16)),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
                       
                       // Filter Buttons (hide when searching)
                       if (!searchMode) ...[
@@ -203,9 +203,41 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           );
                         },
                         loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, _) => Center(
-                          child: Text('Error: $error'),
-                        ),
+                        error: (error, stackTrace) {
+                          // Log the full error for debugging
+                          _logger.e('Tasks error: $error', error: error, stackTrace: stackTrace);
+                          return Center(
+                            child: Padding(
+                              padding: ResponsiveHelper.padding(all: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: ResponsiveHelper.iconSize(48),
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                  Text(
+                                    'Error loading tasks',
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: ResponsiveHelper.h(8)),
+                                  Text(
+                                    error.toString().length > 100 
+                                        ? '${error.toString().substring(0, 100)}...'
+                                        : error.toString(),
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       
                       SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
@@ -242,12 +274,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     );
   }
 
-  Widget _buildProgressSection(BuildContext context, WidgetRef ref, String familyId) {
-    final tasks = ref.watch(familyTasksProvider(familyId));
-    
-    return tasks.when(
-      data: (taskList) {
-        final totalTasks = taskList.length;
+  Widget _buildProgressSection(BuildContext context, WidgetRef ref, List<TaskModel> taskList) {
+    // Use the tasks data directly instead of watching the provider again
+    // This prevents duplicate watches and potential stack overflow
+    final totalTasks = taskList.length;
         
         // If no tasks, show a different message
         if (totalTasks == 0) {
@@ -382,15 +412,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             ),
           ),
         );
-      },
-      loading: () => const Card(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-    );
   }
 
   String _getProgressMessage(int percentage) {
@@ -725,6 +746,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             SizedBox(width: ResponsiveHelper.w(4)),
                           ],
                         ),
+                        // Recurrence indicator
+                        if (task.categoryData?['recurrenceType'] != null && 
+                            task.categoryData!['recurrenceType'] != 'none') ...[
+                          Icon(
+                            Icons.repeat,
+                            size: ResponsiveHelper.iconSize(12),
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(4)),
+                        ],
                         Expanded(
                           child: Text(
                             statusText,
@@ -1177,23 +1208,38 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ),
               ),
               SizedBox(height: ResponsiveHelper.h(8)),
-              // Points and assignee
+              // Points, recurrence, and assignee
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      borderRadius: ResponsiveHelper.borderRadius(6),
-                    ),
-                    child: Text(
-                      '${task.points} pts',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: ResponsiveHelper.borderRadius(6),
+                        ),
+                        child: Text(
+                          '${task.points} pts',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Recurrence indicator
+                      if (task.categoryData?['recurrenceType'] != null && 
+                          task.categoryData!['recurrenceType'] != 'none') ...[
+                        SizedBox(width: ResponsiveHelper.w(4)),
+                        Icon(
+                          Icons.repeat,
+                          size: ResponsiveHelper.iconSize(14),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ],
+                    ],
                   ),
                   if (assignedMember.uid.isNotEmpty)
                     Consumer(

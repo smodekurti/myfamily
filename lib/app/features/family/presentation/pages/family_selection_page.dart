@@ -95,16 +95,17 @@ class FamilySelectionPage extends ConsumerWidget {
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
                             child: InkWell(
-                              onTap: () {
+                              onTap: () async {
                                 // Set the selected family
                                 ref.read(currentFamilyIdProvider.notifier).state = family.id;
                                 
-                                // Wait a moment for the state to update
-                                Future.delayed(const Duration(milliseconds: 100), () {
-                                  if (context.mounted) {
-                                    context.go(AppConstants.routeHome);
-                                  }
-                                });
+                                // Wait for providers to initialize before navigating
+                                // This prevents UI freeze during navigation
+                                await Future.delayed(const Duration(milliseconds: 200));
+                                
+                                if (context.mounted) {
+                                  context.go(AppConstants.routeHome);
+                                }
                               },
                               borderRadius: ResponsiveHelper.borderRadius(12),
                               child: Padding(

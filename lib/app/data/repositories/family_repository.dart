@@ -2,11 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
 import '../models/family_model.dart';
+import 'points_history_repository.dart';
 
 class FamilyRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
+  final PointsHistoryRepository _pointsHistoryRepo = PointsHistoryRepository();
 
   /// Create a new family
   Future<FamilyModel> createFamily({
@@ -473,6 +475,9 @@ class FamilyRepository {
     required String familyId,
     required String userId,
     required int points,
+    String? reason,
+    String? taskId,
+    String? taskTitle,
   }) async {
     try {
       // Get current points - handle case where column might not exist yet
@@ -506,6 +511,16 @@ class FamilyRepository {
             .eq('user_id', userId);
 
         _logger.i('Awarded $points points to user $userId in family $familyId (new total: $newPoints)');
+        
+        // Log points transaction
+        await _pointsHistoryRepo.logPointsTransaction(
+          familyId: familyId,
+          userId: userId,
+          points: points,
+          reason: reason ?? 'task_completed',
+          taskId: taskId,
+          taskTitle: taskTitle,
+        );
       } catch (e) {
         _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
         // Don't rethrow - allow the app to continue functioning
@@ -522,6 +537,9 @@ class FamilyRepository {
     required String familyId,
     required String userId,
     required int points,
+    String? reason,
+    String? taskId,
+    String? taskTitle,
   }) async {
     try {
       // Get current points - handle case where column might not exist yet
@@ -555,6 +573,16 @@ class FamilyRepository {
             .eq('user_id', userId);
 
         _logger.i('Removed $points points from user $userId in family $familyId (new total: $newPoints)');
+        
+        // Log points transaction (negative points)
+        await _pointsHistoryRepo.logPointsTransaction(
+          familyId: familyId,
+          userId: userId,
+          points: -points, // Negative for removal
+          reason: reason ?? 'task_uncompleted',
+          taskId: taskId,
+          taskTitle: taskTitle,
+        );
       } catch (e) {
         _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
         // Don't rethrow - allow the app to continue functioning

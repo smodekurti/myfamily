@@ -294,6 +294,7 @@ class AppConstants {
   static const String routeSettings = '/settings';
   static const String routeHelp = '/help';
   static const String routeLeaderboard = '/leaderboard';
+  static const String routePointsHistory = '/points-history';
 
   // ============================================================================
   // Animation Durations

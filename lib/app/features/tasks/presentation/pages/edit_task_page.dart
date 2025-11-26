@@ -31,6 +31,8 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   String _selectedPriority = 'medium';
   DateTime? _selectedDueDate;
   String? _selectedGroceryListId;
+  String _recurrenceType = 'none'; // 'none', 'daily', 'weekly', 'monthly'
+  DateTime? _recurrenceEndDate;
   bool _isLoading = false;
 
   @override
@@ -43,6 +45,10 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
     _selectedPriority = widget.task.priority;
     _selectedDueDate = widget.task.dueDate;
     _selectedGroceryListId = widget.task.categoryData?['groceryListId'] as String?;
+    _recurrenceType = widget.task.categoryData?['recurrenceType'] as String? ?? 'none';
+    if (widget.task.categoryData?['recurrenceEndDate'] != null) {
+      _recurrenceEndDate = DateTime.parse(widget.task.categoryData!['recurrenceEndDate'] as String);
+    }
   }
 
   @override
@@ -126,6 +132,36 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
 
       final taskActions = ref.read(taskActionsProvider);
       
+      // Build categoryData with recurrence and grocery list info
+      Map<String, dynamic>? categoryData;
+      if (_recurrenceType != 'none' || _selectedGroceryListId != null) {
+        categoryData = Map<String, dynamic>.from(widget.task.categoryData ?? {});
+        if (_recurrenceType != 'none') {
+          categoryData['recurrenceType'] = _recurrenceType;
+          if (_recurrenceEndDate != null) {
+            categoryData['recurrenceEndDate'] = _recurrenceEndDate!.toIso8601String();
+          } else {
+            categoryData.remove('recurrenceEndDate');
+          }
+        } else {
+          categoryData.remove('recurrenceType');
+          categoryData.remove('recurrenceEndDate');
+        }
+        if (_selectedGroceryListId != null) {
+          categoryData['groceryListId'] = _selectedGroceryListId;
+        } else if (_selectedCategory != 'grocery') {
+          categoryData.remove('groceryListId');
+        }
+        // If categoryData becomes empty, pass empty map to clear it in database
+        if (categoryData.isEmpty) {
+          categoryData = {};
+        }
+      } else {
+        // Clear categoryData if no recurrence and no grocery list
+        // Pass empty map to explicitly clear it in database
+        categoryData = {};
+      }
+      
       // Update task
       await taskActions.updateTask(
         taskId: widget.task.id,
@@ -136,9 +172,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
         assignedTo: assignee,
         category: _selectedCategory,
         priority: _selectedPriority,
-        categoryData: _selectedGroceryListId != null
-            ? {'groceryListId': _selectedGroceryListId}
-            : null,
+        categoryData: categoryData,
         dueDate: _selectedDueDate,
       );
       
@@ -226,6 +260,10 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
                         
                         // Due Date
                         _buildDueDateField(context),
+                        SizedBox(height: ResponsiveHelper.h(24)),
+                        
+                        // Recurrence
+                        _buildRecurrenceSelector(context),
                         SizedBox(height: ResponsiveHelper.h(24)),
                         
                         // Shopping List (only if grocery category)
@@ -883,6 +921,153 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRecurrenceSelector(BuildContext context) {
+    final isRecurring = _recurrenceType != 'none';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Repeat',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (isRecurring) ...[
+              SizedBox(width: ResponsiveHelper.w(8)),
+              Icon(
+                Icons.repeat,
+                size: ResponsiveHelper.iconSize(16),
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ],
+        ),
+        SizedBox(height: ResponsiveHelper.h(8)),
+        Wrap(
+          spacing: ResponsiveHelper.w(8),
+          runSpacing: ResponsiveHelper.h(8),
+          children: [
+            _buildRecurrenceChip(context, 'none', 'None'),
+            _buildRecurrenceChip(context, 'daily', 'Daily'),
+            _buildRecurrenceChip(context, 'weekly', 'Weekly'),
+            _buildRecurrenceChip(context, 'monthly', 'Monthly'),
+          ],
+        ),
+        if (_recurrenceType == 'none' && widget.task.categoryData?['recurrenceType'] != null && 
+            widget.task.categoryData!['recurrenceType'] != 'none') ...[
+          SizedBox(height: ResponsiveHelper.h(8)),
+          Container(
+            padding: ResponsiveHelper.padding(all: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: ResponsiveHelper.borderRadius(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: ResponsiveHelper.iconSize(16),
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                SizedBox(width: ResponsiveHelper.w(8)),
+                Expanded(
+                  child: Text(
+                    'Setting to "None" will stop this task from creating future occurrences.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // Show end date picker if recurrence is not 'none'
+        if (_recurrenceType != 'none') ...[
+          SizedBox(height: ResponsiveHelper.h(16)),
+          Text(
+            'Repeat Until',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.h(8)),
+          InkWell(
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 30)),
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+              );
+              
+              if (picked != null) {
+                setState(() {
+                  _recurrenceEndDate = picked;
+                });
+              }
+            },
+            child: Container(
+              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                ),
+                borderRadius: ResponsiveHelper.borderRadius(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _recurrenceEndDate == null
+                          ? 'No end date'
+                          : DateFormat('MM/dd/yyyy').format(_recurrenceEndDate!),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  Icon(
+                    Icons.calendar_today,
+                    size: ResponsiveHelper.iconSize(20),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRecurrenceChip(BuildContext context, String value, String label) {
+    final isSelected = _recurrenceType == value;
+    return ActionChip(
+      label: Text(label),
+      onPressed: () {
+        setState(() {
+          _recurrenceType = value;
+          if (value == 'none') {
+            _recurrenceEndDate = null;
+          }
+        });
+      },
+      backgroundColor: isSelected
+          ? Theme.of(context).colorScheme.primaryContainer
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      labelStyle: TextStyle(
+        color: isSelected
+            ? Theme.of(context).colorScheme.onPrimaryContainer
+            : Theme.of(context).colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: ResponsiveHelper.sp(12),
+      ),
+      padding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 

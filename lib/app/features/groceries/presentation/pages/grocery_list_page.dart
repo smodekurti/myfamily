@@ -1765,148 +1765,39 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       return;
     }
 
-    final nameController = TextEditingController(text: list.name);
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
-
     await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: ResponsiveHelper.borderRadius(16),
-          ),
-          title: const Text('Save as Template'),
-          content: SizedBox(
-            width: ResponsiveHelper.w(400),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Template Name',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(8)),
-                  TextFormField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: 'e.g., Weekly Groceries',
-                      border: OutlineInputBorder(
-                        borderRadius: ResponsiveHelper.borderRadius(12),
-                      ),
-                      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a template name';
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(16)),
-                  Text(
-                    'This will create a template with ${items?.length ?? 0} items.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-
-                      setDialogState(() => isLoading = true);
-
-                      try {
-                        // Convert list items to template items format
-                        final templateItems = (items ?? []).map((item) => {
-                          'name': item.name,
-                          'category': item.category,
-                          'qty': item.qty,
-                          'notes': item.notes,
-                          'unit': item.unit,
-                        }).toList();
-
-                        await templateRepo.createTemplateFromList(
-                          familyId: currentFamily.id,
-                          name: nameController.text.trim(),
-                          createdBy: currentUser.id,
-                          items: templateItems,
-                        );
-
-                        if (context.mounted) {
-                          Navigator.of(dialogContext).pop(true);
-                          // Invalidate provider after dialog closes to avoid disposal issues
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              ref.invalidate(groceryTemplatesProvider(currentFamily.id));
-                            }
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Template created successfully!'),
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to save template: ${e.toString()}'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
-                            ),
-                          );
-                        }
-                      } finally {
-                        if (mounted) {
-                          setDialogState(() => isLoading = false);
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
+      builder: (dialogContext) => _SaveAsTemplateDialogInline(
+        initialName: list.name,
+        itemCount: items?.length ?? 0,
+        templateRepo: templateRepo,
+        familyId: currentFamily.id,
+        userId: currentUser.id,
+        templateItems: (items ?? []).map((item) => {
+          'name': item.name,
+          'category': item.category,
+          'qty': item.qty,
+          'notes': item.notes,
+          'unit': item.unit,
+        }).toList(),
+        onSuccess: () {
+          if (context.mounted) {
+            // Invalidate provider after dialog closes to avoid disposal issues
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ref.invalidate(groceryTemplatesProvider(currentFamily.id));
+              }
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Template created successfully!'),
                 backgroundColor: Theme.of(context).colorScheme.primary,
               ),
-              child: isLoading
-                  ? SizedBox(
-                      width: ResponsiveHelper.w(20),
-                      height: ResponsiveHelper.h(20),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    )
-                  : const Text('Save'),
-            ),
-          ],
-        ),
+            );
+          }
+        },
       ),
     );
-
-    nameController.dispose();
   }
 
   Future<void> _editListName(BuildContext context) async {
@@ -2053,6 +1944,163 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
 }
 
 // Standalone dialog widget for saving a list as a template
+// Inline dialog widget to properly manage TextEditingController lifecycle
+class _SaveAsTemplateDialogInline extends StatefulWidget {
+  final String initialName;
+  final int itemCount;
+  final GroceryTemplateRepository templateRepo;
+  final String familyId;
+  final String userId;
+  final List<Map<String, dynamic>> templateItems;
+  final VoidCallback onSuccess;
+
+  const _SaveAsTemplateDialogInline({
+    required this.initialName,
+    required this.itemCount,
+    required this.templateRepo,
+    required this.familyId,
+    required this.userId,
+    required this.templateItems,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_SaveAsTemplateDialogInline> createState() => _SaveAsTemplateDialogInlineState();
+}
+
+class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline> {
+  late TextEditingController _nameController;
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveHelper.borderRadius(16),
+      ),
+      title: const Text('Save as Template'),
+      content: SizedBox(
+        width: ResponsiveHelper.w(400),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Template Name',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.h(8)),
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Weekly Groceries',
+                  border: OutlineInputBorder(
+                    borderRadius: ResponsiveHelper.borderRadius(12),
+                  ),
+                  contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a template name';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              Text(
+                'This will create a template with ${widget.itemCount} items.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  if (!_formKey.currentState!.validate()) return;
+
+                  setState(() => _isLoading = true);
+
+                  try {
+                    await widget.templateRepo.createTemplateFromList(
+                      familyId: widget.familyId,
+                      name: _nameController.text.trim(),
+                      createdBy: widget.userId,
+                      items: widget.templateItems,
+                    );
+
+                    if (mounted) {
+                      Navigator.of(context).pop(true);
+                      widget.onSuccess();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to save template: ${e.toString()}'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => _isLoading = false);
+                    }
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  width: ResponsiveHelper.w(20),
+                  height: ResponsiveHelper.h(20),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
 class _SaveAsTemplateDialog extends StatefulWidget {
   final String initialName;
   final int itemCount;

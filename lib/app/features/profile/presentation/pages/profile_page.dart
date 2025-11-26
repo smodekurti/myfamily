@@ -74,6 +74,12 @@ class ProfilePage extends ConsumerWidget {
                         ),
                         SizedBox(height: ResponsiveHelper.h(12)),
                         
+                        // Streak information
+                        if (currentUser != null && currentFamily != null) ...[
+                          _buildStreakSection(context, ref, currentUser.id, currentFamily.id),
+                          SizedBox(height: ResponsiveHelper.h(12)),
+                        ],
+                        
                         // Family information
                         if (currentFamily != null) ...[
                           // Family name
@@ -471,6 +477,15 @@ class ProfilePage extends ConsumerWidget {
                         
                         _buildProfileOption(
                           context,
+                          icon: Icons.history,
+                          title: 'Points History',
+                          onTap: () {
+                            context.push(AppConstants.routePointsHistory);
+                          },
+                        ),
+                        
+                        _buildProfileOption(
+                          context,
                           icon: Icons.help,
                           title: 'Help & Support',
                           onTap: () {
@@ -580,6 +595,142 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStreakSection(BuildContext context, WidgetRef ref, String userId, String familyId) {
+    final streakAsync = ref.watch(userStreakProvider((userId, familyId)));
+    
+    return streakAsync.when(
+      data: (streaks) {
+        final currentStreak = streaks['currentStreak'] ?? 0;
+        final longestStreak = streaks['longestStreak'] ?? 0;
+        
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Current Streak
+            Expanded(
+              child: Container(
+                padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: ResponsiveHelper.borderRadius(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    width: ResponsiveHelper.w(1),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      size: ResponsiveHelper.iconSize(24),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    SizedBox(height: ResponsiveHelper.h(4)),
+                    Text(
+                      '$currentStreak',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    Text(
+                      'Current Streak',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: ResponsiveHelper.sp(10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.w(12)),
+            // Longest Streak
+            Expanded(
+              child: Container(
+                padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3),
+                  borderRadius: ResponsiveHelper.borderRadius(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                    width: ResponsiveHelper.w(1),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.emoji_events,
+                      size: ResponsiveHelper.iconSize(24),
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    SizedBox(height: ResponsiveHelper.h(4)),
+                    Text(
+                      '$longestStreak',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ),
+                    Text(
+                      'Longest Streak',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: ResponsiveHelper.sp(10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Container(
+              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: ResponsiveHelper.borderRadius(12),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: ResponsiveHelper.iconSize(24),
+                    height: ResponsiveHelper.iconSize(24),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ResponsiveHelper.h(4)),
+                  Text(
+                    '...',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Loading',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: ResponsiveHelper.sp(10),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      error: (error, stack) => const SizedBox.shrink(),
     );
   }
 }
