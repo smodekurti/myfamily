@@ -3,14 +3,31 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/router/app_router.dart';
 import 'app/core/providers/providers.dart';
 import 'app/common/responsive/responsive_helper.dart';
+import 'app/core/services/notification_service.dart';
+import 'app/core/services/push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase (required for FCM)
+  // Note: If you haven't set up Firebase yet, run: flutterfire configure
+  try {
+    // Try to initialize with firebase_options if available
+    // Otherwise, initialize without options (will use default)
+    await Firebase.initializeApp();
+  } catch (e) {
+    // If Firebase is not configured, continue without it
+    // Push notifications will fail gracefully
+    print('Firebase initialization failed: $e');
+    print('Note: Push notifications require Firebase setup. See PUSH_NOTIFICATIONS_SETUP.md');
+    print('Run: flutterfire configure');
+  }
   
   // Initialize Supabase
   await Supabase.initialize(
@@ -21,7 +38,11 @@ void main() async {
     ),
   );
 
+  // Initialize local notification service (for reminders)
+  await NotificationService().initialize();
   
+  // Initialize push notification service (for cross-device notifications)
+  await PushNotificationService().initialize();
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

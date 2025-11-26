@@ -1,6 +1,7 @@
 import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event_model.dart';
+import '../../core/services/notification_service.dart';
 
 class CalendarRepository {
   final _supabase = Supabase.instance.client;
@@ -41,8 +42,21 @@ class CalendarRepository {
           .select()
           .single();
 
-      _logger.i('Event created: ${response['id']}');
-      return EventModelHelpers.fromSupabase(response);
+      final createdEvent = EventModelHelpers.fromSupabase(response);
+      _logger.i('Event created: ${createdEvent.id}');
+
+      // Schedule event reminder
+      try {
+        await NotificationService().scheduleEventReminder(
+          eventId: createdEvent.id,
+          eventTitle: title,
+          startTime: startTime,
+        );
+      } catch (e) {
+        _logger.w('Failed to schedule event reminder: $e');
+      }
+
+      return createdEvent;
     } catch (e) {
       _logger.e('Create event error: $e');
       rethrow;
@@ -80,8 +94,26 @@ class CalendarRepository {
           .select()
           .single();
 
+      final updatedEvent = EventModelHelpers.fromSupabase(response);
       _logger.i('Event updated: $eventId');
-      return EventModelHelpers.fromSupabase(response);
+
+      // Update event reminder if start time changed
+      if (startTime != null) {
+        try {
+          // Cancel old reminder
+          await NotificationService().cancelEventNotifications(eventId);
+          // Schedule new reminder
+          await NotificationService().scheduleEventReminder(
+            eventId: eventId,
+            eventTitle: updatedEvent.title,
+            startTime: startTime,
+          );
+        } catch (e) {
+          _logger.w('Failed to update event reminder: $e');
+        }
+      }
+
+      return updatedEvent;
     } catch (e) {
       _logger.e('Update event error: $e');
       rethrow;

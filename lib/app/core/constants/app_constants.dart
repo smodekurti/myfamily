@@ -295,6 +295,16 @@ class AppConstants {
   static const String routeHelp = '/help';
   static const String routeLeaderboard = '/leaderboard';
   static const String routePointsHistory = '/points-history';
+  static const String routeAchievements = '/achievements';
+  static const String routeAnnouncements = '/announcements';
+
+  // ============================================================================
+  // Weather Configuration
+  // ============================================================================
+  
+  /// Default city for weather (can be overridden by user location)
+  /// Uses Open-Meteo free API - no API key required
+  static const String defaultWeatherCity = 'San Francisco';
 
   // ============================================================================
   // Animation Durations

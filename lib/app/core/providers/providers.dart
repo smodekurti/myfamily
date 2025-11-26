@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import '../constants/app_constants.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/family_repository.dart';
 import '../../data/repositories/task_repository.dart';
@@ -11,11 +13,17 @@ import '../../data/repositories/consent_repository.dart';
 import '../../data/repositories/points_history_repository.dart';
 import '../../data/repositories/achievement_repository.dart';
 import '../../data/repositories/task_template_repository.dart';
+import '../../data/repositories/announcement_repository.dart';
+import '../../data/repositories/weather_repository.dart';
+import '../../data/models/weather_model.dart';
+import '../services/location_service.dart';
+import '../services/offline_service.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/event_model.dart';
 import '../../data/models/points_history_model.dart';
 import '../../data/models/achievement_model.dart';
 import '../../data/models/task_template_model.dart';
+import '../../data/models/announcement_model.dart';
 import '../utils/streak_calculator.dart';
 
 /// Singleton repository instances to avoid provider evaluation issues
@@ -59,8 +67,24 @@ final achievementRepositoryProvider = Provider<AchievementRepository>((ref) {
   return AchievementRepository();
 });
 
+final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
+  return AnnouncementRepository();
+});
+
 final taskTemplateRepositoryProvider = Provider<TaskTemplateRepository>((ref) {
   return TaskTemplateRepository();
+});
+
+final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
+  return WeatherRepository();
+});
+
+final locationServiceProvider = Provider<LocationService>((ref) {
+  return LocationService();
+});
+
+final offlineServiceProvider = Provider<OfflineService>((ref) {
+  return OfflineService();
 });
 
 /// Provider for current consent content
@@ -330,6 +354,12 @@ class TaskActions {
   }
 }
 
+/// Announcement providers
+final familyAnnouncementsProvider = StreamProvider.family<List<AnnouncementModel>, String>((ref, familyId) {
+  final announcementRepo = ref.watch(announcementRepositoryProvider);
+  return announcementRepo.streamFamilyAnnouncements(familyId);
+});
+
 /// Calendar providers
 final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((ref, familyId) {
   final calendarRepo = ref.watch(calendarRepositoryProvider);
@@ -390,6 +420,53 @@ final userAchievementsProvider = FutureProvider.family<List<AchievementModel>, (
   return await achievementRepo.getUserAchievements(
     userId: params.$1,
     familyId: params.$2,
+  );
+});
+
+/// Selected weather location provider - stores user's selected location
+/// null means use current location
+final selectedWeatherLocationProvider = StateProvider<String?>((ref) => null);
+
+/// Location provider - gets current device location
+final currentLocationProvider = FutureProvider<Position?>((ref) async {
+  final locationService = ref.watch(locationServiceProvider);
+  return await locationService.getCurrentLocation();
+});
+
+/// Weather provider - gets current weather for selected location, current location, or fallback city
+final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
+  final weatherRepo = ref.watch(weatherRepositoryProvider);
+  final selectedLocation = ref.watch(selectedWeatherLocationProvider);
+  
+  // If user has selected a specific location, use it
+  if (selectedLocation != null && selectedLocation.isNotEmpty) {
+    return await weatherRepo.getWeather(cityName: selectedLocation);
+  }
+  
+  // Otherwise, try to use current location
+  final locationAsync = ref.watch(currentLocationProvider);
+  
+  return locationAsync.when(
+    data: (position) async {
+      if (position != null) {
+        // Use current location
+        return await weatherRepo.getWeather(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      } else {
+        // Fallback to default city
+        return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+      }
+    },
+    loading: () async {
+      // While loading location, try default city
+      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+    },
+    error: (error, stack) async {
+      // On error, use default city
+      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+    },
   );
 });
 
