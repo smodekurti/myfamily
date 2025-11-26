@@ -8,8 +8,19 @@ import '../../data/repositories/grocery_template_repository.dart';
 import '../../data/repositories/grocery_list_repository.dart';
 import '../../data/repositories/calendar_repository.dart';
 import '../../data/repositories/consent_repository.dart';
+import '../../data/repositories/points_history_repository.dart';
+import '../../data/repositories/achievement_repository.dart';
+import '../../data/repositories/task_template_repository.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/event_model.dart';
+import '../../data/models/points_history_model.dart';
+import '../../data/models/achievement_model.dart';
+import '../../data/models/task_template_model.dart';
+import '../utils/streak_calculator.dart';
+
+/// Singleton repository instances to avoid provider evaluation issues
+final _taskRepositoryInstance = TaskRepository();
+final _familyRepositoryInstance = FamilyRepository();
 
 /// Repository providers
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -17,11 +28,11 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final familyRepositoryProvider = Provider<FamilyRepository>((ref) {
-  return FamilyRepository();
+  return _familyRepositoryInstance;
 });
 
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  return TaskRepository();
+  return _taskRepositoryInstance;
 });
 
 final groceryTemplateRepositoryProvider = Provider<GroceryTemplateRepository>((ref) {
@@ -38,6 +49,18 @@ final calendarRepositoryProvider = Provider<CalendarRepository>((ref) {
 
 final consentRepositoryProvider = Provider<ConsentRepository>((ref) {
   return ConsentRepository();
+});
+
+final pointsHistoryRepositoryProvider = Provider<PointsHistoryRepository>((ref) {
+  return PointsHistoryRepository();
+});
+
+final achievementRepositoryProvider = Provider<AchievementRepository>((ref) {
+  return AchievementRepository();
+});
+
+final taskTemplateRepositoryProvider = Provider<TaskTemplateRepository>((ref) {
+  return TaskTemplateRepository();
 });
 
 /// Provider for current consent content
@@ -88,8 +111,8 @@ final familyProvider = StreamProvider.family((ref, String familyId) {
 });
 
 final familyMembersProvider = StreamProvider.family((ref, String familyId) {
-  final familyRepo = ref.watch(familyRepositoryProvider);
-  return familyRepo.streamFamilyMembers(familyId);
+  // Use the singleton instance directly to avoid any provider evaluation issues
+  return _familyRepositoryInstance.streamFamilyMembers(familyId);
 });
 
 final familyMemberProvider = StreamProvider.family((ref, (String familyId, String uid) params) {
@@ -197,27 +220,27 @@ final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Task providers
 final familyTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
-  final taskRepo = ref.watch(taskRepositoryProvider);
-  return taskRepo.streamTasksForFamily(familyId);
+  // Use the singleton instance directly to avoid any provider evaluation issues
+  return _taskRepositoryInstance.streamTasksForFamily(familyId);
 });
 
 final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, userId) {
-  final taskRepo = ref.watch(taskRepositoryProvider);
   final currentFamily = ref.watch(currentFamilyProvider);
   
   if (currentFamily == null) {
     return Stream.value([]);
   }
   
-  return taskRepo.streamTasksForUser(userId, currentFamily.id);
+  // Use the singleton instance directly to avoid any provider evaluation issues
+  return _taskRepositoryInstance.streamTasksForUser(userId, currentFamily.id);
 });
 
 final tasksDueTodayProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
-  final taskRepo = ref.watch(taskRepositoryProvider);
   // Stream all tasks and filter for today's tasks
   // This will automatically update when tasks change in Supabase
   // The stream will emit whenever tasks are created, updated, or deleted
-  return taskRepo.streamTasksForFamily(familyId).map((tasks) {
+  // Use the singleton instance directly to avoid any provider evaluation issues
+  return _taskRepositoryInstance.streamTasksForFamily(familyId).map((tasks) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return tasks.where((task) {
@@ -344,3 +367,34 @@ final grocerySuggestionsProvider = FutureProvider.family<List<Map<String, dynami
 // Search state providers
 final searchModeProvider = StateProvider<bool>((ref) => false);
 final searchQueryProvider = StateProvider<String>((ref) => '');
+
+/// Streak provider - calculates current and longest streaks for a user
+final userStreakProvider = FutureProvider.family<Map<String, int>, (String userId, String familyId)>((ref, params) async {
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  final completedTasks = await taskRepo.getCompletedTasksForUser(params.$1, params.$2);
+  return StreakCalculator.calculateStreaks(completedTasks);
+});
+
+/// Points history provider - gets points transaction history for a user
+final userPointsHistoryProvider = FutureProvider.family<List<PointsHistoryModel>, (String userId, String familyId)>((ref, params) async {
+  final historyRepo = ref.watch(pointsHistoryRepositoryProvider);
+  return await historyRepo.getPointsHistoryForUser(
+    userId: params.$1,
+    familyId: params.$2,
+  );
+});
+
+/// User achievements provider - gets all unlocked achievements for a user
+final userAchievementsProvider = FutureProvider.family<List<AchievementModel>, (String userId, String familyId)>((ref, params) async {
+  final achievementRepo = ref.watch(achievementRepositoryProvider);
+  return await achievementRepo.getUserAchievements(
+    userId: params.$1,
+    familyId: params.$2,
+  );
+});
+
+/// Task templates provider - gets all task templates for a family
+final taskTemplatesProvider = FutureProvider.family<List<TaskTemplateModel>, String>((ref, familyId) async {
+  final templateRepo = ref.watch(taskTemplateRepositoryProvider);
+  return await templateRepo.getTemplatesForFamily(familyId);
+});

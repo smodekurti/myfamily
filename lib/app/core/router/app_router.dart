@@ -32,6 +32,7 @@ import '../../features/family/presentation/pages/family_settings_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/help_page.dart';
 import '../../features/gamification/presentation/pages/leaderboard_page.dart';
+import '../../features/gamification/presentation/pages/points_history_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final routerState = ref.watch(routerStateProvider);
@@ -140,7 +141,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation == AppConstants.routeFamilySettings ||
               state.matchedLocation == AppConstants.routeSettings ||
               state.matchedLocation == AppConstants.routeHelp ||
-              state.matchedLocation == AppConstants.routeLeaderboard) {
+              state.matchedLocation == AppConstants.routeLeaderboard ||
+              state.matchedLocation == AppConstants.routePointsHistory) {
             return null;
           }
           
@@ -318,6 +320,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppConstants.routeLeaderboard,
             name: 'leaderboard',
             builder: (context, state) => const LeaderboardPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routePointsHistory,
+            name: 'points-history',
+            builder: (context, state) => const PointsHistoryPage(),
           ),
         ],
       ),

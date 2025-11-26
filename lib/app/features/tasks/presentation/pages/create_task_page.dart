@@ -35,6 +35,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   DateTime? _selectedDueDate;
   String? _selectedGroceryListId;
   String? _templateIdToImport;
+  String? _selectedTemplateId; // Task template ID
+  String _recurrenceType = 'none'; // 'none', 'daily', 'weekly', 'monthly'
+  DateTime? _recurrenceEndDate;
   bool _isLoading = false;
 
   @override
@@ -49,8 +52,35 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     // Check for templateId in query parameters
     final route = GoRouterState.of(context);
     final templateId = route.uri.queryParameters['templateId'];
-    if (_selectedCategory == 'grocery' && templateId != null && _templateIdToImport == null) {
-      _templateIdToImport = templateId;
+    if (templateId != null) {
+      if (_selectedCategory == 'grocery' && _templateIdToImport == null) {
+        _templateIdToImport = templateId;
+      } else if (_selectedTemplateId == null) {
+        // Load task template
+        _loadTaskTemplate(templateId);
+      }
+    }
+  }
+
+  Future<void> _loadTaskTemplate(String templateId) async {
+    final templateRepo = ref.read(taskTemplateRepositoryProvider);
+    try {
+      final template = await templateRepo.getTemplate(templateId);
+      if (template != null && mounted) {
+        setState(() {
+          _selectedTemplateId = templateId;
+          _titleController.text = template.title;
+          _notesController.text = template.description ?? '';
+          _selectedCategory = template.category ?? 'chore';
+          _selectedPriority = template.priority ?? 'medium';
+          _recurrenceType = template.recurrenceType ?? 'none';
+          if (template.recurrenceEndDate != null) {
+            _recurrenceEndDate = template.recurrenceEndDate;
+          }
+        });
+      }
+    } catch (e) {
+      // Silently fail - template might not exist
     }
   }
 
@@ -189,7 +219,18 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       final category = TaskCategories.getById(_selectedCategory);
       final defaultPoints = category?.defaultPoints ?? 10;
       
-      // Create task (don't set categoryData yet - we'll set it after linking the list)
+      // Build categoryData with recurrence info
+      Map<String, dynamic>? categoryData;
+      if (_recurrenceType != 'none') {
+        categoryData = {
+          'recurrenceType': _recurrenceType,
+        };
+        if (_recurrenceEndDate != null) {
+          categoryData['recurrenceEndDate'] = _recurrenceEndDate!.toIso8601String();
+        }
+      }
+      
+      // Create task (don't set groceryListId in categoryData yet - we'll set it after linking the list)
       final task = await taskActions.createTask(
         title: _titleController.text.trim(),
         description: _notesController.text.trim().isEmpty 
@@ -199,7 +240,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         createdBy: currentUser.id,
         familyId: currentFamily.id,
         category: _selectedCategory,
-        categoryData: null, // Will be set after linking the list
+        categoryData: categoryData,
         dueDate: _selectedDueDate,
         priority: _selectedPriority,
         points: defaultPoints,
@@ -272,10 +313,12 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           );
         }
         
-        // Update task with grocery list ID in categoryData
+        // Update task with grocery list ID in categoryData (merge with existing categoryData)
+        final updatedCategoryData = Map<String, dynamic>.from(task.categoryData ?? categoryData ?? {});
+        updatedCategoryData['groceryListId'] = groceryListId;
         await taskActions.updateTask(
           taskId: task.id,
-          categoryData: {'groceryListId': groceryListId},
+          categoryData: updatedCategoryData,
         );
       }
       
@@ -324,6 +367,164 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     }
   }
 
+  Future<void> _saveAsTemplate(BuildContext context) async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamily = ref.read(currentFamilyProvider);
+    
+    if (currentUser == null || currentFamily == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User not authenticated'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    final templateRepo = ref.read(taskTemplateRepositoryProvider);
+    final nameController = TextEditingController(text: _titleController.text);
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: ResponsiveHelper.borderRadius(16),
+          ),
+          title: const Text('Save as Template'),
+          content: SizedBox(
+            width: ResponsiveHelper.w(400),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Template Name',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: ResponsiveHelper.h(8)),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Weekly Cleaning',
+                      border: OutlineInputBorder(
+                        borderRadius: ResponsiveHelper.borderRadius(12),
+                      ),
+                      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a template name';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: ResponsiveHelper.h(16)),
+                  Text(
+                    'This will save the current task configuration as a reusable template.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+
+                      setDialogState(() => isLoading = true);
+
+                      try {
+                        await templateRepo.createTemplate(
+                          familyId: currentFamily.id,
+                          name: nameController.text.trim(),
+                          title: _titleController.text.trim(),
+                          description: _notesController.text.trim().isEmpty
+                              ? null
+                              : _notesController.text.trim(),
+                          category: _selectedCategory,
+                          priority: _selectedPriority,
+                          points: TaskCategories.getById(_selectedCategory)?.defaultPoints ?? 10,
+                          recurrenceType: _recurrenceType != 'none' ? _recurrenceType : null,
+                          recurrenceEndDate: _recurrenceEndDate,
+                          createdBy: currentUser.id,
+                        );
+
+                        if (context.mounted) {
+                          Navigator.of(dialogContext).pop(true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Template saved successfully!'),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                            ),
+                          );
+                          // Invalidate templates provider
+                          ref.invalidate(taskTemplatesProvider(currentFamily.id));
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to save template: ${e.toString()}'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setDialogState(() => isLoading = false);
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+              child: isLoading
+                  ? SizedBox(
+                      width: ResponsiveHelper.w(20),
+                      height: ResponsiveHelper.h(20),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    nameController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
@@ -359,6 +560,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Template selector (if any templates exist)
+                        _buildTemplateSelector(context),
+                        if (_selectedTemplateId != null) SizedBox(height: ResponsiveHelper.h(16)),
+                        
                         // Chore Name
                         _buildChoreNameField(),
                   SizedBox(height: ResponsiveHelper.h(24)),
@@ -377,6 +582,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         
                         // Due Date
                         _buildDueDateField(context),
+                        SizedBox(height: ResponsiveHelper.h(24)),
+                        
+                        // Recurrence
+                        _buildRecurrenceSelector(context),
                         SizedBox(height: ResponsiveHelper.h(24)),
                         
                         // Shopping List (only if grocery category and no template pre-selected)
@@ -431,15 +640,38 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               textAlign: TextAlign.center,
             ),
           ),
-          TextButton(
-            onPressed: _isLoading ? null : _saveTask,
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Save as Template button
+              TextButton.icon(
+                onPressed: _isLoading ? null : () => _saveAsTemplate(context),
+                icon: Icon(
+                  Icons.bookmark_border,
+                  size: ResponsiveHelper.iconSize(18),
+                ),
+                label: Text(
+                  'Template',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: ResponsiveHelper.sp(12),
+                  ),
+                ),
               ),
-            ),
+              SizedBox(width: ResponsiveHelper.w(8)),
+              // Save button
+              TextButton(
+                onPressed: _isLoading ? null : _saveTask,
+                child: Text(
+                  'Save',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1014,6 +1246,111 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     );
   }
 
+  Widget _buildRecurrenceSelector(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Repeat',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: ResponsiveHelper.h(8)),
+        Wrap(
+          spacing: ResponsiveHelper.w(8),
+          runSpacing: ResponsiveHelper.h(8),
+          children: [
+            _buildRecurrenceChip(context, 'none', 'None'),
+            _buildRecurrenceChip(context, 'daily', 'Daily'),
+            _buildRecurrenceChip(context, 'weekly', 'Weekly'),
+            _buildRecurrenceChip(context, 'monthly', 'Monthly'),
+          ],
+        ),
+        // Show end date picker if recurrence is not 'none'
+        if (_recurrenceType != 'none') ...[
+          SizedBox(height: ResponsiveHelper.h(16)),
+          Text(
+            'Repeat Until',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.h(8)),
+          InkWell(
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 30)),
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+              );
+              
+              if (picked != null) {
+                setState(() {
+                  _recurrenceEndDate = picked;
+                });
+              }
+            },
+            child: Container(
+              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                ),
+                borderRadius: ResponsiveHelper.borderRadius(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _recurrenceEndDate == null
+                          ? 'No end date'
+                          : DateFormat('MM/dd/yyyy').format(_recurrenceEndDate!),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  Icon(
+                    Icons.calendar_today,
+                    size: ResponsiveHelper.iconSize(20),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRecurrenceChip(BuildContext context, String value, String label) {
+    final isSelected = _recurrenceType == value;
+    return ActionChip(
+      label: Text(label),
+      onPressed: () {
+        setState(() {
+          _recurrenceType = value;
+          if (value == 'none') {
+            _recurrenceEndDate = null;
+          }
+        });
+      },
+      backgroundColor: isSelected
+          ? Theme.of(context).colorScheme.primaryContainer
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      labelStyle: TextStyle(
+        color: isSelected
+            ? Theme.of(context).colorScheme.onPrimaryContainer
+            : Theme.of(context).colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: ResponsiveHelper.sp(12),
+      ),
+      padding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
   Widget _buildShoppingListSection(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
@@ -1360,6 +1697,111 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           maxLines: 4,
         ),
       ],
+    );
+  }
+
+  Widget _buildTemplateSelector(BuildContext context) {
+    final currentFamily = ref.watch(currentFamilyProvider);
+    if (currentFamily == null) return const SizedBox.shrink();
+
+    final templatesAsync = ref.watch(taskTemplatesProvider(currentFamily.id));
+
+    return templatesAsync.when(
+      data: (templates) {
+        if (templates.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Use Template (Optional)',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.h(8)),
+            Container(
+              height: ResponsiveHelper.h(120),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: templates.length,
+                itemBuilder: (context, index) {
+                  final template = templates[index];
+                  final isSelected = _selectedTemplateId == template.id;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedTemplateId = null;
+                          _titleController.clear();
+                          _notesController.clear();
+                          _selectedCategory = widget.initialCategory ?? 'chore';
+                          _selectedPriority = 'medium';
+                          _recurrenceType = 'none';
+                          _recurrenceEndDate = null;
+                        } else {
+                          _selectedTemplateId = template.id;
+                          _titleController.text = template.title;
+                          _notesController.text = template.description ?? '';
+                          _selectedCategory = template.category ?? 'chore';
+                          _selectedPriority = template.priority ?? 'medium';
+                          _recurrenceType = template.recurrenceType ?? 'none';
+                          _recurrenceEndDate = template.recurrenceEndDate;
+                        }
+                      });
+                    },
+                    child: Container(
+                      width: ResponsiveHelper.w(140),
+                      margin: EdgeInsets.only(right: ResponsiveHelper.w(12)),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                          width: isSelected ? ResponsiveHelper.w(2) : ResponsiveHelper.w(1),
+                        ),
+                        borderRadius: ResponsiveHelper.borderRadius(12),
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ),
+                      padding: ResponsiveHelper.padding(all: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.description,
+                            size: ResponsiveHelper.iconSize(24),
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          SizedBox(height: ResponsiveHelper.h(8)),
+                          Text(
+                            template.name,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
