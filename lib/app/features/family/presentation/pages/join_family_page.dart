@@ -5,6 +5,8 @@ import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../data/models/family_model.dart';
+import '../widgets/role_selection_dialog.dart';
 
 class JoinFamilyPage extends ConsumerStatefulWidget {
   const JoinFamilyPage({super.key});
@@ -24,7 +26,7 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
     super.dispose();
   }
 
-  Future<void> _joinFamily() async {
+  Future<void> _joinFamily({String? selectedRole}) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -36,20 +38,37 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
       }
 
       final familyRepo = ref.read(familyRepositoryProvider);
-      final joinedFamily = await familyRepo.joinFamilyByCode(
+      final result = await familyRepo.joinFamilyByCode(
         inviteCode: _codeController.text.trim(),
         userId: currentUser.id,
+        selectedRole: selectedRole,
       );
       
-      if (joinedFamily != null) {
+      final family = result['family'] as FamilyModel?;
+      final needsRoleSelection = result['needsRoleSelection'] as bool? ?? false;
+      
+      // If role selection is needed, show dialog
+      if (needsRoleSelection && family != null) {
+        setState(() => _isLoading = false);
+        
+        final role = await RoleSelectionDialog.show(context, family.name);
+        
+        if (role != null && mounted) {
+          // Retry join with selected role
+          await _joinFamily(selectedRole: role);
+        }
+        return;
+      }
+      
+      if (family != null) {
         // Invalidate the user families provider to force a refresh
         ref.invalidate(userFamiliesProvider(currentUser.id));
         
         // Invalidate family members provider to refresh the members list
-        ref.invalidate(familyMembersProvider(joinedFamily.id));
+        ref.invalidate(familyMembersProvider(family.id));
         
         // Invalidate family provider to refresh family data
-        ref.invalidate(familyProvider(joinedFamily.id));
+        ref.invalidate(familyProvider(family.id));
         
         // Wait for the streams to update
         await Future.delayed(const Duration(seconds: 1));
