@@ -74,9 +74,13 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
   @override
   void initState() {
     super.initState();
+    // Register global callbacks immediately to ensure they're always available
+    _registerGlobalCallbacks();
+
     // Load theme preference from user profile after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadThemePreference();
+      // Re-register callbacks after first frame to ensure they're set with proper ref context
       _registerGlobalCallbacks();
     });
   }
@@ -129,11 +133,38 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
         ref.invalidate(familyEventsProvider(currentFamily.id));
       }
     });
+
+    // Announcement callback
+    PushNotificationService().setAnnouncementNotificationCallback(() {
+      final currentFamily = ref.read(currentFamilyProvider);
+      if (currentFamily != null && mounted) {
+        ref.invalidate(familyAnnouncementsProvider(currentFamily.id));
+      }
+    });
+
+    // Template callback (for both grocery and task templates)
+    PushNotificationService().setTemplateNotificationCallback(() {
+      final currentFamily = ref.read(currentFamilyProvider);
+      if (currentFamily != null && mounted) {
+        // Invalidate grocery templates
+        ref.invalidate(groceryTemplatesProvider(currentFamily.id));
+        // Note: taskTemplatesProvider is a FutureProvider, so we can't invalidate it directly
+        // It will refresh on next access, but templates are less critical for real-time updates
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+
+    // Re-register global callbacks whenever the family changes
+    // This ensures callbacks are always available with the current family
+    ref.listen(currentFamilyProvider, (previous, next) {
+      if (next != null) {
+        _registerGlobalCallbacks();
+      }
+    });
 
     return ScreenUtilInit(
       designSize: const Size(
