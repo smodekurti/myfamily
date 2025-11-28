@@ -72,7 +72,6 @@ class FamilyRepository {
         displayName: '', // Will be updated from user profile
       );
 
-      _logger.i('Created family: $familyId with invite code: $inviteCode');
       return family;
     } catch (e) {
       _logger.e('Create family error: $e');
@@ -222,7 +221,6 @@ class FamilyRepository {
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', family.id);
 
-      _logger.i('User $userId joined family: ${family.id} with role: $roleToAssign');
       
       // Return updated family
       final updatedFamily = await getFamily(family.id);
@@ -313,7 +311,6 @@ class FamilyRepository {
 
       await _supabase.from('families').update(updates).eq('id', familyId);
       
-      _logger.i('Updated family: $familyId');
     } catch (e) {
       _logger.e('Update family error: $e');
       rethrow;
@@ -324,7 +321,6 @@ class FamilyRepository {
   Future<void> deleteFamily(String familyId) async {
     try {
       await _supabase.from('families').delete().eq('id', familyId);
-      _logger.i('Deleted family: $familyId');
     } catch (e) {
       _logger.e('Delete family error: $e');
       rethrow;
@@ -354,7 +350,6 @@ class FamilyRepository {
         }).eq('id', familyId);
       }
 
-      _logger.i('User $userId left family: $familyId');
     } catch (e) {
       _logger.e('Leave family error: $e');
       rethrow;
@@ -378,7 +373,6 @@ class FamilyRepository {
 
       await _supabase.from('family_members').insert(member);
 
-      _logger.i('Added member $uid to family: $familyId');
     } catch (e) {
       _logger.e('Add family member error: $e');
       rethrow;
@@ -537,7 +531,6 @@ class FamilyRepository {
                   .maybeSingle();
               
               final avatarUrl = userResponse?['avatar_url'] as String?;
-              _logger.d('Fetched user data for $userId: displayName=${userResponse?['display_name']}, avatar_url=$avatarUrl');
               
               return FamilyMemberModel(
                 uid: userId,
@@ -592,7 +585,6 @@ class FamilyRepository {
           .eq('family_id', familyId)
           .eq('user_id', uid);
 
-      _logger.i('Updated family member $uid in family: $familyId');
     } catch (e) {
       _logger.e('Update family member error: $e');
       rethrow;
@@ -639,7 +631,6 @@ class FamilyRepository {
             .eq('family_id', familyId)
             .eq('user_id', userId);
 
-        _logger.i('Awarded $points points to user $userId in family $familyId (new total: $newPoints)');
         
         // Log points transaction
         await _pointsHistoryRepo.logPointsTransaction(
@@ -701,7 +692,6 @@ class FamilyRepository {
             .eq('family_id', familyId)
             .eq('user_id', userId);
 
-        _logger.i('Removed $points points from user $userId in family $familyId (new total: $newPoints)');
         
         // Log points transaction (negative points)
         await _pointsHistoryRepo.logPointsTransaction(
@@ -735,7 +725,6 @@ class FamilyRepository {
           .eq('family_id', familyId)
           .eq('user_id', uid);
 
-      _logger.i('Removed member $uid from family: $familyId');
     } catch (e) {
       _logger.e('Remove family member error: $e');
       rethrow;
@@ -796,7 +785,6 @@ class FamilyRepository {
           })
           .eq('id', familyId);
 
-      _logger.i('Generated adult invite code for family $familyId: $inviteCode');
       return inviteCode;
     } catch (e) {
       _logger.e('Generate invite code error: $e');
@@ -826,7 +814,6 @@ class FamilyRepository {
           })
           .eq('id', familyId);
 
-      _logger.i('Generated child invite code for family $familyId: $inviteCode');
       return inviteCode;
     } catch (e) {
       _logger.e('Generate child invite code error: $e');
@@ -871,7 +858,6 @@ class FamilyRepository {
           })
           .eq('id', familyId);
 
-      _logger.i('Generated parent invite code for family $familyId: $inviteCode');
       return inviteCode;
     } catch (e) {
       _logger.e('Generate parent invite code error: $e');

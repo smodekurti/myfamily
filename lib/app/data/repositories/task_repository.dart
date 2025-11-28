@@ -79,7 +79,6 @@ class TaskRepository {
           .single();
 
       final createdTask = TaskModelHelpers.fromSupabase(response);
-      _logger.i('Task created successfully: ${createdTask.id}');
 
       // Send notifications to family members
       try {
@@ -255,7 +254,6 @@ class TaskRepository {
           .single();
 
       final updatedTask = TaskModelHelpers.fromSupabase(response);
-      _logger.i('Task updated successfully: $taskId');
 
       // Handle notifications for task updates
       try {
@@ -341,8 +339,6 @@ class TaskRepository {
           .from('tasks')
           .delete()
           .eq('id', taskId);
-
-      _logger.i('Task deleted successfully: $taskId');
 
       // Notify family members about deletion
       try {
@@ -456,7 +452,6 @@ class TaskRepository {
 
   /// Stream tasks assigned to a specific user
   Stream<List<TaskModel>> streamTasksForUser(String userId, String familyId) {
-    _logger.i('Starting stream for user tasks: userId=$userId, familyId=$familyId');
     try {
       // Stream all family tasks and filter for the user
       return _supabase
@@ -470,7 +465,6 @@ class TaskRepository {
                   .where((json) => json['assigned_to'] == userId)
                   .map((json) => TaskModelHelpers.fromSupabase(json))
                   .toList();
-              _logger.i('Received ${tasks.length} tasks for user $userId from stream');
               return tasks;
             } catch (e, stackTrace) {
               _logger.e('Error parsing user tasks from stream: $e', error: e, stackTrace: stackTrace);
@@ -555,8 +549,6 @@ class TaskRepository {
           .eq('id', taskId)
           .select()
           .single();
-
-      _logger.i('Task completed successfully: $taskId, points awarded: $points to user $assignedTo');
 
       // Check and unlock achievements
       final completedTask = TaskModelHelpers.fromSupabase(response);
@@ -651,7 +643,6 @@ class TaskRepository {
       // Check if we've passed the recurrence end date
       if (recurrenceEndDate != null && nextDueDate != null) {
         if (nextDueDate.isAfter(recurrenceEndDate)) {
-          _logger.i('Recurrence end date reached, not creating next occurrence');
           return;
         }
       }
@@ -679,8 +670,6 @@ class TaskRepository {
       await _supabase
           .from('tasks')
           .insert(nextTaskData);
-
-      _logger.i('Next recurrence created for task: ${originalTask.id}');
     } catch (e) {
       _logger.e('Error creating next recurrence: $e');
       // Don't rethrow - we don't want to fail task completion if recurrence creation fails

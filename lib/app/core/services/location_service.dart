@@ -26,7 +26,6 @@ class LocationService {
   /// Returns null if permission denied or location unavailable
   Future<Position?> getCurrentLocation() async {
     try {
-      _logger.i('Getting current location...');
       
       // Check if location services are enabled
       final serviceEnabled = await isLocationServiceEnabled();
@@ -37,13 +36,10 @@ class LocationService {
 
       // Check permission
       var permission = await Permission.location.status;
-      _logger.i('Location permission status: $permission');
       
       if (permission.isDenied) {
-        _logger.i('Location permission denied, requesting...');
         // Request permission
         permission = await Permission.location.request();
-        _logger.i('Location permission request result: $permission');
         
         if (permission.isDenied) {
           _logger.w('Location permission denied after request');
@@ -61,14 +57,12 @@ class LocationService {
         return null;
       }
 
-      _logger.i('Getting current position...');
       // Get current position with better accuracy and timeout
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
         timeLimit: const Duration(seconds: 15),
       );
 
-      _logger.i('Current location obtained: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e, stackTrace) {
       _logger.e('Get current location error: $e', error: e, stackTrace: stackTrace);

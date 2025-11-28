@@ -329,7 +329,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         final hasPermission = await pushService.hasPermission();
         
         if (!hasPermission) {
-          _logger.i('Requesting notification permission...');
           final permissionGranted = await pushService.requestPermission();
           
           if (!permissionGranted) {

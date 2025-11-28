@@ -31,7 +31,6 @@ class PointsHistoryRepository {
       };
 
       await _supabase.from('points_history').insert(historyData);
-      _logger.i('Logged points transaction: $points points for $reason');
     } catch (e) {
       _logger.e('Log points transaction error: $e');
       // Don't rethrow - points history logging shouldn't break the app

@@ -22,22 +22,17 @@ class NotificationService {
     try {
       // Check current permission status first
       var status = await Permission.notification.status;
-      _logger.i('Notification permission status: $status');
       
       // Only request permission if explicitly requested and not already granted
       if (requestPermissions && !status.isGranted && !status.isPermanentlyDenied) {
-        _logger.i('Requesting notification permission...');
         status = await Permission.notification.request();
-        _logger.i('Permission request result: $status');
         
         // Re-check after a brief delay (iOS sometimes takes a moment)
         if (!status.isGranted) {
           await Future.delayed(const Duration(milliseconds: 500));
           status = await Permission.notification.status;
-          _logger.i('Re-checked permission status: $status');
         }
       } else if (!requestPermissions) {
-        _logger.i('Skipping permission request (deferred until needed)');
       }
       
       if (!status.isGranted) {
@@ -45,7 +40,6 @@ class NotificationService {
         // Don't return false - we can still initialize the service
         // Permission will be requested when user actually schedules a notification
       } else {
-      _logger.i('✅ Notification permission granted');
       }
 
       // Initialize timezone
@@ -75,7 +69,6 @@ class NotificationService {
 
       if (initialized == true) {
         _initialized = true;
-        _logger.i('Notification service initialized');
         return true;
       }
 
@@ -88,7 +81,6 @@ class NotificationService {
 
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
-    _logger.i('Notification tapped: ${response.payload}');
     // Handle navigation based on payload if needed
   }
 
@@ -136,7 +128,6 @@ class NotificationService {
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
-      _logger.i('Notification scheduled: $id at $scheduledDate');
     } catch (e, stackTrace) {
       _logger.e('Schedule notification error: $e', error: e, stackTrace: stackTrace);
       // Don't rethrow - notification scheduling failure shouldn't block task operations
@@ -183,7 +174,6 @@ class NotificationService {
         ),
         payload: payload,
       );
-      _logger.i('Notification shown: $id');
     } catch (e, stackTrace) {
       _logger.e('Show notification error: $e', error: e, stackTrace: stackTrace);
       // Don't rethrow - notification showing failure shouldn't block operations
@@ -194,7 +184,6 @@ class NotificationService {
   Future<void> cancelNotification(int id) async {
     try {
       await _notifications.cancel(id);
-      _logger.i('Notification cancelled: $id');
     } catch (e) {
       _logger.e('Cancel notification error: $e');
     }
@@ -204,7 +193,6 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     try {
       await _notifications.cancelAll();
-      _logger.i('All notifications cancelled');
     } catch (e) {
       _logger.e('Cancel all notifications error: $e');
     }

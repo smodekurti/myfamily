@@ -57,7 +57,6 @@ class CalendarRepository {
           .single();
 
       final createdEvent = EventModelHelpers.fromSupabase(response);
-      _logger.i('Event created: ${createdEvent.id}');
 
       // Schedule event reminder
       try {
@@ -149,7 +148,6 @@ class CalendarRepository {
           .single();
 
       final updatedEvent = EventModelHelpers.fromSupabase(response);
-      _logger.i('Event updated: $eventId');
 
       // Update event reminder if start time changed
       if (startTime != null) {
@@ -226,7 +224,6 @@ class CalendarRepository {
           .delete()
           .eq('id', eventId);
 
-      _logger.i('Event deleted: $eventId');
 
       // Notify family members
       try {

@@ -81,9 +81,6 @@ class AuthRepository {
   /// This provides a native UI experience on both iOS and Android
   Future<AuthResponse?> signInWithGoogle() async {
     try {
-      _logger.i('=== Starting Native Google Sign-In ===');
-      _logger.i('Initializing GoogleSignIn instance...');
-
       // Initialize and sign in with native Google Sign-In SDK
       final googleUser = await _googleSignIn.signIn().catchError((error) {
         _logger.e('GoogleSignIn.signIn() error: $error');
@@ -95,21 +92,12 @@ class AuthRepository {
         return null;
       }
 
-      _logger.i('✓ Google user obtained: ${googleUser.email}');
-      _logger.i('Getting authentication tokens...');
-
       // Get the authentication details
       final googleAuth = await googleUser.authentication;
-
-      _logger.i('✓ Got authentication tokens');
-      _logger.i('ID Token present: ${googleAuth.idToken != null}');
-      _logger.i('Access Token present: ${googleAuth.accessToken != null}');
 
       if (googleAuth.idToken == null) {
         throw Exception('No ID token received from Google');
       }
-
-      _logger.i('Authenticating with Supabase...');
 
       // Sign in to Supabase with the Google ID token
       // Note: For native iOS/Android sign-in, "Skip nonce checks" must be enabled in Supabase
@@ -118,8 +106,6 @@ class AuthRepository {
         idToken: googleAuth.idToken!,
       );
 
-      _logger.i('✓ Supabase authentication successful!');
-      _logger.i('User: ${response.user?.email}');
 
       if (response.user != null) {
         await _createOrUpdateUserProfile(response.user!);
@@ -197,7 +183,6 @@ class AuthRepository {
 
       await _supabase.auth.updateUser(UserAttributes(data: updatedMetadata));
 
-      _logger.i('User metadata updated successfully');
     } catch (e) {
       _logger.e('Update user metadata error: $e');
       rethrow;
@@ -240,7 +225,6 @@ class AuthRepository {
       if (dbUpdates.isNotEmpty) {
         try {
           await _supabase.from('users').update(dbUpdates).eq('id', user.id);
-          _logger.i('User profile updated in database');
         } catch (e) {
           _logger.e('Error updating user in database: $e');
           // Still try the metadata approach as fallback
@@ -299,7 +283,6 @@ class AuthRepository {
       // Try to insert first, then update if it fails
       try {
         await _supabase.from('users').insert(userModel.toSupabase());
-        _logger.i('User profile created successfully');
       } catch (insertError) {
         // If insert fails (user already exists), try update
         _logger.w('Insert failed, trying update: $insertError');
@@ -307,7 +290,6 @@ class AuthRepository {
             .from('users')
             .update(userModel.toSupabase())
             .eq('id', user.id);
-        _logger.i('User profile updated successfully');
       }
     } catch (e) {
       _logger.e('Create/update user profile error: $e');
@@ -385,7 +367,6 @@ class AuthRepository {
 
       if (updates.isNotEmpty) {
         await _supabase.from('users').update(updates).eq('id', user.id);
-        _logger.i('User preferences updated successfully');
       }
     } catch (e) {
       _logger.e('Update user preferences error: $e');

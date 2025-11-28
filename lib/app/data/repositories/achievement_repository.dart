@@ -62,7 +62,6 @@ class AchievementRepository {
       };
 
       await _supabase.from('achievements').insert(achievementData);
-      _logger.i('Unlocked achievement: $achievementId for user: $userId');
     } catch (e) {
       _logger.e('Unlock achievement error: $e');
       // Don't rethrow - achievement unlocking shouldn't break the app

@@ -44,7 +44,6 @@ class AnnouncementRepository {
           .single();
 
       final createdAnnouncement = AnnouncementModelHelpers.fromSupabase(response);
-      _logger.i('Announcement created: ${createdAnnouncement.id}');
 
       // Notify family members
       try {
@@ -103,7 +102,6 @@ class AnnouncementRepository {
             .update({'read_by': readBy})
             .eq('id', announcementId);
 
-        _logger.i('Announcement marked as read: $announcementId');
       }
     } catch (e) {
       _logger.e('Mark as read error: $e');
@@ -147,7 +145,6 @@ class AnnouncementRepository {
           .delete()
           .eq('id', announcementId);
 
-      _logger.i('Announcement deleted: $announcementId');
 
       // Notify family members
       try {
@@ -190,7 +187,6 @@ class AnnouncementRepository {
           .single();
 
       final updatedAnnouncement = AnnouncementModelHelpers.fromSupabase(response);
-      _logger.i('Announcement updated: $announcementId');
 
       // Notify family members
       try {
