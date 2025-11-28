@@ -909,68 +909,76 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ],
           ),
         ),
-        trailing: PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            size: ResponsiveHelper.iconSize(18),
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-          ),
-          onSelected: (value) async {
-            if (value == 'edit') {
-              // Check permission before editing
-              final hasPermission = await checkPermission(ref, 'edit_event');
-              if (hasPermission) {
-                _showEditEventDialog(context, event);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('You do not have permission to edit events'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
+        trailing: Consumer(
+          builder: (context, ref, child) {
+            return FutureBuilder<List<bool>>(
+              future: Future.wait([
+                checkPermission(ref, 'edit_event'),
+                checkPermission(ref, 'delete_event'),
+              ]),
+              builder: (context, snapshot) {
+                final canEdit = snapshot.data?[0] ?? false;
+                final canDelete = snapshot.data?[1] ?? false;
+                
+                if (!canEdit && !canDelete) {
+                  return const SizedBox.shrink();
                 }
-              }
-            } else if (value == 'delete') {
-              // Check permission before deleting
-              final hasPermission = await checkPermission(ref, 'delete_event');
-              if (hasPermission) {
-                _deleteEvent(context, event);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('You do not have permission to delete events'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            }
-          },
-          itemBuilder: (context) async {
-            final canEdit = await checkPermission(ref, 'edit_event');
-            final canDelete = await checkPermission(ref, 'delete_event');
-            
-            final items = <PopupMenuEntry<String>>[];
-            if (canEdit) {
-              items.add(const PopupMenuItem(
-                value: 'edit',
-                child: Text('Edit'),
-              ));
-            }
-            if (canDelete) {
-              items.add(PopupMenuItem(
-                value: 'delete',
-                child: Text(
-                  'Delete',
-                  style: TextStyle(
-                    color: Colors.red,
+                
+                return PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: ResponsiveHelper.iconSize(18),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
-                ),
-              ));
-            }
-            return items;
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      if (canEdit) {
+                        _showEditEventDialog(context, event);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('You do not have permission to edit events'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    } else if (value == 'delete') {
+                      if (canDelete) {
+                        _deleteEvent(context, event);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('You do not have permission to delete events'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (canEdit)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit'),
+                      ),
+                    if (canDelete)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
           },
         ),
       ),

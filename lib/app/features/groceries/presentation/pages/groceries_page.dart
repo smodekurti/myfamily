@@ -223,97 +223,105 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                ),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: RoundedRectangleBorder(
-                  borderRadius: ResponsiveHelper.borderRadius(12),
-                ),
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    // Check permission before editing
-                    final hasPermission = await checkPermission(ref, 'edit_list');
-                    if (hasPermission) {
-                      _editListName(context, list);
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('You do not have permission to edit lists'),
-                            backgroundColor: Theme.of(context).colorScheme.error,
-                          ),
-                        );
+              Consumer(
+                builder: (context, ref, child) {
+                  return FutureBuilder<List<bool>>(
+                    future: Future.wait([
+                      checkPermission(ref, 'edit_list'),
+                      checkPermission(ref, 'delete_list'),
+                    ]),
+                    builder: (context, snapshot) {
+                      final canEdit = snapshot.data?[0] ?? false;
+                      final canDelete = snapshot.data?[1] ?? false;
+                      
+                      if (!canEdit && !canDelete) {
+                        return const SizedBox.shrink();
                       }
-                    }
-                  } else if (value == 'delete') {
-                    // Check permission before deleting
-                    final hasPermission = await checkPermission(ref, 'delete_list');
-                    if (hasPermission) {
-                      _deleteList(context, list);
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('You do not have permission to delete lists'),
-                            backgroundColor: Theme.of(context).colorScheme.error,
-                          ),
-                        );
-                      }
-                    }
-                  }
-                },
-                itemBuilder: (context) async {
-                  final canEdit = await checkPermission(ref, 'edit_list');
-                  final canDelete = await checkPermission(ref, 'delete_list');
-                  
-                  final items = <PopupMenuEntry<String>>[];
-                  if (canEdit) {
-                    items.add(PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            size: ResponsiveHelper.iconSize(20),
-                          ),
-                          SizedBox(width: ResponsiveHelper.w(12)),
-                          Text(
-                            'Edit Name',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
+                      
+                      return PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          size: ResponsiveHelper.iconSize(20),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: ResponsiveHelper.borderRadius(12),
+                        ),
+                        onSelected: (value) async {
+                          if (value == 'edit') {
+                            if (canEdit) {
+                              _editListName(context, list);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('You do not have permission to edit lists'),
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                              }
+                            }
+                          } else if (value == 'delete') {
+                            if (canDelete) {
+                              _deleteList(context, list);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('You do not have permission to delete lists'),
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (canEdit)
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    size: ResponsiveHelper.iconSize(20),
+                                  ),
+                                  SizedBox(width: ResponsiveHelper.w(12)),
+                                  Text(
+                                    'Edit Name',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ));
-                  }
-                  if (canDelete) {
-                    items.add(PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            color: Theme.of(context).colorScheme.error,
-                            size: ResponsiveHelper.iconSize(20),
-                          ),
-                          SizedBox(width: ResponsiveHelper.w(12)),
-                          Text(
-                            'Delete',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
+                          if (canDelete)
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete_outline,
+                                    color: Theme.of(context).colorScheme.error,
+                                    size: ResponsiveHelper.iconSize(20),
+                                  ),
+                                  SizedBox(width: ResponsiveHelper.w(12)),
+                                  Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                         ],
-                      ),
-                    ));
-                  }
-                  return items;
+                      );
+                    },
+                  );
                 },
               ),
             ],
