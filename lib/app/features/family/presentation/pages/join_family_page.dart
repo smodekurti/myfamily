@@ -193,13 +193,22 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                     // Create family link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          "Don't have a family code? ",
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        Flexible(
+                          child: Text(
+                            "Don't have a family code? ",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         TextButton(
                           onPressed: () => context.go(AppConstants.routeCreateFamily),
+                          style: TextButton.styleFrom(
+                            padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           child: Text(
                             'Create one',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
