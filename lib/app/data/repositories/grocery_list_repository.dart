@@ -2,10 +2,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/grocery_template_model.dart';
 import '../../core/services/family_notification_service.dart';
+import '../../core/services/role_permission_service.dart';
 
 class GroceryListRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
+  final RolePermissionService _roleService = RolePermissionService();
 
   /// Create a standalone grocery list (not attached to a task)
   Future<GroceryListModel> createStandaloneList({
@@ -15,6 +17,17 @@ class GroceryListRepository {
     required String createdBy,
   }) async {
     try {
+      // Check permission to create lists
+      final canCreate = await _roleService.canPerformAction(
+        userId: createdBy,
+        familyId: familyId,
+        action: 'create_list',
+      );
+      
+      if (!canCreate) {
+        throw Exception('You do not have permission to create grocery lists');
+      }
+      
       final now = DateTime.now();
       final listData = {
         'task_id': null, // Standalone list
@@ -64,6 +77,17 @@ class GroceryListRepository {
     required String createdBy,
   }) async {
     try {
+      // Check permission to create lists
+      final canCreate = await _roleService.canPerformAction(
+        userId: createdBy,
+        familyId: familyId,
+        action: 'create_list',
+      );
+      
+      if (!canCreate) {
+        throw Exception('You do not have permission to create grocery lists');
+      }
+      
       final now = DateTime.now();
       final listData = {
         'task_id': taskId,
@@ -124,27 +148,51 @@ class GroceryListRepository {
   }
 
   /// Stream all standalone grocery lists for a family
-  Stream<List<GroceryListModel>> streamStandaloneListsForFamily(String familyId) {
-    return _supabase
-        .from('grocery_lists')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .map((data) {
-          // Filter out lists with task_id in memory
-          return data
-              .where((json) => json['task_id'] == null)
-              .map((json) => _fromSupabase(json))
-              .toList();
-        })
-        .map((lists) {
-          // Sort by updated_at descending
-          lists.sort((a, b) {
-            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-            return bDate.compareTo(aDate);
+  /// Children can view lists (read-only per restrictions)
+  Stream<List<GroceryListModel>> streamStandaloneListsForFamily(String familyId, {String? userId}) async* {
+    try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user can view lists
+      if (currentUserId != null) {
+        final canView = await _roleService.canViewData(
+          userId: currentUserId,
+          familyId: familyId,
+          dataType: 'grocery_list',
+        );
+        
+        if (!canView) {
+          _logger.w('User $currentUserId cannot view grocery lists in family $familyId');
+          yield <GroceryListModel>[];
+          return;
+        }
+      }
+      
+      yield* _supabase
+          .from('grocery_lists')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .map((data) {
+            // Filter out lists with task_id in memory
+            return data
+                .where((json) => json['task_id'] == null)
+                .map((json) => _fromSupabase(json))
+                .toList();
+          })
+          .map((lists) {
+            // Sort by updated_at descending
+            lists.sort((a, b) {
+              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+              return bDate.compareTo(aDate);
+            });
+            return lists;
           });
-          return lists;
-        });
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for standalone lists: $e', error: e, stackTrace: stackTrace);
+      yield <GroceryListModel>[];
+    }
   }
 
   /// Stream all grocery lists for a family (both standalone and task-linked)
@@ -406,6 +454,37 @@ class GroceryListRepository {
     String? unit,
   }) async {
     try {
+      // Get item info first
+      final itemResponse = await _supabase
+          .from('grocery_list_items')
+          .select('list_id')
+          .eq('id', itemId)
+          .single();
+      final listId = itemResponse['list_id'] as String;
+      
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Check permission to edit lists
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+      
+      if (!canEdit) {
+        throw Exception('You do not have permission to edit grocery list items');
+      }
+      
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
