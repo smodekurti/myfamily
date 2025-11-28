@@ -6,12 +6,14 @@ import 'achievement_repository.dart';
 import '../../core/utils/streak_calculator.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/family_notification_service.dart';
+import '../../core/services/role_permission_service.dart';
 
 class TaskRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
   final FamilyRepository _familyRepo = FamilyRepository();
   final AchievementRepository _achievementRepo = AchievementRepository();
+  final RolePermissionService _roleService = RolePermissionService();
 
   /// Create a new task
   Future<TaskModel> createTask({
@@ -28,6 +30,30 @@ class TaskRepository {
     int points = 10,
   }) async {
     try {
+      // Check permission to create tasks
+      final canCreate = await _roleService.canPerformAction(
+        userId: createdBy,
+        familyId: familyId,
+        action: 'create_task',
+      );
+      
+      if (!canCreate) {
+        throw Exception('You do not have permission to create tasks');
+      }
+      
+      // Check permission to assign tasks if assigning to someone else
+      if (assignedTo != createdBy) {
+        final canAssign = await _roleService.canPerformAction(
+          userId: createdBy,
+          familyId: familyId,
+          action: 'assign_task',
+        );
+        
+        if (!canAssign) {
+          throw Exception('You do not have permission to assign tasks to others');
+        }
+      }
+      
       final now = DateTime.now();
       
       final taskData = {
@@ -127,6 +153,36 @@ class TaskRepository {
       final taskPoints = currentTaskResponse['points'] as int;
       final taskAssignedTo = currentTaskResponse['assigned_to'] as String;
       final taskFamilyId = currentTaskResponse['family_id'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Check permission to edit tasks
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: taskFamilyId,
+        action: 'edit_task',
+      );
+      
+      if (!canEdit) {
+        throw Exception('You do not have permission to edit tasks');
+      }
+      
+      // Check permission to assign tasks if reassigning
+      if (assignedTo != null && assignedTo != taskAssignedTo && assignedTo != userId) {
+        final canAssign = await _roleService.canPerformAction(
+          userId: userId,
+          familyId: taskFamilyId,
+          action: 'assign_task',
+        );
+        
+        if (!canAssign) {
+          throw Exception('You do not have permission to assign tasks to others');
+        }
+      }
 
       // Handle points when status changes
       if (status != null) {
@@ -263,6 +319,23 @@ class TaskRepository {
       final familyId = taskResponse['family_id'] as String;
       final taskTitle = taskResponse['title'] as String;
       final createdBy = taskResponse['created_by'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Check permission to delete tasks
+      final canDelete = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: familyId,
+        action: 'delete_task',
+      );
+      
+      if (!canDelete) {
+        throw Exception('You do not have permission to delete tasks');
+      }
 
       await _supabase
           .from('tasks')
