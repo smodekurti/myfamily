@@ -70,7 +70,6 @@ class TaskTemplateRepository {
           .single();
 
       final createdTemplate = TaskTemplateModelHelpers.fromSupabase(response);
-      _logger.i('Task template created: ${createdTemplate.id}');
 
       // Notify family members
       try {
@@ -165,7 +164,6 @@ class TaskTemplateRepository {
           .single();
 
       final updatedTemplate = TaskTemplateModelHelpers.fromSupabase(response);
-      _logger.i('Task template updated: $templateId');
 
       // Notify family members
       try {
@@ -205,7 +203,6 @@ class TaskTemplateRepository {
           .delete()
           .eq('id', templateId);
 
-      _logger.i('Task template deleted: $templateId');
 
       // Notify family members
       if (familyId != null) {

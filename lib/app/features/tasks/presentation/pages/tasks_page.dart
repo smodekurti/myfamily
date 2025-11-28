@@ -52,7 +52,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         if (currentFamily != null) {
           PushNotificationService().setTaskNotificationCallback(() {
             if (mounted) {
-              _logger.i('🔄 Refreshing tasks due to notification (realtime fallback)');
               ref.invalidate(familyTasksProvider(currentFamily.id));
               ref.invalidate(tasksDueTodayProvider(currentFamily.id));
             }

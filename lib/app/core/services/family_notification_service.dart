@@ -38,7 +38,6 @@ class FamilyNotificationService {
           : allMemberIds;
 
       if (memberIdsToNotify.isEmpty) {
-        _logger.i('No other family members to notify');
         return;
       }
 
@@ -57,7 +56,6 @@ class FamilyNotificationService {
         },
       );
 
-      _logger.i('✅ Silent notification sent to ${memberIdsToNotify.length} family members for $dataType $action');
     } catch (e, stackTrace) {
       _logger.e('Error sending family notification: $e', error: e, stackTrace: stackTrace);
       // Don't rethrow - notification failure shouldn't block operations
@@ -98,7 +96,6 @@ class FamilyNotificationService {
       }
 
       if (memberIdsToNotify.isEmpty) {
-        _logger.i('No family members to notify');
         return;
       }
 
@@ -114,7 +111,6 @@ class FamilyNotificationService {
         data: notificationData,
       );
 
-      _logger.i('✅ Visible notification sent to ${memberIdsToNotify.length} family members: $title');
     } catch (e, stackTrace) {
       _logger.e('Error sending family notification: $e', error: e, stackTrace: stackTrace);
       // Don't rethrow - notification failure shouldn't block operations

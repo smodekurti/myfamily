@@ -14,7 +14,6 @@ class OfflineService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tasksKey, jsonEncode(tasks));
-      _logger.i('Tasks cached offline: ${tasks.length}');
     } catch (e) {
       _logger.e('Cache tasks error: $e');
     }
@@ -29,7 +28,6 @@ class OfflineService {
         final tasks = (jsonDecode(tasksJson) as List)
             .cast<Map<String, dynamic>>()
             .toList();
-        _logger.i('Retrieved ${tasks.length} cached tasks');
         return tasks;
       }
     } catch (e) {
@@ -43,7 +41,6 @@ class OfflineService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_groceryListsKey, jsonEncode(lists));
-      _logger.i('Grocery lists cached offline: ${lists.length}');
     } catch (e) {
       _logger.e('Cache grocery lists error: $e');
     }
@@ -58,7 +55,6 @@ class OfflineService {
         final lists = (jsonDecode(listsJson) as List)
             .cast<Map<String, dynamic>>()
             .toList();
-        _logger.i('Retrieved ${lists.length} cached grocery lists');
         return lists;
       }
     } catch (e) {
@@ -72,7 +68,6 @@ class OfflineService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_eventsKey, jsonEncode(events));
-      _logger.i('Events cached offline: ${events.length}');
     } catch (e) {
       _logger.e('Cache events error: $e');
     }
@@ -87,7 +82,6 @@ class OfflineService {
         final events = (jsonDecode(eventsJson) as List)
             .cast<Map<String, dynamic>>()
             .toList();
-        _logger.i('Retrieved ${events.length} cached events');
         return events;
       }
     } catch (e) {
@@ -115,7 +109,6 @@ class OfflineService {
       });
       
       await prefs.setString(_pendingOperationsKey, jsonEncode(pending));
-      _logger.i('Added pending operation: $type');
     } catch (e) {
       _logger.e('Add pending operation error: $e');
     }
@@ -142,7 +135,6 @@ class OfflineService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_pendingOperationsKey);
-      _logger.i('Cleared pending operations');
     } catch (e) {
       _logger.e('Clear pending operations error: $e');
     }
@@ -174,7 +166,6 @@ class OfflineService {
       await prefs.remove(_tasksKey);
       await prefs.remove(_groceryListsKey);
       await prefs.remove(_eventsKey);
-      _logger.i('Cleared all cached data');
     } catch (e) {
       _logger.e('Clear cache error: $e');
     }

@@ -46,7 +46,6 @@ class GroceryListRepository {
           .single();
 
       final createdList = _fromSupabase(response);
-      _logger.i('Standalone grocery list created: ${createdList.id}');
 
       // Notify family members
       try {
@@ -106,7 +105,6 @@ class GroceryListRepository {
           .single();
 
       final createdList = _fromSupabase(response);
-      _logger.i('Grocery list created: ${createdList.id}');
 
       // Notify family members
       try {
@@ -533,7 +531,6 @@ class GroceryListRepository {
           .single();
 
       final updatedList = _fromSupabase(response);
-      _logger.i('List name updated: $listId');
 
       // Notify family members
       try {
@@ -573,7 +570,6 @@ class GroceryListRepository {
           .select()
           .single();
 
-      _logger.i('List linked to task: $listId -> $taskId');
       return _fromSupabase(response);
     } catch (e) {
       _logger.e('Update list task_id error: $e');
@@ -609,7 +605,6 @@ class GroceryListRepository {
 
       // If list is referenced by tasks, create a copy for each task
       if (tasksWithList.isNotEmpty) {
-        _logger.i('List $listId is referenced by ${tasksWithList.length} task(s). Creating copies...');
         
         // Get all items from the original list
         final originalItems = await getListItems(listId);
@@ -651,7 +646,6 @@ class GroceryListRepository {
               })
               .eq('id', taskId);
           
-          _logger.i('Created copy ${copiedList.id} for task $taskId');
         }
       }
 
@@ -660,7 +654,6 @@ class GroceryListRepository {
           .from('grocery_lists')
           .delete()
           .eq('id', listId);
-      _logger.i('List deleted: $listId');
 
       // Notify family members
       try {

@@ -74,7 +74,6 @@ class WeatherRepository {
         '$_geocodingUrl/search?$queryParam=${Uri.encodeComponent(location)}&count=1&language=en&format=json'
       );
 
-      _logger.i('Geocoding request: $url');
 
       final response = await http.get(url).timeout(AppConstants.requestTimeout);
 
@@ -92,7 +91,6 @@ class WeatherRepository {
               ? '$name, $admin1' 
               : name;
           
-          _logger.i('Found location: $displayName, $country at ${result['latitude']}, ${result['longitude']}');
           
           return {
             'latitude': result['latitude'] as double,

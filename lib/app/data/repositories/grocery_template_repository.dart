@@ -57,7 +57,6 @@ class GroceryTemplateRepository {
           .single();
 
       final createdTemplate = _fromSupabase(response);
-      _logger.i('Grocery template created: ${createdTemplate.id}');
 
       // Notify family members
       try {
@@ -179,7 +178,6 @@ class GroceryTemplateRepository {
           .from('grocery_template_items')
           .delete()
           .eq('id', itemId);
-      _logger.i('Template item deleted: $itemId');
     } catch (e) {
       _logger.e('Delete template item error: $e');
       rethrow;
@@ -236,7 +234,6 @@ class GroceryTemplateRepository {
       }
 
       final createdTemplate = _fromSupabase(templateResponse);
-      _logger.i('Template created from list: $templateId');
 
       // Notify family members
       try {
@@ -295,7 +292,6 @@ class GroceryTemplateRepository {
           .single();
 
       final updatedTemplate = _fromSupabase(response);
-      _logger.i('Template updated: $templateId');
 
       // Notify family members
       try {
@@ -334,7 +330,6 @@ class GroceryTemplateRepository {
           .from('grocery_templates')
           .delete()
           .eq('id', templateId);
-      _logger.i('Template deleted: $templateId');
 
       // Notify family members
       try {
