@@ -244,8 +244,12 @@ final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Task providers
 final familyTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  
   // Use the singleton instance directly to avoid any provider evaluation issues
-  return _taskRepositoryInstance.streamTasksForFamily(familyId);
+  return _taskRepositoryInstance.streamTasksForFamily(familyId, userId: userId);
 });
 
 final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, userId) {
@@ -260,11 +264,15 @@ final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, u
 });
 
 final tasksDueTodayProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  
   // Stream all tasks and filter for today's tasks
   // This will automatically update when tasks change in Supabase
   // The stream will emit whenever tasks are created, updated, or deleted
   // Use the singleton instance directly to avoid any provider evaluation issues
-  return _taskRepositoryInstance.streamTasksForFamily(familyId).map((tasks) {
+  return _taskRepositoryInstance.streamTasksForFamily(familyId, userId: userId).map((tasks) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return tasks.where((task) {
@@ -357,7 +365,10 @@ class TaskActions {
 /// Announcement providers
 final familyAnnouncementsProvider = StreamProvider.family<List<AnnouncementModel>, String>((ref, familyId) {
   final announcementRepo = ref.watch(announcementRepositoryProvider);
-  return announcementRepo.streamFamilyAnnouncements(familyId);
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  return announcementRepo.streamFamilyAnnouncements(familyId, userId: userId);
 });
 
 /// Calendar providers
