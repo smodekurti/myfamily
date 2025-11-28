@@ -259,13 +259,13 @@ async function sendFCMNotificationsV1(
         // iOS (APNs) configuration
         // Build APNs payload with aps (Apple's reserved fields) and custom data
         const apnsPayload: any = {
-          aps: {
-            alert: {
-              title: title,
-              body: body,
-            },
-            sound: 'default',
-            badge: 1,
+            aps: {
+              alert: {
+                title: title,
+                body: body,
+              },
+              sound: 'default',
+              badge: 1,
           },
         }
         
@@ -280,7 +280,7 @@ async function sendFCMNotificationsV1(
           headers: {
             'apns-priority': '10',
             'apns-push-type': 'alert',
-          },
+            },
           payload: apnsPayload,
         }
         console.log(`📱 Sending iOS notification to token ${token.substring(0, 20)}...`)

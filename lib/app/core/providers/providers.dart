@@ -459,7 +459,7 @@ final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
     if (isZipcode) {
       return await weatherRepo.getWeather(zipcode: selectedLocation.trim());
     } else {
-      return await weatherRepo.getWeather(cityName: selectedLocation);
+    return await weatherRepo.getWeather(cityName: selectedLocation);
     }
   }
   

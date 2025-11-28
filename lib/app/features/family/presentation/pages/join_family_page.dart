@@ -61,9 +61,9 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
       }
       
       if (family != null) {
-        // Invalidate the user families provider to force a refresh
-        ref.invalidate(userFamiliesProvider(currentUser.id));
-        
+      // Invalidate the user families provider to force a refresh
+      ref.invalidate(userFamiliesProvider(currentUser.id));
+      
         // Invalidate family members provider to refresh the members list
         ref.invalidate(familyMembersProvider(family.id));
         
@@ -71,7 +71,7 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
         ref.invalidate(familyProvider(family.id));
         
         // Wait for the streams to update
-        await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 1));
       }
       
       if (mounted) {
@@ -224,8 +224,8 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            "Don't have a family code? ",
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          "Don't have a family code? ",
+                          style: Theme.of(context).textTheme.bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

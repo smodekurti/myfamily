@@ -212,9 +212,9 @@ class FamilySelectionPage extends ConsumerWidget {
                                                 SizedBox(width: ResponsiveHelper.w(4)),
                                                 Flexible(
                                                   child: Text(
-                                                    'Created ${_formatDate(family.createdAt!)}',
-                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  'Created ${_formatDate(family.createdAt!)}',
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                                     ),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),

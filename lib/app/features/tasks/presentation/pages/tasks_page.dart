@@ -279,10 +279,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             return PermissionAwareWidget(
               action: 'create_task',
               child: FloatingActionButton(
-                onPressed: () {
-                  context.push(AppConstants.routeCreateTask);
-                },
-                child: const Icon(Icons.add),
+              onPressed: () {
+                context.push(AppConstants.routeCreateTask);
+              },
+              child: const Icon(Icons.add),
               ),
             );
           },
@@ -290,10 +290,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           error: (_, __) => PermissionAwareWidget(
             action: 'create_task',
             child: FloatingActionButton(
-              onPressed: () {
-                context.push(AppConstants.routeCreateTask);
-              },
-              child: const Icon(Icons.add),
+            onPressed: () {
+              context.push(AppConstants.routeCreateTask);
+            },
+            child: const Icon(Icons.add),
             ),
           ),
         ),
@@ -920,22 +920,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     PermissionAwareWidget(
                       action: 'edit_task',
                       child: IconButton(
-                        icon: Icon(
-                          Icons.edit,
-                          size: ResponsiveHelper.iconSize(20),
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                        onPressed: () {
-                          // Navigate to edit page with task data
-                          final taskJson = TaskModelHelpers.toSupabase(task);
-                          context.push(
-                            AppConstants.routeEditTask,
-                            extra: taskJson,
-                          );
-                        },
-                        tooltip: 'Edit chore',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      icon: Icon(
+                        Icons.edit,
+                        size: ResponsiveHelper.iconSize(20),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      onPressed: () {
+                        // Navigate to edit page with task data
+                        final taskJson = TaskModelHelpers.toSupabase(task);
+                        context.push(
+                          AppConstants.routeEditTask,
+                          extra: taskJson,
+                        );
+                      },
+                      tooltip: 'Edit chore',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       ),
                     ),
                 ],

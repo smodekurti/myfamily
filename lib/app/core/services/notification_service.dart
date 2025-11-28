@@ -45,7 +45,7 @@ class NotificationService {
         // Don't return false - we can still initialize the service
         // Permission will be requested when user actually schedules a notification
       } else {
-        _logger.i('✅ Notification permission granted');
+      _logger.i('✅ Notification permission granted');
       }
 
       // Initialize timezone

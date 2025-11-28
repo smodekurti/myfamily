@@ -84,7 +84,7 @@ class TaskRepository {
       // Send notifications to family members
       try {
         // Send visible notification to assignee (if different from creator)
-        if (assignedTo != createdBy) {
+      if (assignedTo != createdBy) {
           await FamilyNotificationService().notifyTaskAssigned(
             familyId: familyId,
             assigneeId: assignedTo,
@@ -103,7 +103,7 @@ class TaskRepository {
           itemTitle: title,
           excludeUserId: createdBy,
         );
-      } catch (e) {
+        } catch (e) {
         _logger.w('Failed to send task notifications: $e');
         // Don't fail task creation if notifications fail
       }
