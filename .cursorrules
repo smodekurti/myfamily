@@ -631,6 +631,11 @@ Widget build(BuildContext context) {
 4. **Re-register when family changes** using `ref.listen(currentFamilyProvider, ...)`
 5. **Add logging** to debug callback registration status
 6. **Handle both silent and visible notifications** - silent notifications should trigger refresh without showing UI
+7. **Direct assignment notifications are prioritized** - Push notifications are the default method ONLY when the current logged-in user is directly assigned (task, event, appointment, etc.). The system checks if the notification is for the current user by:
+   - For tasks: Verifying the task's `assigned_to` field matches the current user ID
+   - For events: Checking if the current user is in the event's `participants` list
+   - If permission is not granted for direct assignments, the system will request it and fall back to local notifications
+   - For general family notifications (not direct assignments), standard permission rules apply
 
 #### Cost Optimization: Top-Level Events Only
 
