@@ -64,8 +64,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    // Clear the callback when page is disposed
-    PushNotificationService().setTaskNotificationCallback(null);
+    // Don't clear the callback - let the global callback handle it
+    // The global callback in main.dart will ensure it's always registered
     super.dispose();
   }
 

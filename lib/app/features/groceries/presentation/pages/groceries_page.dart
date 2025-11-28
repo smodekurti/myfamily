@@ -54,8 +54,8 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   
   @override
   void dispose() {
-    // Clear the callback when page is disposed
-    PushNotificationService().setGroceryListNotificationCallback(null);
+    // Don't clear the callback - let the global callback handle it
+    // The global callback in main.dart will ensure it's always registered
     super.dispose();
   }
   

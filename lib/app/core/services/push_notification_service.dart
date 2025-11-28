@@ -35,6 +35,12 @@ class PushNotificationService {
   // Callback to refresh events when an event notification is received
   VoidCallback? _onEventNotificationReceived;
   
+  // Callback to refresh announcements when an announcement notification is received
+  VoidCallback? _onAnnouncementNotificationReceived;
+  
+  // Callback to refresh templates when a template notification is received
+  VoidCallback? _onTemplateNotificationReceived;
+  
   /// Set callback to be called when a task notification is received
   /// This allows the app to refresh tasks when realtime stream isn't working
   void setTaskNotificationCallback(VoidCallback? callback) {
@@ -51,6 +57,18 @@ class PushNotificationService {
   /// This allows the app to refresh events when realtime stream isn't working
   void setEventNotificationCallback(VoidCallback? callback) {
     _onEventNotificationReceived = callback;
+  }
+  
+  /// Set callback to be called when an announcement notification is received
+  /// This allows the app to refresh announcements when realtime stream isn't working
+  void setAnnouncementNotificationCallback(VoidCallback? callback) {
+    _onAnnouncementNotificationReceived = callback;
+  }
+  
+  /// Set callback to be called when a template notification is received
+  /// This allows the app to refresh templates when realtime stream isn't working
+  void setTemplateNotificationCallback(VoidCallback? callback) {
+    _onTemplateNotificationReceived = callback;
   }
 
   /// Initialize push notification service
@@ -399,6 +417,42 @@ class PushNotificationService {
       }
     }
     
+    // If this is an announcement notification, trigger callback to refresh announcements
+    // This is a fallback when realtime stream isn't working
+    if (notificationType == 'announcement') {
+      _logger.i('📢 Announcement notification detected. Callback registered: ${_onAnnouncementNotificationReceived != null}');
+      if (_onAnnouncementNotificationReceived != null) {
+        _logger.i('🔄 Announcement notification received, triggering announcement refresh callback');
+        _onAnnouncementNotificationReceived!();
+        
+        // For silent notifications, don't show UI notification - just refresh
+        if (isSilent) {
+          _logger.i('🔄 Silent announcement notification - skipping UI notification, refresh triggered');
+          return;
+        }
+      } else {
+        _logger.w('⚠️ Announcement notification received but callback is not registered. Page may not be mounted.');
+      }
+    }
+    
+    // If this is a template notification (grocery or task), trigger callback to refresh templates
+    // This is a fallback when realtime stream isn't working
+    if (notificationType == 'grocery_template' || notificationType == 'task_template') {
+      _logger.i('📋 Template notification detected (type: $notificationType). Callback registered: ${_onTemplateNotificationReceived != null}');
+      if (_onTemplateNotificationReceived != null) {
+        _logger.i('🔄 Template notification received, triggering template refresh callback');
+        _onTemplateNotificationReceived!();
+        
+        // For silent notifications, don't show UI notification - just refresh
+        if (isSilent) {
+          _logger.i('🔄 Silent template notification - skipping UI notification, refresh triggered');
+          return;
+        }
+      } else {
+        _logger.w('⚠️ Template notification received but callback is not registered. Page may not be mounted.');
+      }
+    }
+    
     // For silent notifications, don't show notification UI
     if (isSilent) {
       _logger.i('🔄 Silent notification - skipping UI notification');
@@ -478,6 +532,24 @@ class PushNotificationService {
       if (itemId != null) {
         // Navigate to specific event
         // You can use a navigation service or router here
+      }
+    } else if (notificationType == 'announcement') {
+      // Trigger callback to refresh announcements when notification is tapped
+      if (_onAnnouncementNotificationReceived != null) {
+        _logger.i('🔄 Announcement notification tapped, triggering announcement refresh callback');
+        _onAnnouncementNotificationReceived!();
+      }
+      // Navigate to announcement detail page if announcement_id is provided
+      final announcementId = data['announcement_id'] as String?;
+      if (announcementId != null) {
+        // Navigate to specific announcement
+        // You can use a navigation service or router here
+      }
+    } else if (notificationType == 'grocery_template' || notificationType == 'task_template') {
+      // Trigger callback to refresh templates when notification is tapped
+      if (_onTemplateNotificationReceived != null) {
+        _logger.i('🔄 Template notification tapped, triggering template refresh callback');
+        _onTemplateNotificationReceived!();
       }
     }
   }

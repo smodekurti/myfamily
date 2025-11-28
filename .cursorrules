@@ -531,6 +531,121 @@ EdgeInsets getAdaptivePadding(BuildContext context) {
 }
 ```
 
+## Push Notifications & Real-time Data Refresh
+
+### Global Notification Callbacks Pattern
+
+**CRITICAL**: When implementing push notifications for any data type, you MUST register global callbacks in `main.dart` to ensure data refreshes automatically on all devices, regardless of which page the user is on.
+
+#### Required Pattern for All Notification Types
+
+1. **Add callback support in PushNotificationService**:
+```dart
+// In PushNotificationService class
+VoidCallback? _onYourDataTypeNotificationReceived;
+
+void setYourDataTypeNotificationCallback(VoidCallback? callback) {
+  _onYourDataTypeNotificationReceived = callback;
+}
+```
+
+2. **Handle notification type in notification handler**:
+```dart
+// In _handleForegroundMessage method
+if (notificationType == 'your_data_type') {
+  _logger.i('📋 Your data type notification detected. Callback registered: ${_onYourDataTypeNotificationReceived != null}');
+  if (_onYourDataTypeNotificationReceived != null) {
+    _logger.i('🔄 Your data type notification received, triggering refresh callback');
+    _onYourDataTypeNotificationReceived!();
+    
+    if (isSilent) {
+      _logger.i('🔄 Silent notification - skipping UI notification, refresh triggered');
+      return;
+    }
+  } else {
+    _logger.w('⚠️ Notification received but callback is not registered.');
+  }
+}
+```
+
+3. **Register global callback in main.dart**:
+```dart
+// In _MyFamilyAppState._registerGlobalCallbacks() method
+void _registerGlobalCallbacks() {
+  // Your data type callback
+  PushNotificationService().setYourDataTypeNotificationCallback(() {
+    final currentFamily = ref.read(currentFamilyProvider);
+    if (currentFamily != null && mounted) {
+      ref.invalidate(yourDataProvider(currentFamily.id));
+      // Invalidate all related providers
+    }
+  });
+  
+  // ... other callbacks
+}
+```
+
+4. **Register immediately in initState**:
+```dart
+@override
+void initState() {
+  super.initState();
+  // Register immediately to ensure callbacks are always available
+  _registerGlobalCallbacks();
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadThemePreference();
+    // Re-register after first frame
+    _registerGlobalCallbacks();
+  });
+}
+```
+
+5. **Re-register when family changes**:
+```dart
+@override
+Widget build(BuildContext context) {
+  // Re-register callbacks whenever family changes
+  ref.listen(currentFamilyProvider, (previous, next) {
+    if (next != null) {
+      _registerGlobalCallbacks();
+    }
+  });
+  // ... rest of build
+}
+```
+
+#### Notification Types That MUST Have Global Callbacks
+
+- ✅ **Tasks** (`task`) - `familyTasksProvider`, `tasksDueTodayProvider`, `taskStatsProvider`
+- ✅ **Grocery Lists** (`grocery_list`, `grocery_list_item`) - `allGroceryListsProvider`, `standaloneGroceryListsProvider`
+- ✅ **Calendar Events** (`event`, `calendar_event`) - `familyEventsProvider`
+- ✅ **Announcements** (`announcement`) - `familyAnnouncementsProvider`
+- ✅ **Templates** (`grocery_template`, `task_template`) - `groceryTemplatesProvider`
+
+#### Important Rules
+
+1. **ALWAYS register global callbacks** in `main.dart` for every notification type
+2. **NEVER clear callbacks** in page `dispose()` methods - let global callbacks persist
+3. **Register immediately** in `initState()`, not just in `addPostFrameCallback()`
+4. **Re-register when family changes** using `ref.listen(currentFamilyProvider, ...)`
+5. **Add logging** to debug callback registration status
+6. **Handle both silent and visible notifications** - silent notifications should trigger refresh without showing UI
+
+#### Page-Specific Callbacks (Optional)
+
+Pages can register their own callbacks for more targeted refreshes, but they should NOT clear the global callback in `dispose()`. The global callback ensures data refreshes even when the user is not on the specific page.
+
+```dart
+// ✅ GOOD - Page-specific callback that doesn't clear global callback
+@override
+void dispose() {
+  // Don't clear the callback - let the global callback handle it
+  // The global callback in main.dart will ensure it's always registered
+  super.dispose();
+}
+```
+
 ## Summary
 
 **Remember:**
@@ -542,6 +657,7 @@ EdgeInsets getAdaptivePadding(BuildContext context) {
 6. **PERFORMANCE** - Use const, ListView.builder, keys
 7. **TESTABILITY** - Make widgets testable
 8. **CONFIGURATION** - Use constants and environment variables
+9. **GLOBAL NOTIFICATION CALLBACKS** - Always register in main.dart for all notification types
 
 **Every line of code should be:**
 - Responsive
@@ -550,4 +666,5 @@ EdgeInsets getAdaptivePadding(BuildContext context) {
 - Maintainable
 - Testable
 - Accessible
+- **Real-time aware** (with global notification callbacks)
 
