@@ -351,33 +351,49 @@ class FamilyRepository {
   /// Get all family members
   Future<List<FamilyMemberModel>> getFamilyMembers(String familyId) async {
     try {
-      // Join with users table to get display_name and avatar_url
+      // Fetch family members first
       final response = await _supabase
           .from('family_members')
-          .select('''
-            *,
-            users!family_members_user_id_fkey (
-              display_name,
-              avatar_url
-            )
-          ''')
+          .select()
           .eq('family_id', familyId);
           // Note: Order by points requires the column to exist. Run add_family_members_points_column.sql migration first.
           // .order('points', ascending: false)
 
-      final members = (response as List).map((json) {
-        final userData = json['users'] as Map<String, dynamic>?;
-        return FamilyMemberModel(
-          uid: json['user_id'] as String,
-          displayName: userData?['display_name'] as String? ?? 'User',
-          photoURL: userData?['avatar_url'] as String?,
-          role: json['role'] as String? ?? 'member',
-          points: json['points'] as int? ?? 0,
-          notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-          joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-          updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-        );
-      }).toList();
+      // Fetch user data for all members in parallel
+      final members = await Future.wait((response as List).map((json) async {
+        try {
+          final userId = json['user_id'] as String;
+          final userResponse = await _supabase
+              .from('users')
+              .select('display_name, avatar_url')
+              .eq('id', userId)
+              .maybeSingle();
+          
+          return FamilyMemberModel(
+            uid: userId,
+            displayName: userResponse?['display_name'] as String? ?? 'User',
+            photoURL: userResponse?['avatar_url'] as String?,
+            role: json['role'] as String? ?? 'member',
+            points: json['points'] as int? ?? 0,
+            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
+            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
+            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
+          );
+        } catch (e) {
+          _logger.e('Error fetching user data for ${json['user_id']}: $e');
+          // Return member with minimal data if user fetch fails
+          return FamilyMemberModel(
+            uid: json['user_id'] as String,
+            displayName: 'User',
+            photoURL: null,
+            role: json['role'] as String? ?? 'member',
+            points: json['points'] as int? ?? 0,
+            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
+            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
+            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
+          );
+        }
+      }));
       
       // Sort by points (descending)
       members.sort((a, b) => b.points.compareTo(a.points));
