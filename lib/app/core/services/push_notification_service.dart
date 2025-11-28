@@ -32,6 +32,9 @@ class PushNotificationService {
   // Callback to refresh grocery lists when a grocery list notification is received
   VoidCallback? _onGroceryListNotificationReceived;
   
+  // Callback to refresh events when an event notification is received
+  VoidCallback? _onEventNotificationReceived;
+  
   /// Set callback to be called when a task notification is received
   /// This allows the app to refresh tasks when realtime stream isn't working
   void setTaskNotificationCallback(VoidCallback? callback) {
@@ -42,6 +45,12 @@ class PushNotificationService {
   /// This allows the app to refresh grocery lists when realtime stream isn't working
   void setGroceryListNotificationCallback(VoidCallback? callback) {
     _onGroceryListNotificationReceived = callback;
+  }
+  
+  /// Set callback to be called when an event notification is received
+  /// This allows the app to refresh events when realtime stream isn't working
+  void setEventNotificationCallback(VoidCallback? callback) {
+    _onEventNotificationReceived = callback;
   }
 
   /// Initialize push notification service
@@ -333,29 +342,60 @@ class PushNotificationService {
     // Check if this is a silent notification (data-only, no UI)
     final isSilent = data['silent'] == 'true' || (title.isEmpty && body.isEmpty);
     
+    // Get notification type
+    final notificationType = data['type'] as String?;
+    
     // If this is a task notification, trigger callback to refresh tasks
     // This is a fallback when realtime stream isn't working
-    if (data['type'] == 'task' && _onTaskNotificationReceived != null) {
-      _logger.i('🔄 Task notification received, triggering task refresh callback');
-      _onTaskNotificationReceived!();
-      
-      // For silent notifications, don't show UI notification - just refresh
-      if (isSilent) {
-        _logger.i('🔄 Silent task notification - skipping UI notification, refresh triggered');
-        return;
+    if (notificationType == 'task') {
+      _logger.i('📋 Task notification detected. Callback registered: ${_onTaskNotificationReceived != null}');
+      if (_onTaskNotificationReceived != null) {
+        _logger.i('🔄 Task notification received, triggering task refresh callback');
+        _onTaskNotificationReceived!();
+        
+        // For silent notifications, don't show UI notification - just refresh
+        if (isSilent) {
+          _logger.i('🔄 Silent task notification - skipping UI notification, refresh triggered');
+          return;
+        }
+      } else {
+        _logger.w('⚠️ Task notification received but callback is not registered. Page may not be mounted.');
       }
     }
     
-    // If this is a grocery list notification, trigger callback to refresh grocery lists
+    // If this is a grocery list or grocery list item notification, trigger callback to refresh grocery lists
     // This is a fallback when realtime stream isn't working
-    if (data['type'] == 'grocery_list' && _onGroceryListNotificationReceived != null) {
-      _logger.i('🔄 Grocery list notification received, triggering grocery list refresh callback');
-      _onGroceryListNotificationReceived!();
-      
-      // For silent notifications, don't show UI notification - just refresh
-      if (isSilent) {
-        _logger.i('🔄 Silent grocery list notification - skipping UI notification, refresh triggered');
-        return;
+    if (notificationType == 'grocery_list' || notificationType == 'grocery_list_item') {
+      _logger.i('🛒 Grocery notification detected (type: $notificationType). Callback registered: ${_onGroceryListNotificationReceived != null}');
+      if (_onGroceryListNotificationReceived != null) {
+        _logger.i('🔄 Grocery notification received, triggering grocery list refresh callback');
+        _onGroceryListNotificationReceived!();
+        
+        // For silent notifications, don't show UI notification - just refresh
+        if (isSilent) {
+          _logger.i('🔄 Silent grocery notification - skipping UI notification, refresh triggered');
+          return;
+        }
+      } else {
+        _logger.w('⚠️ Grocery notification received but callback is not registered. Page may not be mounted.');
+      }
+    }
+    
+    // If this is an event notification, trigger callback to refresh events
+    // This is a fallback when realtime stream isn't working
+    if (notificationType == 'event' || notificationType == 'calendar_event') {
+      _logger.i('📅 Event notification detected (type: $notificationType). Callback registered: ${_onEventNotificationReceived != null}');
+      if (_onEventNotificationReceived != null) {
+        _logger.i('🔄 Event notification received, triggering event refresh callback');
+        _onEventNotificationReceived!();
+        
+        // For silent notifications, don't show UI notification - just refresh
+        if (isSilent) {
+          _logger.i('🔄 Silent event notification - skipping UI notification, refresh triggered');
+          return;
+        }
+      } else {
+        _logger.w('⚠️ Event notification received but callback is not registered. Page may not be mounted.');
       }
     }
     
@@ -405,7 +445,8 @@ class PushNotificationService {
     _logger.i('Notification tapped: ${message.messageId}');
     // Handle navigation based on message data
     final data = message.data;
-    if (data['type'] == 'task') {
+    final notificationType = data['type'] as String?;
+    if (notificationType == 'task') {
       // Trigger callback to refresh tasks when notification is tapped
       // This ensures tasks are refreshed when user opens app from notification
       if (_onTaskNotificationReceived != null) {
@@ -414,8 +455,30 @@ class PushNotificationService {
       }
       // Navigate to task detail page
       // You can use a navigation service or router here
-    } else if (data['type'] == 'event') {
-      // Navigate to event detail page
+    } else if (notificationType == 'grocery_list' || notificationType == 'grocery_list_item') {
+      // Trigger callback to refresh grocery lists when notification is tapped
+      if (_onGroceryListNotificationReceived != null) {
+        _logger.i('🔄 Grocery notification tapped, triggering grocery list refresh callback');
+        _onGroceryListNotificationReceived!();
+      }
+      // Navigate to grocery list page if item_id is provided
+      final itemId = data['item_id'] as String?;
+      if (itemId != null) {
+        // Navigate to specific grocery list
+        // You can use a navigation service or router here
+      }
+    } else if (notificationType == 'event' || notificationType == 'calendar_event') {
+      // Trigger callback to refresh events when notification is tapped
+      if (_onEventNotificationReceived != null) {
+        _logger.i('🔄 Event notification tapped, triggering event refresh callback');
+        _onEventNotificationReceived!();
+      }
+      // Navigate to event detail page if item_id is provided
+      final itemId = data['item_id'] as String?;
+      if (itemId != null) {
+        // Navigate to specific event
+        // You can use a navigation service or router here
+      }
     }
   }
 

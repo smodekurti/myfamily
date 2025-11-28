@@ -26,19 +26,30 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
     
     // Set up callback to refresh grocery lists when a notification is received
     // This is a fallback when realtime stream isn't working
+    // Register immediately, then update after first frame if family is available
+    _registerGroceryListCallback();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final currentFamily = ref.read(currentFamilyProvider);
-        if (currentFamily != null) {
-          PushNotificationService().setGroceryListNotificationCallback(() {
-            if (mounted) {
-              ref.invalidate(allGroceryListsProvider(currentFamily.id));
-              ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
-            }
-          });
-        }
+        _registerGroceryListCallback();
       }
     });
+  }
+  
+  void _registerGroceryListCallback() {
+    final currentFamily = ref.read(currentFamilyProvider);
+    if (currentFamily != null) {
+      PushNotificationService().setGroceryListNotificationCallback(() {
+        if (mounted) {
+          // Re-read family ID in case it changed
+          final currentFamily = ref.read(currentFamilyProvider);
+          if (currentFamily != null) {
+            ref.invalidate(allGroceryListsProvider(currentFamily.id));
+            ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+          }
+        }
+      });
+    }
   }
   
   @override
