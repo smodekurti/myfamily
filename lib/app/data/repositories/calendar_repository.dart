@@ -3,10 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event_model.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/family_notification_service.dart';
+import '../../core/services/role_permission_service.dart';
 
 class CalendarRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
+  final RolePermissionService _roleService = RolePermissionService();
 
   /// Create a new event
   Future<EventModel> createEvent({
@@ -21,6 +23,17 @@ class CalendarRepository {
     List<String>? participants,
   }) async {
     try {
+      // Check permission to create events
+      final canCreate = await _roleService.canPerformAction(
+        userId: createdBy,
+        familyId: familyId,
+        action: 'create_event',
+      );
+      
+      if (!canCreate) {
+        throw Exception('You do not have permission to create calendar events');
+      }
+      
       final eventData = <String, dynamic>{
         'family_id': familyId,
         'title': title,
@@ -89,6 +102,31 @@ class CalendarRepository {
     List<String>? participants,
   }) async {
     try {
+      // Get event info first
+      final eventResponse = await _supabase
+          .from('calendar_events')
+          .select('family_id, created_by')
+          .eq('id', eventId)
+          .single();
+      final familyId = eventResponse['family_id'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Check permission to edit events
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: familyId,
+        action: 'edit_event',
+      );
+      
+      if (!canEdit) {
+        throw Exception('You do not have permission to edit calendar events');
+      }
+      
       final updateData = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -159,6 +197,23 @@ class CalendarRepository {
       final familyId = event['family_id'] as String;
       final eventTitle = event['title'] as String;
       final createdBy = event['created_by'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Check permission to delete events
+      final canDelete = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: familyId,
+        action: 'delete_event',
+      );
+      
+      if (!canDelete) {
+        throw Exception('You do not have permission to delete calendar events');
+      }
 
       await _supabase
           .from('calendar_events')

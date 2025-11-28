@@ -2,10 +2,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/announcement_model.dart';
 import '../../core/services/family_notification_service.dart';
+import '../../core/services/role_permission_service.dart';
 
 class AnnouncementRepository {
   final _supabase = Supabase.instance.client;
   final _logger = Logger();
+  final RolePermissionService _roleService = RolePermissionService();
 
   /// Create a new announcement
   Future<AnnouncementModel> createAnnouncement({
@@ -15,6 +17,17 @@ class AnnouncementRepository {
     required String createdBy,
   }) async {
     try {
+      // Check permission to create announcements
+      final canCreate = await _roleService.canPerformAction(
+        userId: createdBy,
+        familyId: familyId,
+        action: 'create_announcement',
+      );
+      
+      if (!canCreate) {
+        throw Exception('You do not have permission to create announcements');
+      }
+      
       final announcementData = {
         'family_id': familyId,
         'title': title,
@@ -104,6 +117,24 @@ class AnnouncementRepository {
       final familyId = announcement['family_id'] as String;
       final title = announcement['title'] as String;
       final createdBy = announcement['created_by'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Only creator can delete (announcements don't have separate delete permission)
+      // But check if user has permission to create announcements (implies delete own)
+      final canCreate = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: familyId,
+        action: 'create_announcement',
+      );
+      
+      if (!canCreate || userId != createdBy) {
+        throw Exception('You do not have permission to delete this announcement');
+      }
 
       await _supabase
           .from('announcements')
