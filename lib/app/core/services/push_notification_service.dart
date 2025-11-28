@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -24,6 +25,15 @@ class PushNotificationService {
   
   String? _fcmToken;
   bool _initialized = false;
+  
+  // Callback to refresh tasks when a task notification is received
+  VoidCallback? _onTaskNotificationReceived;
+  
+  /// Set callback to be called when a task notification is received
+  /// This allows the app to refresh tasks when realtime stream isn't working
+  void setTaskNotificationCallback(VoidCallback? callback) {
+    _onTaskNotificationReceived = callback;
+  }
 
   /// Initialize push notification service
   /// [requestPermissions] - If true, requests permission immediately. If false, only checks status.
@@ -309,6 +319,29 @@ class PushNotificationService {
     final notification = message.notification;
     final title = notification?.title ?? message.data['title'] ?? 'New Notification';
     final body = notification?.body ?? message.data['body'] ?? 'You have a new notification';
+    final data = message.data;
+    
+    // Check if this is a silent notification (data-only, no UI)
+    final isSilent = data['silent'] == 'true' || (title.isEmpty && body.isEmpty);
+    
+    // If this is a task notification, trigger callback to refresh tasks
+    // This is a fallback when realtime stream isn't working
+    if (data['type'] == 'task' && _onTaskNotificationReceived != null) {
+      _logger.i('🔄 Task notification received, triggering task refresh callback');
+      _onTaskNotificationReceived!();
+      
+      // For silent notifications, don't show UI notification - just refresh
+      if (isSilent) {
+        _logger.i('🔄 Silent task notification - skipping UI notification, refresh triggered');
+        return;
+      }
+    }
+    
+    // For silent notifications, don't show notification UI
+    if (isSilent) {
+      _logger.i('🔄 Silent notification - skipping UI notification');
+      return;
+    }
     
     try {
       final notificationId = message.messageId?.hashCode ?? 
@@ -351,6 +384,12 @@ class PushNotificationService {
     // Handle navigation based on message data
     final data = message.data;
     if (data['type'] == 'task') {
+      // Trigger callback to refresh tasks when notification is tapped
+      // This ensures tasks are refreshed when user opens app from notification
+      if (_onTaskNotificationReceived != null) {
+        _logger.i('🔄 Task notification tapped, triggering task refresh callback');
+        _onTaskNotificationReceived!();
+      }
       // Navigate to task detail page
       // You can use a navigation service or router here
     } else if (data['type'] == 'event') {

@@ -7,6 +7,7 @@ import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/models/task_category.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../../data/models/family_model.dart';
 import 'package:intl/intl.dart';
@@ -41,11 +42,30 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         }
       });
     }
+    
+    // Set up callback to refresh tasks when a task notification is received
+    // This is a fallback when realtime stream isn't working
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          PushNotificationService().setTaskNotificationCallback(() {
+            if (mounted) {
+              _logger.i('🔄 Refreshing tasks due to notification (realtime fallback)');
+              ref.invalidate(familyTasksProvider(currentFamily.id));
+              ref.invalidate(tasksDueTodayProvider(currentFamily.id));
+            }
+          });
+        }
+      }
+    });
   }
   
   @override
   void dispose() {
     _searchController.dispose();
+    // Clear the callback when page is disposed
+    PushNotificationService().setTaskNotificationCallback(null);
     super.dispose();
   }
 

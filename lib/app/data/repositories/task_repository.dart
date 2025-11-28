@@ -55,25 +55,51 @@ class TaskRepository {
       final createdTask = TaskModelHelpers.fromSupabase(response);
       _logger.i('Task created successfully: ${createdTask.id}');
 
-      // Send push notification for task assignment if assigned to someone else
-      if (assignedTo != createdBy) {
-        try {
-          // Send push notification to assignee
-          await PushNotificationService().sendNotificationToUser(
-            userId: assignedTo,
-            title: 'New Task Assigned',
-            body: '$title has been assigned to you',
-            data: {
-              'type': 'task',
-              'task_id': createdTask.id,
-              'action': 'view_task',
-            },
-          );
+      // Send push notifications to family members
+      try {
+        // Get all family members
+        final familyMembers = await _familyRepo.getFamilyMembers(familyId);
+        final allMemberIds = familyMembers.map((m) => m.uid).toList();
+        
+        if (allMemberIds.isEmpty) {
+          _logger.w('No family members found, skipping notifications');
+        } else {
+          // Send visible notification to assignee (if different from creator)
+          if (assignedTo != createdBy && allMemberIds.contains(assignedTo)) {
+            await PushNotificationService().sendNotificationToUser(
+              userId: assignedTo,
+              title: 'New Task Assigned',
+              body: '$title has been assigned to you',
+              data: {
+                'type': 'task',
+                'task_id': createdTask.id,
+                'action': 'view_task',
+              },
+            );
+            _logger.i('Push notification sent to assignee: $assignedTo');
+          }
           
-          _logger.i('Push notification sent for task assignment');
-        } catch (e) {
-          _logger.w('Failed to send task assignment notification: $e');
+          // Send silent notification (data-only) to all other family members
+          // This triggers the refresh callback so everyone sees the new task
+          final otherMemberIds = allMemberIds.where((id) => id != assignedTo && id != createdBy).toList();
+          if (otherMemberIds.isNotEmpty) {
+            await PushNotificationService().sendNotificationToUsers(
+              userIds: otherMemberIds,
+              title: '', // Empty title = silent notification
+              body: '', // Empty body = silent notification
+              data: {
+                'type': 'task',
+                'task_id': createdTask.id,
+                'action': 'refresh_tasks', // Special action to trigger refresh
+                'silent': 'true', // Mark as silent
+              },
+            );
+            _logger.i('Silent refresh notification sent to ${otherMemberIds.length} family members');
+          }
         }
+      } catch (e) {
+        _logger.w('Failed to send task notifications: $e');
+        // Don't fail task creation if notifications fail
       }
 
       // Schedule due date reminder if due date is set
@@ -326,51 +352,13 @@ class TaskRepository {
 
   /// Stream tasks for a specific family (real-time updates)
   Stream<List<TaskModel>> streamTasksForFamily(String familyId) {
-    _logger.i('🔄 Starting stream for family tasks: $familyId');
-    try {
-      // Create the stream with explicit realtime configuration
-      // The stream will automatically fetch initial data and then listen for changes
-      final stream = _supabase
-          .from('tasks')
-          .stream(primaryKey: ['id'])
-          .eq('family_id', familyId)
-          .order('created_at', ascending: false);
-      
-      _logger.i('✅ Stream created for family tasks: $familyId');
-      
-      // Return a stream that:
-      // 1. Maps the data to TaskModel list
-      // 2. Handles errors gracefully
-      // 3. Logs all updates for debugging
-      return stream
-          .map((data) {
-            _logger.i('📥 Stream update received: ${data.length} tasks for family $familyId');
-            try {
-              final tasks = data.map((json) => TaskModelHelpers.fromSupabase(json)).toList();
-              _logger.i('✅ Successfully parsed ${tasks.length} tasks from stream');
-              // Log task IDs for debugging
-              if (tasks.isNotEmpty) {
-                final taskIds = tasks.map((t) => t.id.substring(0, 8)).join(', ');
-                _logger.i('📋 Task IDs: $taskIds...');
-              } else {
-                _logger.i('📋 No tasks found in stream update');
-              }
-              return tasks;
-            } catch (e, stackTrace) {
-              _logger.e('❌ Error parsing tasks from stream: $e', error: e, stackTrace: stackTrace);
-              return <TaskModel>[];
-            }
-          })
-          .handleError((error, stackTrace) {
-            _logger.e('❌ Stream error for family tasks: $error', error: error, stackTrace: stackTrace);
-            // Log error but don't close the stream - it will automatically reconnect
-            _logger.i('🔄 Stream will attempt to reconnect automatically');
-          });
-    } catch (e, stackTrace) {
-      _logger.e('❌ Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
-      // Return a stream that emits empty list
-      return Stream.value(<TaskModel>[]);
-    }
+    // Match the pattern used by grocery lists which works correctly
+    return _supabase
+        .from('tasks')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .order('created_at', ascending: false)
+        .map((data) => data.map((json) => TaskModelHelpers.fromSupabase(json)).toList());
   }
 
   /// Stream tasks assigned to a specific user
