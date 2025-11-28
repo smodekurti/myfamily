@@ -161,9 +161,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         floatingActionButton: PermissionAwareWidget(
           action: 'create_event',
           child: FloatingActionButton(
-            onPressed: () => _showCreateEventDialog(context, _selectedDay),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showCreateEventDialog(context, _selectedDay),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
       ),
@@ -925,15 +925,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 }
                 
                 return PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: ResponsiveHelper.iconSize(18),
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                  ),
+          icon: Icon(
+            Icons.more_vert,
+            size: ResponsiveHelper.iconSize(18),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          ),
                   onSelected: (value) async {
-                    if (value == 'edit') {
+            if (value == 'edit') {
                       if (canEdit) {
-                        _showEditEventDialog(context, event);
+              _showEditEventDialog(context, event);
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -944,9 +944,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                           );
                         }
                       }
-                    } else if (value == 'delete') {
+            } else if (value == 'delete') {
                       if (canDelete) {
-                        _deleteEvent(context, event);
+              _deleteEvent(context, event);
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -957,25 +957,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                           );
                         }
                       }
-                    }
-                  },
-                  itemBuilder: (context) => [
+            }
+          },
+          itemBuilder: (context) => [
                     if (canEdit)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit'),
-                      ),
+            const PopupMenuItem(
+              value: 'edit',
+              child: Text('Edit'),
+            ),
                     if (canDelete)
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                  ],
+            PopupMenuItem(
+              value: 'delete',
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
                 );
               },
             );

@@ -93,9 +93,9 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         floatingActionButton: PermissionAwareWidget(
           action: 'create_list',
           child: FloatingActionButton(
-            onPressed: () => _showCreateListDialog(context),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showCreateListDialog(context),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
         persistentFooterButtons: [
@@ -239,19 +239,19 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                       }
                       
                       return PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          size: ResponsiveHelper.iconSize(20),
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: ResponsiveHelper.borderRadius(12),
-                        ),
+                icon: Icon(
+                  Icons.more_vert,
+                  size: ResponsiveHelper.iconSize(20),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: ResponsiveHelper.borderRadius(12),
+                ),
                         onSelected: (value) async {
-                          if (value == 'edit') {
+                  if (value == 'edit') {
                             if (canEdit) {
-                              _editListName(context, list);
+                    _editListName(context, list);
                             } else {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -262,9 +262,9 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                                 );
                               }
                             }
-                          } else if (value == 'delete') {
+                  } else if (value == 'delete') {
                             if (canDelete) {
-                              _deleteList(context, list);
+                    _deleteList(context, list);
                             } else {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -275,50 +275,50 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                                 );
                               }
                             }
-                          }
-                        },
-                        itemBuilder: (context) => [
+                  }
+                },
+                itemBuilder: (context) => [
                           if (canEdit)
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.edit,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    size: ResponsiveHelper.iconSize(20),
-                                  ),
-                                  SizedBox(width: ResponsiveHelper.w(12)),
-                                  Text(
-                                    'Edit Name',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          size: ResponsiveHelper.iconSize(20),
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(12)),
+                        Text(
+                          'Edit Name',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                           if (canDelete)
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.delete_outline,
-                                    color: Theme.of(context).colorScheme.error,
-                                    size: ResponsiveHelper.iconSize(20),
-                                  ),
-                                  SizedBox(width: ResponsiveHelper.w(12)),
-                                  Text(
-                                    'Delete',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.error,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                          size: ResponsiveHelper.iconSize(20),
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(12)),
+                        Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                       );
                     },
                   );

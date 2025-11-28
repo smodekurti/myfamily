@@ -71,6 +71,7 @@ class CalendarRepository {
       }
 
       // Notify family members
+      // Pass participants for direct assignment (push notifications to participants)
       try {
         await FamilyNotificationService().notifyCalendarEventChanged(
           familyId: familyId,
@@ -78,6 +79,7 @@ class CalendarRepository {
           eventId: createdEvent.id,
           eventTitle: title,
           excludeUserId: createdBy,
+          participants: participants, // Pass participants for direct assignment
         );
       } catch (e) {
         _logger.w('Failed to send calendar event notification: $e');
@@ -166,6 +168,7 @@ class CalendarRepository {
       }
 
       // Notify family members
+      // Pass participants for direct assignment (push notifications to participants)
       try {
         await FamilyNotificationService().notifyCalendarEventChanged(
           familyId: updatedEvent.familyId,
@@ -173,6 +176,9 @@ class CalendarRepository {
           eventId: eventId,
           eventTitle: updatedEvent.title,
           excludeUserId: updatedEvent.createdBy,
+          participants: updatedEvent.participants.isNotEmpty 
+              ? updatedEvent.participants 
+              : null, // Pass participants for direct assignment
         );
       } catch (e) {
         _logger.w('Failed to send calendar event notification: $e');
@@ -304,13 +310,13 @@ class CalendarRepository {
     try {
       // Stream all family events for all roles
       yield* _supabase
-          .from('calendar_events')
-          .stream(primaryKey: ['id'])
-          .eq('family_id', familyId)
-          .order('start_time', ascending: true)
-          .map((data) => data
-              .map((json) => EventModelHelpers.fromSupabase(json))
-              .toList());
+        .from('calendar_events')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .order('start_time', ascending: true)
+        .map((data) => data
+            .map((json) => EventModelHelpers.fromSupabase(json))
+            .toList());
     } catch (e, stackTrace) {
       _logger.e('Error creating stream for family events: $e', error: e, stackTrace: stackTrace);
       yield <EventModel>[];

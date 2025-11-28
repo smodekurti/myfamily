@@ -70,13 +70,13 @@ class AnnouncementRepository {
   Stream<List<AnnouncementModel>> streamFamilyAnnouncements(String familyId, {String? userId}) async* {
     try {
       yield* _supabase
-          .from('announcements')
-          .stream(primaryKey: ['id'])
-          .eq('family_id', familyId)
-          .order('created_at', ascending: false)
-          .map((data) => (data as List)
-              .map((json) => AnnouncementModelHelpers.fromSupabase(json as Map<String, dynamic>))
-              .toList());
+        .from('announcements')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .order('created_at', ascending: false)
+        .map((data) => (data as List)
+            .map((json) => AnnouncementModelHelpers.fromSupabase(json as Map<String, dynamic>))
+            .toList());
     } catch (e, stackTrace) {
       _logger.e('Error creating stream for announcements: $e', error: e, stackTrace: stackTrace);
       yield <AnnouncementModel>[];

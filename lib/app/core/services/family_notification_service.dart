@@ -103,11 +103,15 @@ class FamilyNotificationService {
       }
 
       // Send visible notification
+      // Always include 'refresh: true' to ensure data refresh happens even if permission is denied
+      final notificationData = Map<String, dynamic>.from(data);
+      notificationData['refresh'] = 'true';
+      
       await _pushNotificationService.sendNotificationToUsers(
         userIds: memberIdsToNotify,
         title: title,
         body: body,
-        data: data,
+        data: notificationData,
       );
 
       _logger.i('✅ Visible notification sent to ${memberIdsToNotify.length} family members: $title');
@@ -220,15 +224,52 @@ class FamilyNotificationService {
   }
 
   /// Notify when a calendar event is created or updated
+  /// 
+  /// **Direct Assignment**: If participants are provided, sends push notifications
+  /// to participants (direct assignment). Otherwise, sends to all family members.
+  /// 
+  /// **Fallback**: If push notification permission is not granted, falls back to
+  /// soft notifications (silent data refresh).
   Future<void> notifyCalendarEventChanged({
     required String familyId,
     required String action, // 'created', 'updated', 'deleted'
     String? eventId,
     String? eventTitle,
     String? excludeUserId,
+    List<String>? participants, // Direct participants - will receive push notifications
   }) async {
-    // For calendar events, send visible notification for new events
-    if (action == 'created' && eventTitle != null) {
+    // If participants are provided and this is a creation/update, send push notifications to participants
+    if (participants != null && participants.isNotEmpty && 
+        (action == 'created' || action == 'updated') && eventTitle != null) {
+      // Send push notification to participants (direct assignment)
+      await notifyEventParticipants(
+        familyId: familyId,
+        participantIds: participants,
+        eventId: eventId,
+        eventTitle: eventTitle,
+        action: action,
+        excludeUserId: excludeUserId,
+      );
+      
+      // Send silent notification to other family members
+      final familyMembers = await _familyRepo.getFamilyMembers(familyId);
+      final allMemberIds = familyMembers.map((m) => m.uid).toList();
+      final otherMemberIds = allMemberIds
+          .where((id) => !participants.contains(id) && id != excludeUserId)
+          .toList();
+      
+      if (otherMemberIds.isNotEmpty) {
+        await notifyFamilyDataChanged(
+          familyId: familyId,
+          dataType: 'calendar_event',
+          action: action,
+          itemId: eventId,
+          itemTitle: eventTitle,
+          excludeUserId: excludeUserId,
+        );
+      }
+    } else if (action == 'created' && eventTitle != null) {
+      // For new events without specific participants, send visible notification to all
       await notifyFamilyMembers(
         familyId: familyId,
         title: 'New Calendar Event',
@@ -241,7 +282,7 @@ class FamilyNotificationService {
         excludeUserId: excludeUserId,
       );
     } else {
-      // For updates/deletes, send silent notification
+      // For updates/deletes without participants, send silent notification
       await notifyFamilyDataChanged(
         familyId: familyId,
         dataType: 'calendar_event',
@@ -251,6 +292,41 @@ class FamilyNotificationService {
         excludeUserId: excludeUserId,
       );
     }
+  }
+
+  /// Notify event participants (direct assignment)
+  /// Similar to task assignments, participants receive push notifications
+  Future<void> notifyEventParticipants({
+    required String familyId,
+    required List<String> participantIds,
+    required String? eventId,
+    required String? eventTitle,
+    required String action,
+    String? excludeUserId,
+  }) async {
+    final title = action == 'created' 
+        ? 'New Calendar Event'
+        : 'Calendar Event Updated';
+    final body = eventTitle != null
+        ? action == 'created'
+            ? '$eventTitle has been added'
+            : '$eventTitle has been updated'
+        : action == 'created'
+            ? 'A new calendar event has been added'
+            : 'A calendar event has been updated';
+    
+    await notifyFamilyMembers(
+      familyId: familyId,
+      title: title,
+      body: body,
+      data: {
+        'type': 'calendar_event',
+        'event_id': eventId,
+        'action': 'view_event', // Marks this as a direct participant notification
+      },
+      specificUserIds: participantIds,
+      excludeUserId: excludeUserId,
+    );
   }
 
   /// Notify when a grocery template is created or updated

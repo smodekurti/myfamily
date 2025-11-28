@@ -152,25 +152,25 @@ class GroceryListRepository {
   Stream<List<GroceryListModel>> streamStandaloneListsForFamily(String familyId, {String? userId}) async* {
     try {
       yield* _supabase
-          .from('grocery_lists')
-          .stream(primaryKey: ['id'])
-          .eq('family_id', familyId)
-          .map((data) {
-            // Filter out lists with task_id in memory
-            return data
-                .where((json) => json['task_id'] == null)
-                .map((json) => _fromSupabase(json))
-                .toList();
-          })
-          .map((lists) {
-            // Sort by updated_at descending
-            lists.sort((a, b) {
-              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-              return bDate.compareTo(aDate);
-            });
-            return lists;
+        .from('grocery_lists')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .map((data) {
+          // Filter out lists with task_id in memory
+          return data
+              .where((json) => json['task_id'] == null)
+              .map((json) => _fromSupabase(json))
+              .toList();
+        })
+        .map((lists) {
+          // Sort by updated_at descending
+          lists.sort((a, b) {
+            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+            return bDate.compareTo(aDate);
           });
+          return lists;
+        });
     } catch (e, stackTrace) {
       _logger.e('Error creating stream for standalone lists: $e', error: e, stackTrace: stackTrace);
       yield <GroceryListModel>[];
@@ -182,24 +182,24 @@ class GroceryListRepository {
   Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId, {String? userId}) async* {
     try {
       yield* _supabase
-          .from('grocery_lists')
-          .stream(primaryKey: ['id'])
-          .eq('family_id', familyId)
-          .map((data) {
-            // Include all lists (both standalone and task-linked)
-            return data
-                .map((json) => _fromSupabase(json))
-                .toList();
-          })
-          .map((lists) {
-            // Sort by updated_at descending
-            lists.sort((a, b) {
-              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-              return bDate.compareTo(aDate);
-            });
-            return lists;
+        .from('grocery_lists')
+        .stream(primaryKey: ['id'])
+        .eq('family_id', familyId)
+        .map((data) {
+          // Include all lists (both standalone and task-linked)
+          return data
+              .map((json) => _fromSupabase(json))
+              .toList();
+        })
+        .map((lists) {
+          // Sort by updated_at descending
+          lists.sort((a, b) {
+            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+            return bDate.compareTo(aDate);
           });
+          return lists;
+        });
     } catch (e, stackTrace) {
       _logger.e('Error creating stream for all lists: $e', error: e, stackTrace: stackTrace);
       yield <GroceryListModel>[];

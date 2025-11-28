@@ -498,7 +498,7 @@ class PushNotificationService {
         hasPermission = recheckStatus.isGranted;
         if (hasPermission) {
           _logger.i('✅ iOS permission granted after re-check');
-        }
+      }
       }
     }
     
