@@ -399,6 +399,62 @@ class PushNotificationService {
     // Only check permission for notifications that need to show UI
     _logger.i('📢 Visible notification detected - checking permission before showing UI');
     
+    // Check if this notification is for the current logged-in user (direct assignment)
+    // Only prioritize push notifications when the user is directly assigned
+    bool isDirectAssignment = false;
+    final currentUserId = _supabase.auth.currentUser?.id;
+    
+    if (currentUserId != null) {
+      // Check if this is a task assignment to the current user
+      if (notificationType == 'task' && data['action'] == 'view_task' && data['task_id'] != null) {
+        try {
+          // Fetch the task to check if it's assigned to the current user
+          final taskResponse = await _supabase
+              .from('tasks')
+              .select('assigned_to')
+              .eq('id', data['task_id'] as String)
+              .maybeSingle();
+          
+          if (taskResponse != null) {
+            final assignedTo = taskResponse['assigned_to'] as String?;
+            isDirectAssignment = assignedTo == currentUserId;
+            if (isDirectAssignment) {
+              _logger.i('✅ Task assignment notification is for current user (direct assignment)');
+            }
+          }
+        } catch (e) {
+          _logger.w('Could not verify task assignment: $e');
+        }
+      }
+      
+      // Check if this is an event where the current user is a participant
+      if ((notificationType == 'event' || notificationType == 'calendar_event') && 
+          data['event_id'] != null) {
+        try {
+          // Fetch the event to check if current user is a participant
+          final eventResponse = await _supabase
+              .from('calendar_events')
+              .select('participants')
+              .eq('id', data['event_id'] as String)
+              .maybeSingle();
+          
+          if (eventResponse != null) {
+            final participants = (eventResponse['participants'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ?? [];
+            isDirectAssignment = participants.contains(currentUserId);
+            if (isDirectAssignment) {
+              _logger.i('✅ Event notification is for current user (direct participant)');
+            }
+          }
+        } catch (e) {
+          _logger.w('Could not verify event participation: $e');
+        }
+      }
+    } else {
+      _logger.w('⚠️ No current user found - cannot verify direct assignment');
+    }
+    
     bool hasPermission = false;
     final permissionStatus = await Permission.notification.status;
     hasPermission = permissionStatus.isGranted;
@@ -419,19 +475,46 @@ class PushNotificationService {
       }
     }
     
-    // Only request permission if not granted and not permanently denied
-    // Don't request during notification handling - it's too late and interrupts the flow
-    if (!hasPermission && !permissionStatus.isPermanentlyDenied) {
-      _logger.w('⚠️ Notification permission not granted. Data refresh was already processed, but UI notification cannot be shown.');
-      _logger.w('💡 User can enable notifications in app settings. Silent updates will continue to work.');
-      return;
-    } else if (permissionStatus.isPermanentlyDenied) {
-      _logger.w('⚠️ Notification permission permanently denied. Data refresh was already processed.');
-      _logger.w('💡 User must enable notifications in system settings to see UI notifications.');
-      return;
+    // For direct assignments (task/event assigned to current user), request permission if not granted
+    // This ensures push notifications are prioritized for direct assignments
+    if (isDirectAssignment && !hasPermission && !permissionStatus.isPermanentlyDenied) {
+      _logger.i('🔔 Direct assignment notification - requesting permission for high-priority notification');
+      final requestResult = await Permission.notification.request();
+      if (requestResult.isGranted) {
+        hasPermission = true;
+        _logger.i('✅ Permission granted after request for direct assignment');
+      } else {
+        _logger.w('⚠️ Permission not granted after request for direct assignment');
+      }
     }
     
-    _logger.i('✅ Permission granted - proceeding to show UI notification');
+    // If still no permission and not permanently denied, try to show anyway (some platforms allow it)
+    // For direct assignments, we want to ensure the user is notified
+    if (!hasPermission && !permissionStatus.isPermanentlyDenied) {
+      if (isDirectAssignment) {
+        _logger.w('⚠️ Direct assignment notification - permission not granted, but attempting to show anyway');
+        // Continue to try showing - some platforms may still allow it
+      } else {
+        _logger.w('⚠️ Notification permission not granted. Data refresh was already processed, but UI notification cannot be shown.');
+        _logger.w('💡 User can enable notifications in app settings. Silent updates will continue to work.');
+        return;
+      }
+    } else if (permissionStatus.isPermanentlyDenied) {
+      if (isDirectAssignment) {
+        _logger.w('⚠️ Direct assignment notification - permission permanently denied. Attempting to show anyway.');
+        // For direct assignments, still try to show - user might have enabled it in settings
+      } else {
+        _logger.w('⚠️ Notification permission permanently denied. Data refresh was already processed.');
+        _logger.w('💡 User must enable notifications in system settings to see UI notifications.');
+        return;
+      }
+    }
+    
+    if (hasPermission) {
+      _logger.i('✅ Permission granted - proceeding to show UI notification');
+    } else if (isDirectAssignment) {
+      _logger.i('⚠️ Permission not granted but attempting to show direct assignment notification anyway');
+    }
     
     try {
       final notificationId = message.messageId?.hashCode ?? 

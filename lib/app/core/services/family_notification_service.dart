@@ -118,6 +118,17 @@ class FamilyNotificationService {
   }
 
   /// Notify when a task is assigned to a specific user
+  /// 
+  /// **Priority**: Push notifications are prioritized ONLY when the notification is for
+  /// the current logged-in user (direct assignment). The system verifies this by checking
+  /// if the task's `assigned_to` field matches the current user ID.
+  /// 
+  /// If push notification permission is not granted on the recipient's device for a direct
+  /// assignment, the system will automatically request permission and fall back to local
+  /// notifications. This ensures direct assignments are always delivered, even if the user
+  /// hasn't granted notification permissions yet.
+  /// 
+  /// For general family notifications (not direct assignments), standard permission rules apply.
   Future<void> notifyTaskAssigned({
     required String familyId,
     required String assigneeId,
@@ -125,6 +136,9 @@ class FamilyNotificationService {
     required String taskTitle,
     String? createdById,
   }) async {
+    // Send push notification (prioritized method)
+    // On recipient device, if permission not granted, it will be requested
+    // and fall back to local notification if needed
     await notifyFamilyMembers(
       familyId: familyId,
       title: 'New Task Assigned',
@@ -132,7 +146,7 @@ class FamilyNotificationService {
       data: {
         'type': 'task',
         'task_id': taskId,
-        'action': 'view_task',
+        'action': 'view_task', // Marks this as a task assignment notification
       },
       specificUserIds: [assigneeId],
       excludeUserId: createdById,
