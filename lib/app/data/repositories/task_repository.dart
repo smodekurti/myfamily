@@ -415,13 +415,17 @@ class TaskRepository {
   }
 
   /// Get tasks due today
-  Future<List<TaskModel>> getTasksDueToday(String familyId) async {
+  /// For children, only returns tasks assigned to them
+  Future<List<TaskModel>> getTasksDueToday(String familyId, {String? userId}) async {
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final startOfDay = today.toIso8601String();
       final endOfDay = today.add(const Duration(days: 1)).toIso8601String();
 
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
       var query = _supabase
         .from('tasks')
         .select()
