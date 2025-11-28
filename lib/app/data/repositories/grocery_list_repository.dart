@@ -261,22 +261,9 @@ class GroceryListRepository {
 
       final createdItem = _itemFromSupabase(response);
 
-      // Notify family members about new item
-      try {
-        final list = await getListById(listId);
-        if (list != null) {
-          await FamilyNotificationService().notifyFamilyDataChanged(
-            familyId: list.familyId,
-            dataType: 'grocery_list_item',
-            action: 'created',
-            itemId: listId,
-            itemTitle: name,
-            excludeUserId: null, // Item additions are less critical, notify everyone
-          );
-        }
-      } catch (e) {
-        _logger.w('Failed to send grocery item notification: $e');
-      }
+      // NOTE: Not sending notification for adding items (nested event)
+      // Notifications are only sent for top-level events (creating/updating/deleting lists)
+      // Realtime streams will handle item updates automatically
 
       return createdItem;
     } catch (e) {
@@ -383,15 +370,6 @@ class GroceryListRepository {
   /// Toggle item checked status
   Future<GroceryListItemModel> toggleItem(String itemId, bool checked) async {
     try {
-      // Get item info before updating
-      final currentItem = await _supabase
-          .from('grocery_list_items')
-          .select('list_id, name')
-          .eq('id', itemId)
-          .single();
-      final listId = currentItem['list_id'] as String;
-      final itemName = currentItem['name'] as String;
-
       final updates = {
         'checked': checked,
         'checked_at': checked ? DateTime.now().toIso8601String() : null,
@@ -407,21 +385,9 @@ class GroceryListRepository {
 
       final updatedItem = _itemFromSupabase(response);
 
-      // Notify family members about item status change
-      try {
-        final list = await getListById(listId);
-        if (list != null) {
-          await FamilyNotificationService().notifyGroceryListItemChanged(
-            familyId: list.familyId,
-            listId: listId,
-            itemName: itemName,
-            checked: checked,
-            excludeUserId: null, // Item status changes are less critical, notify everyone
-          );
-        }
-      } catch (e) {
-        _logger.w('Failed to send grocery item notification: $e');
-      }
+      // NOTE: Not sending notification for item status changes (nested event)
+      // Notifications are only sent for top-level events (creating/updating/deleting lists)
+      // Realtime streams will handle item updates automatically
 
       return updatedItem;
     } catch (e) {
@@ -467,36 +433,14 @@ class GroceryListRepository {
   /// Delete item
   Future<void> deleteItem(String itemId) async {
     try {
-      // Get item info before deleting
-      final item = await _supabase
-          .from('grocery_list_items')
-          .select('list_id, name')
-          .eq('id', itemId)
-          .single();
-      final listId = item['list_id'] as String;
-      final itemName = item['name'] as String;
-
       await _supabase
           .from('grocery_list_items')
           .delete()
           .eq('id', itemId);
 
-      // Notify family members
-      try {
-        final list = await getListById(listId);
-        if (list != null) {
-          await FamilyNotificationService().notifyFamilyDataChanged(
-            familyId: list.familyId,
-            dataType: 'grocery_list_item',
-            action: 'deleted',
-            itemId: listId,
-            itemTitle: itemName,
-            excludeUserId: null,
-          );
-        }
-      } catch (e) {
-        _logger.w('Failed to send grocery item delete notification: $e');
-      }
+      // NOTE: Not sending notification for deleting items (nested event)
+      // Notifications are only sent for top-level events (creating/updating/deleting lists)
+      // Realtime streams will handle item updates automatically
     } catch (e) {
       _logger.e('Delete item error: $e');
       rethrow;
