@@ -80,13 +80,28 @@ WHERE relname IN ('tasks', 'grocery_lists', 'grocery_list_items', 'calendar_even
 - **Provider:** `familyEventsProvider`
 - **Table:** `calendar_events`
 
+## Step 4: Fix RLS Policies (IMPORTANT)
+
+For real-time to work, **all family members must be able to SELECT from the tables**. Some RLS policies might be too restrictive (only allowing users to see their own created items).
+
+Run this SQL to fix RLS policies:
+
+```sql
+-- See fix_rls_for_realtime.sql for complete policy updates
+```
+
+**Or run the complete fix:**
+- Use the `fix_rls_for_realtime.sql` file which ensures all family members can view all items in their family
+
 ## Troubleshooting
 
 If real-time still doesn't work after running the SQL:
 
-1. **Check RLS policies:**
+1. **Check RLS policies (CRITICAL):**
    - Make sure both users can SELECT from the tables
    - Verify the RLS policies allow viewing data in the same family
+   - **Common issue:** Policies that only allow `created_by = auth.uid()` will break real-time
+   - Policies should check `family_id` membership, not just creator
 
 2. **Check app logs:**
    - Look for stream connection messages
