@@ -29,10 +29,19 @@ class PushNotificationService {
   // Callback to refresh tasks when a task notification is received
   VoidCallback? _onTaskNotificationReceived;
   
+  // Callback to refresh grocery lists when a grocery list notification is received
+  VoidCallback? _onGroceryListNotificationReceived;
+  
   /// Set callback to be called when a task notification is received
   /// This allows the app to refresh tasks when realtime stream isn't working
   void setTaskNotificationCallback(VoidCallback? callback) {
     _onTaskNotificationReceived = callback;
+  }
+  
+  /// Set callback to be called when a grocery list notification is received
+  /// This allows the app to refresh grocery lists when realtime stream isn't working
+  void setGroceryListNotificationCallback(VoidCallback? callback) {
+    _onGroceryListNotificationReceived = callback;
   }
 
   /// Initialize push notification service
@@ -333,6 +342,19 @@ class PushNotificationService {
       // For silent notifications, don't show UI notification - just refresh
       if (isSilent) {
         _logger.i('🔄 Silent task notification - skipping UI notification, refresh triggered');
+        return;
+      }
+    }
+    
+    // If this is a grocery list notification, trigger callback to refresh grocery lists
+    // This is a fallback when realtime stream isn't working
+    if (data['type'] == 'grocery_list' && _onGroceryListNotificationReceived != null) {
+      _logger.i('🔄 Grocery list notification received, triggering grocery list refresh callback');
+      _onGroceryListNotificationReceived!();
+      
+      // For silent notifications, don't show UI notification - just refresh
+      if (isSilent) {
+        _logger.i('🔄 Silent grocery list notification - skipping UI notification, refresh triggered');
         return;
       }
     }

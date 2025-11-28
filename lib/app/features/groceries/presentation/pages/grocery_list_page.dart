@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/utils/grocery_category_mapper.dart';
 import '../../../../data/models/grocery_template_model.dart';
 import '../../../../data/models/family_model.dart';
@@ -34,9 +35,37 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   bool _isSearchMode = false;
 
   @override
+  void initState() {
+    super.initState();
+    
+    // Set up callback to refresh grocery list items when a notification is received
+    // This is a fallback when realtime stream isn't working
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        PushNotificationService().setGroceryListNotificationCallback(() {
+          if (mounted) {
+            // Refresh the current list's items
+            ref.invalidate(groceryListItemsProvider(widget.listId));
+            ref.invalidate(groceryListProvider(widget.listId));
+            
+            // Also refresh all lists if we have family context
+            final currentFamily = ref.read(currentFamilyProvider);
+            if (currentFamily != null) {
+              ref.invalidate(allGroceryListsProvider(currentFamily.id));
+              ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+            }
+          }
+        });
+      }
+    });
+  }
+  
+  @override
   void dispose() {
     _itemController.dispose();
     _searchController.dispose();
+    // Clear the callback when page is disposed
+    PushNotificationService().setGroceryListNotificationCallback(null);
     super.dispose();
   }
 

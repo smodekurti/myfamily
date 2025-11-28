@@ -5,6 +5,7 @@ import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../../../../data/models/grocery_template_model.dart';
 import '../../../../data/models/family_model.dart';
 import '../../../../data/repositories/grocery_list_repository.dart';
@@ -19,6 +20,34 @@ class GroceriesPage extends ConsumerStatefulWidget {
 }
 
 class _GroceriesPageState extends ConsumerState<GroceriesPage> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Set up callback to refresh grocery lists when a notification is received
+    // This is a fallback when realtime stream isn't working
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          PushNotificationService().setGroceryListNotificationCallback(() {
+            if (mounted) {
+              ref.invalidate(allGroceryListsProvider(currentFamily.id));
+              ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+            }
+          });
+        }
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    // Clear the callback when page is disposed
+    PushNotificationService().setGroceryListNotificationCallback(null);
+    super.dispose();
+  }
+  
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
