@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,33 @@ import 'app/core/services/push_notification_service.dart';
 import 'app/features/groceries/presentation/pages/grocery_list_page.dart';
 
 void main() async {
+  // Run app in a zone to intercept print() calls and filter Supabase INFO messages
+  runZonedGuarded(
+    () async {
+      await _initializeApp();
+    },
+    (error, stack) {
+      // Handle errors
+      if (kDebugMode) {
+        debugPrint('Uncaught error: $error');
+        debugPrint('Stack trace: $stack');
+      }
+    },
+    zoneSpecification: ZoneSpecification(
+      print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
+        // Filter out Supabase INFO messages
+        if (line.contains('supabase.supabase_flutter: INFO:') ||
+            line.contains('***** Supabase init completed *****')) {
+          return; // Suppress Supabase INFO messages
+        }
+        // Print other messages normally
+        parent.print(zone, line);
+      },
+    ),
+  );
+}
+
+Future<void> _initializeApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase (required for FCM)
@@ -28,6 +57,8 @@ void main() async {
   }
 
   // Initialize Supabase
+  // Note: Supabase SDK INFO messages are from the SDK itself and cannot be suppressed
+  // They use the standard Dart print() function which is controlled by Flutter's logging
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
