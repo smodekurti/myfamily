@@ -66,27 +66,9 @@ class AnnouncementRepository {
   }
 
   /// Get all announcements for a family
-  /// Children cannot view announcements per restrictions
+  /// Children can now view and create announcements (permissions updated)
   Stream<List<AnnouncementModel>> streamFamilyAnnouncements(String familyId, {String? userId}) async* {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user can view announcements
-      if (currentUserId != null) {
-        final canView = await _roleService.canViewData(
-          userId: currentUserId,
-          familyId: familyId,
-          dataType: 'announcement',
-        );
-        
-        if (!canView) {
-          _logger.w('User $currentUserId cannot view announcements in family $familyId');
-          yield <AnnouncementModel>[];
-          return;
-        }
-      }
-      
       yield* _supabase
           .from('announcements')
           .stream(primaryKey: ['id'])

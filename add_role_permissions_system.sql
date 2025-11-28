@@ -55,9 +55,12 @@ ON CONFLICT (role) DO NOTHING;
 
 INSERT INTO role_permissions (role, permissions, restrictions) VALUES
 ('child',
- '{"can_create_tasks": false, "can_edit_tasks": false, "can_delete_tasks": false, "can_assign_tasks": false, "can_create_events": false, "can_edit_events": false, "can_delete_events": false, "can_create_lists": false, "can_edit_lists": false, "can_delete_lists": false, "can_create_templates": false, "can_delete_templates": false, "can_create_announcements": false, "can_manage_family": false, "can_invite_members": false, "can_change_roles": false, "can_view_all_data": false, "can_view_points": false, "can_delete_family": false}',
- '{"can_only_view_assigned_tasks": true, "can_only_complete_own_tasks": true, "can_view_calendar": true, "can_view_grocery_lists_readonly": true, "cannot_view_announcements": true, "cannot_view_leaderboard": true}')
-ON CONFLICT (role) DO NOTHING;
+ '{"can_create_tasks": true, "can_edit_tasks": true, "can_delete_tasks": false, "can_assign_tasks": false, "can_create_events": true, "can_edit_events": true, "can_delete_events": false, "can_create_lists": true, "can_edit_lists": true, "can_delete_lists": false, "can_create_templates": false, "can_delete_templates": false, "can_create_announcements": true, "can_manage_family": false, "can_invite_members": false, "can_change_roles": false, "can_view_all_data": true, "can_view_points": true, "can_delete_family": false}',
+ '{"can_only_view_assigned_tasks": false, "can_only_complete_own_tasks": false, "can_view_calendar": true, "can_view_grocery_lists_readonly": false, "cannot_view_announcements": false, "cannot_view_leaderboard": false}')
+ON CONFLICT (role) DO UPDATE SET
+  permissions = EXCLUDED.permissions,
+  restrictions = EXCLUDED.restrictions,
+  updated_at = NOW();
 
 -- Step 5: Create function to check parent limit (max 2 parents per family)
 CREATE OR REPLACE FUNCTION check_parent_limit()

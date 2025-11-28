@@ -148,27 +148,9 @@ class GroceryListRepository {
   }
 
   /// Stream all standalone grocery lists for a family
-  /// Children can view lists (read-only per restrictions)
+  /// Children can now view and edit lists (permissions updated)
   Stream<List<GroceryListModel>> streamStandaloneListsForFamily(String familyId, {String? userId}) async* {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user can view lists
-      if (currentUserId != null) {
-        final canView = await _roleService.canViewData(
-          userId: currentUserId,
-          familyId: familyId,
-          dataType: 'grocery_list',
-        );
-        
-        if (!canView) {
-          _logger.w('User $currentUserId cannot view grocery lists in family $familyId');
-          yield <GroceryListModel>[];
-          return;
-        }
-      }
-      
       yield* _supabase
           .from('grocery_lists')
           .stream(primaryKey: ['id'])
@@ -196,27 +178,9 @@ class GroceryListRepository {
   }
 
   /// Stream all grocery lists for a family (both standalone and task-linked)
-  /// Children can view lists (read-only per restrictions)
+  /// Children can now view and edit lists (permissions updated)
   Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId, {String? userId}) async* {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user can view lists
-      if (currentUserId != null) {
-        final canView = await _roleService.canViewData(
-          userId: currentUserId,
-          familyId: familyId,
-          dataType: 'grocery_list',
-        );
-        
-        if (!canView) {
-          _logger.w('User $currentUserId cannot view grocery lists in family $familyId');
-          yield <GroceryListModel>[];
-          return;
-        }
-      }
-      
       yield* _supabase
           .from('grocery_lists')
           .stream(primaryKey: ['id'])

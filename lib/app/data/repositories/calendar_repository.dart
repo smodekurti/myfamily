@@ -299,28 +299,10 @@ class CalendarRepository {
   }
 
   /// Stream events for a family
-  /// Children can view all events (read-only per restrictions)
+  /// Children can now view and edit events (permissions updated)
   Stream<List<EventModel>> streamFamilyEvents(String familyId, {String? userId}) async* {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user can view events
-      if (currentUserId != null) {
-        final canView = await _roleService.canViewData(
-          userId: currentUserId,
-          familyId: familyId,
-          dataType: 'calendar_event',
-        );
-        
-        if (!canView) {
-          _logger.w('User $currentUserId cannot view events in family $familyId');
-          yield <EventModel>[];
-          return;
-        }
-      }
-      
-      // Stream all family events (children can view but not edit)
+      // Stream all family events for all roles
       yield* _supabase
           .from('calendar_events')
           .stream(primaryKey: ['id'])
