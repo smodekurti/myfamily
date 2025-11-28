@@ -257,24 +257,34 @@ async function sendFCMNotificationsV1(
       // Platform-specific configurations
       if (isIOS) {
         // iOS (APNs) configuration
+        // Build APNs payload with aps (Apple's reserved fields) and custom data
+        const apnsPayload: any = {
+          aps: {
+            alert: {
+              title: title,
+              body: body,
+            },
+            sound: 'default',
+            badge: 1,
+          },
+        }
+        
+        // Add custom data fields to APNs payload (at root level, not inside aps)
+        if (data) {
+          Object.entries(data).forEach(([key, value]) => {
+            apnsPayload[key] = String(value)
+          })
+        }
+        
         message.message.apns = {
           headers: {
             'apns-priority': '10',
             'apns-push-type': 'alert',
           },
-          payload: {
-            aps: {
-              alert: {
-                title: title,
-                body: body,
-              },
-              sound: 'default',
-              badge: 1,
-              'content-available': 1,
-            },
-          },
+          payload: apnsPayload,
         }
         console.log(`📱 Sending iOS notification to token ${token.substring(0, 20)}...`)
+        console.log(`📱 iOS APNs payload: ${JSON.stringify(apnsPayload)}`)
       } else {
         // Android configuration
         message.message.android = {
