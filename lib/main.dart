@@ -12,10 +12,11 @@ import 'app/core/providers/providers.dart';
 import 'app/common/responsive/responsive_helper.dart';
 import 'app/core/services/notification_service.dart';
 import 'app/core/services/push_notification_service.dart';
+import 'app/features/groceries/presentation/pages/grocery_list_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase (required for FCM)
   try {
     await Firebase.initializeApp(
@@ -25,10 +26,12 @@ void main() async {
     // If Firebase is not configured, continue without it
     // Push notifications will fail gracefully
     print('Firebase initialization failed: $e');
-    print('Note: Push notifications require Firebase setup. See PUSH_NOTIFICATIONS_SETUP.md');
+    print(
+      'Note: Push notifications require Firebase setup. See PUSH_NOTIFICATIONS_SETUP.md',
+    );
     print('Run: flutterfire configure');
   }
-  
+
   // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
@@ -42,21 +45,21 @@ void main() async {
   // Permissions will be requested when user actually needs the features
   // This prevents premature permission dialogs on iOS
   await NotificationService().initialize(requestPermissions: false);
-  
+
   // Initialize push notification service without requesting permissions
   // Permission will be requested when user enables notifications in settings
   await PushNotificationService().initialize(requestPermissions: false);
-  
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   // Set system UI overlay style
   // Note: System UI colors are set dynamically based on theme in the app
   // This is just an initial setting and will be overridden by theme
-  
+
   runApp(const ProviderScope(child: MyFamilyApp()));
 }
 
@@ -74,6 +77,7 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
     // Load theme preference from user profile after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadThemePreference();
+      _registerGlobalCallbacks();
     });
   }
 
@@ -86,28 +90,66 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
           final themeMode = profile.themePreference == 'light'
               ? ThemeMode.light
               : profile.themePreference == 'dark'
-                  ? ThemeMode.dark
-                  : ThemeMode.system;
+              ? ThemeMode.dark
+              : ThemeMode.system;
           ref.read(themeModeProvider.notifier).state = themeMode;
         }
       });
     }
   }
 
+  void _registerGlobalCallbacks() {
+    // Register global callbacks that work from any page
+    // This ensures data refreshes even when user is not on the specific page
+    // Individual pages will register their own callbacks for more specific refreshes
+
+    // Grocery list callback
+    PushNotificationService().setGroceryListNotificationCallback(() {
+      final currentFamily = ref.read(currentFamilyProvider);
+      if (currentFamily != null && mounted) {
+        ref.invalidate(allGroceryListsProvider(currentFamily.id));
+        ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+      }
+    });
+
+    // Task callback
+    PushNotificationService().setTaskNotificationCallback(() {
+      final currentFamily = ref.read(currentFamilyProvider);
+      if (currentFamily != null && mounted) {
+        ref.invalidate(familyTasksProvider(currentFamily.id));
+        ref.invalidate(tasksDueTodayProvider(currentFamily.id));
+        ref.invalidate(taskStatsProvider(currentFamily.id));
+      }
+    });
+
+    // Event callback
+    PushNotificationService().setEventNotificationCallback(() {
+      final currentFamily = ref.read(currentFamilyProvider);
+      if (currentFamily != null && mounted) {
+        ref.invalidate(familyEventsProvider(currentFamily.id));
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
-    
+
     return ScreenUtilInit(
-      designSize: const Size(ResponsiveHelper.designWidth, ResponsiveHelper.designHeight),
+      designSize: const Size(
+        ResponsiveHelper.designWidth,
+        ResponsiveHelper.designHeight,
+      ),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(TextScalingClamp.clamp(
-              MediaQuery.of(context).textScaler.scale(1.0),
-            )),
+            textScaler: TextScaler.linear(
+              TextScalingClamp.clamp(
+                MediaQuery.of(context).textScaler.scale(1.0),
+              ),
+            ),
           ),
           child: GestureDetector(
             // Dismiss keyboard when tapping outside input fields
