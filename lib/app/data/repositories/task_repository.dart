@@ -403,7 +403,7 @@ class TaskRepository {
   }
 
   /// Get tasks due today
-  /// For children, only returns tasks assigned to them
+  /// Children can now view all tasks (permissions updated)
   Future<List<TaskModel>> getTasksDueToday(String familyId, {String? userId}) async {
     try {
       final now = DateTime.now();
@@ -411,26 +411,14 @@ class TaskRepository {
       final startOfDay = today.toIso8601String();
       final endOfDay = today.add(const Duration(days: 1)).toIso8601String();
 
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      var query = _supabase
+      final response = await _supabase
         .from('tasks')
         .select()
         .eq('family_id', familyId)
         .gte('due_date', startOfDay)
         .lt('due_date', endOfDay)
-        .neq('status', 'completed');
-      
-      // For children, only show tasks assigned to them
-      if (currentUserId != null) {
-        final role = await _roleService.getUserRole(currentUserId, familyId);
-        if (role == 'child') {
-          query = query.eq('assigned_to', currentUserId);
-        }
-      }
-      
-      final response = await query.order('due_date', ascending: true);
+        .neq('status', 'completed')
+        .order('due_date', ascending: true);
 
       // Also filter in memory to ensure we only get tasks due today (handles timezone issues)
       final allTasks = (response as List)
