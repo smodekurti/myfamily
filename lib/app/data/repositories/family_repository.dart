@@ -44,8 +44,8 @@ class FamilyRepository {
       final familyData = family.toJson();
       familyData['parent_invite_code'] = parentInviteCode;
 
-      // Create family in Supabase
-      await _supabase.from('families').insert(family.toJson());
+      // Create family in Supabase with parent invite code
+      await _supabase.from('families').insert(familyData);
 
       // Update user profile with age and birthdate if provided
       if (creatorAge != null || creatorBirthdate != null) {
