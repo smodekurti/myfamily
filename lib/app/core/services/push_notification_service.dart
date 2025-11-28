@@ -317,44 +317,10 @@ class PushNotificationService {
     _logger.i('Message data: ${message.data}');
     _logger.i('Message notification: ${message.notification?.title} - ${message.notification?.body}');
     
-    // Check notification permissions before showing
-    bool hasPermission = false;
-    
-    // Use permission_handler for both Android and iOS
-    final permissionStatus = await Permission.notification.status;
-    hasPermission = permissionStatus.isGranted;
-    
-    if (Platform.isAndroid) {
-      _logger.i('Android notification permission status: $permissionStatus');
-    } else if (Platform.isIOS) {
-      _logger.i('iOS notification permission status: $permissionStatus');
-    }
-    
-    // If permission is not granted, try requesting it
-    // Note: On iOS, if permission was previously denied, this won't show a dialog
-    if (!hasPermission) {
-      final requestResult = await Permission.notification.request();
-      hasPermission = requestResult.isGranted;
-      
-      if (Platform.isAndroid) {
-        _logger.i('Android permission request result: $requestResult');
-      } else if (Platform.isIOS) {
-        _logger.i('iOS permission request result: $requestResult');
-      }
-    }
-    
-    if (!hasPermission) {
-      _logger.w('Notification permission not granted, cannot show notification');
-      return;
-    }
-    
-    _logger.i('✅ Proceeding to show notification');
-    
-    // Show local notification for foreground messages
-    // iOS doesn't show notifications automatically when app is in foreground
+    // Extract notification data first
     final notification = message.notification;
-    final title = notification?.title ?? message.data['title'] ?? 'New Notification';
-    final body = notification?.body ?? message.data['body'] ?? 'You have a new notification';
+    final title = notification?.title ?? message.data['title'] ?? '';
+    final body = notification?.body ?? message.data['body'] ?? '';
     final data = message.data;
     
     // Check if this is a silent notification (data-only, no UI)
@@ -363,101 +329,109 @@ class PushNotificationService {
     // Get notification type
     final notificationType = data['type'] as String?;
     
-    // If this is a task notification, trigger callback to refresh tasks
-    // This is a fallback when realtime stream isn't working
+    // CRITICAL: Process data refresh callbacks FIRST, regardless of permission status
+    // Silent notifications should always trigger data refreshes, even without permission
+    // This ensures real-time updates work even if user hasn't granted notification permission
+    
+    // Process all notification callbacks FIRST (regardless of permission)
+    // This ensures data refreshes work even without notification permission
+    bool callbackTriggered = false;
+    
     if (notificationType == 'task') {
       _logger.i('📋 Task notification detected. Callback registered: ${_onTaskNotificationReceived != null}');
       if (_onTaskNotificationReceived != null) {
         _logger.i('🔄 Task notification received, triggering task refresh callback');
         _onTaskNotificationReceived!();
-        
-        // For silent notifications, don't show UI notification - just refresh
-        if (isSilent) {
-          _logger.i('🔄 Silent task notification - skipping UI notification, refresh triggered');
-          return;
-        }
+        callbackTriggered = true;
       } else {
         _logger.w('⚠️ Task notification received but callback is not registered. Page may not be mounted.');
       }
-    }
-    
-    // If this is a grocery list or grocery list item notification, trigger callback to refresh grocery lists
-    // This is a fallback when realtime stream isn't working
-    if (notificationType == 'grocery_list' || notificationType == 'grocery_list_item') {
+    } else if (notificationType == 'grocery_list' || notificationType == 'grocery_list_item') {
       _logger.i('🛒 Grocery notification detected (type: $notificationType). Callback registered: ${_onGroceryListNotificationReceived != null}');
       if (_onGroceryListNotificationReceived != null) {
         _logger.i('🔄 Grocery notification received, triggering grocery list refresh callback');
         _onGroceryListNotificationReceived!();
-        
-        // For silent notifications, don't show UI notification - just refresh
-        if (isSilent) {
-          _logger.i('🔄 Silent grocery notification - skipping UI notification, refresh triggered');
-          return;
-        }
+        callbackTriggered = true;
       } else {
         _logger.w('⚠️ Grocery notification received but callback is not registered. Page may not be mounted.');
       }
-    }
-    
-    // If this is an event notification, trigger callback to refresh events
-    // This is a fallback when realtime stream isn't working
-    if (notificationType == 'event' || notificationType == 'calendar_event') {
+    } else if (notificationType == 'event' || notificationType == 'calendar_event') {
       _logger.i('📅 Event notification detected (type: $notificationType). Callback registered: ${_onEventNotificationReceived != null}');
       if (_onEventNotificationReceived != null) {
         _logger.i('🔄 Event notification received, triggering event refresh callback');
         _onEventNotificationReceived!();
-        
-        // For silent notifications, don't show UI notification - just refresh
-        if (isSilent) {
-          _logger.i('🔄 Silent event notification - skipping UI notification, refresh triggered');
-          return;
-        }
+        callbackTriggered = true;
       } else {
         _logger.w('⚠️ Event notification received but callback is not registered. Page may not be mounted.');
       }
-    }
-    
-    // If this is an announcement notification, trigger callback to refresh announcements
-    // This is a fallback when realtime stream isn't working
-    if (notificationType == 'announcement') {
+    } else if (notificationType == 'announcement') {
       _logger.i('📢 Announcement notification detected. Callback registered: ${_onAnnouncementNotificationReceived != null}');
       if (_onAnnouncementNotificationReceived != null) {
         _logger.i('🔄 Announcement notification received, triggering announcement refresh callback');
         _onAnnouncementNotificationReceived!();
-        
-        // For silent notifications, don't show UI notification - just refresh
-        if (isSilent) {
-          _logger.i('🔄 Silent announcement notification - skipping UI notification, refresh triggered');
-          return;
-        }
+        callbackTriggered = true;
       } else {
         _logger.w('⚠️ Announcement notification received but callback is not registered. Page may not be mounted.');
       }
-    }
-    
-    // If this is a template notification (grocery or task), trigger callback to refresh templates
-    // This is a fallback when realtime stream isn't working
-    if (notificationType == 'grocery_template' || notificationType == 'task_template') {
+    } else if (notificationType == 'grocery_template' || notificationType == 'task_template') {
       _logger.i('📋 Template notification detected (type: $notificationType). Callback registered: ${_onTemplateNotificationReceived != null}');
       if (_onTemplateNotificationReceived != null) {
         _logger.i('🔄 Template notification received, triggering template refresh callback');
         _onTemplateNotificationReceived!();
-        
-        // For silent notifications, don't show UI notification - just refresh
-        if (isSilent) {
-          _logger.i('🔄 Silent template notification - skipping UI notification, refresh triggered');
-          return;
-        }
+        callbackTriggered = true;
       } else {
         _logger.w('⚠️ Template notification received but callback is not registered. Page may not be mounted.');
       }
     }
     
-    // For silent notifications, don't show notification UI
+    // For silent notifications, we've already processed the data refresh
+    // No need to show UI notification, regardless of permission status
     if (isSilent) {
-      _logger.i('🔄 Silent notification - skipping UI notification');
+      if (callbackTriggered) {
+        _logger.i('🔄 Silent notification processed - data refresh triggered, skipping UI notification');
+      } else {
+        _logger.i('🔄 Silent notification - no callback registered, skipping UI notification');
+      }
       return;
     }
+    
+    // For visible notifications, check permission before showing UI
+    // Only check permission for notifications that need to show UI
+    _logger.i('📢 Visible notification detected - checking permission before showing UI');
+    
+    bool hasPermission = false;
+    final permissionStatus = await Permission.notification.status;
+    hasPermission = permissionStatus.isGranted;
+    
+    if (Platform.isAndroid) {
+      _logger.i('Android notification permission status: $permissionStatus');
+    } else if (Platform.isIOS) {
+      _logger.i('iOS notification permission status: $permissionStatus');
+      // On iOS, re-check permission status after a brief delay
+      // iOS sometimes takes a moment to update permission status after user grants it
+      if (!hasPermission) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        final recheckStatus = await Permission.notification.status;
+        hasPermission = recheckStatus.isGranted;
+        if (hasPermission) {
+          _logger.i('✅ iOS permission granted after re-check');
+        }
+      }
+    }
+    
+    // Only request permission if not granted and not permanently denied
+    // Don't request during notification handling - it's too late and interrupts the flow
+    if (!hasPermission && !permissionStatus.isPermanentlyDenied) {
+      _logger.w('⚠️ Notification permission not granted. Data refresh was already processed, but UI notification cannot be shown.');
+      _logger.w('💡 User can enable notifications in app settings. Silent updates will continue to work.');
+      return;
+    } else if (permissionStatus.isPermanentlyDenied) {
+      _logger.w('⚠️ Notification permission permanently denied. Data refresh was already processed.');
+      _logger.w('💡 User must enable notifications in system settings to see UI notifications.');
+      return;
+    }
+    
+    _logger.i('✅ Permission granted - proceeding to show UI notification');
     
     try {
       final notificationId = message.messageId?.hashCode ?? 
