@@ -138,3 +138,4 @@ Then manually insert a task in Supabase Dashboard and see if the stream receives
 3. Test with Supabase Dashboard manual insert
 4. Share the logs you see (or don't see) so we can diagnose further
 
+
