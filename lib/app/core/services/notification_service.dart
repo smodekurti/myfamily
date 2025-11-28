@@ -14,7 +14,9 @@ class NotificationService {
   bool _initialized = false;
 
   /// Initialize notification service
-  Future<bool> initialize() async {
+  /// [requestPermissions] - If true, requests permission immediately. If false, only checks status.
+  /// Set to false during app startup to avoid premature permission dialogs on iOS.
+  Future<bool> initialize({bool requestPermissions = true}) async {
     if (_initialized) return true;
 
     try {
@@ -22,8 +24,8 @@ class NotificationService {
       var status = await Permission.notification.status;
       _logger.i('Notification permission status: $status');
       
-      // Request if not already granted
-      if (!status.isGranted && !status.isPermanentlyDenied) {
+      // Only request permission if explicitly requested and not already granted
+      if (requestPermissions && !status.isGranted && !status.isPermanentlyDenied) {
         _logger.i('Requesting notification permission...');
         status = await Permission.notification.request();
         _logger.i('Permission request result: $status');
@@ -34,14 +36,17 @@ class NotificationService {
           status = await Permission.notification.status;
           _logger.i('Re-checked permission status: $status');
         }
+      } else if (!requestPermissions) {
+        _logger.i('Skipping permission request (deferred until needed)');
       }
       
       if (!status.isGranted) {
-        _logger.w('Notification permission not granted');
-        return false;
+        _logger.w('Notification permission not granted (will request when needed)');
+        // Don't return false - we can still initialize the service
+        // Permission will be requested when user actually schedules a notification
+      } else {
+        _logger.i('✅ Notification permission granted');
       }
-      
-      _logger.i('✅ Notification permission granted');
 
       // Initialize timezone
       tz.initializeTimeZones();

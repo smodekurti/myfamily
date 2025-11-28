@@ -38,11 +38,14 @@ void main() async {
     ),
   );
 
-  // Initialize local notification service (for reminders)
-  await NotificationService().initialize();
+  // Initialize services WITHOUT requesting permissions
+  // Permissions will be requested when user actually needs the features
+  // This prevents premature permission dialogs on iOS
+  await NotificationService().initialize(requestPermissions: false);
   
-  // Initialize push notification service (for cross-device notifications)
-  await PushNotificationService().initialize();
+  // Initialize push notification service without requesting permissions
+  // Permission will be requested when user enables notifications in settings
+  await PushNotificationService().initialize(requestPermissions: false);
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

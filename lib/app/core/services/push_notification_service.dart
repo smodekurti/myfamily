@@ -26,7 +26,9 @@ class PushNotificationService {
   bool _initialized = false;
 
   /// Initialize push notification service
-  Future<bool> initialize() async {
+  /// [requestPermissions] - If true, requests permission immediately. If false, only checks status.
+  /// Set to false during app startup to avoid premature permission dialogs on iOS.
+  Future<bool> initialize({bool requestPermissions = true}) async {
     if (_initialized) return true;
 
     try {
@@ -34,8 +36,8 @@ class PushNotificationService {
       var status = await Permission.notification.status;
       _logger.i('Initial notification permission status: $status');
       
-      // Only request if not already granted or permanently denied
-      if (status.isDenied) {
+      // Only request if explicitly requested and not already granted or permanently denied
+      if (requestPermissions && status.isDenied) {
         _logger.i('Requesting notification permission...');
         final requestResult = await Permission.notification.request();
         _logger.i('Permission request result: $requestResult');
@@ -56,6 +58,8 @@ class PushNotificationService {
         } else {
           _logger.i('✅ Notification permission granted');
         }
+      } else if (!requestPermissions) {
+        _logger.i('Skipping permission request (deferred until user enables notifications)');
       } else if (status.isPermanentlyDenied) {
         _logger.w('Notification permission permanently denied. User needs to enable it in settings.');
         // Continue initialization anyway - token can still be saved

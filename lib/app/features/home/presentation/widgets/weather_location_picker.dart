@@ -22,25 +22,31 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
     super.dispose();
   }
 
-  Future<void> _selectLocation(String cityName) async {
-    if (cityName.isEmpty) return;
+  Future<void> _selectLocation(String location) async {
+    if (location.isEmpty) return;
 
     setState(() {
       _isValidating = true;
     });
 
-    // Validate the city by trying to get weather for it
-    final weather = await _weatherRepo.getWeather(cityName: cityName);
+    // Check if input is a zipcode (numeric, 5 digits for US, or other formats)
+    final isZipcode = RegExp(r'^\d{4,10}$').hasMatch(location.trim());
+    
+    // Validate the location by trying to get weather for it
+    final weather = isZipcode
+        ? await _weatherRepo.getWeather(zipcode: location.trim())
+        : await _weatherRepo.getWeather(cityName: location.trim());
     
     if (weather != null && mounted) {
-      // Save the selected location
-      ref.read(selectedWeatherLocationProvider.notifier).state = cityName;
+      // Save the selected location (use the resolved city name from weather)
+      final locationName = weather.city;
+      ref.read(selectedWeatherLocationProvider.notifier).state = locationName;
       Navigator.pop(context);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not find weather for "$cityName". Please try another location.'),
+            content: Text('Could not find weather for "$location". Please try another location or zipcode.'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -102,8 +108,10 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                   TextField(
                     controller: _searchController,
                     enabled: !_isValidating,
+                    keyboardType: TextInputType.text,
                     decoration: InputDecoration(
-                      hintText: 'Enter city name (e.g., New York, London)',
+                      hintText: 'Enter city name or zipcode (e.g., New York, 10001)',
+                      helperText: 'You can search by city name or zipcode',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
