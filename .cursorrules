@@ -632,6 +632,61 @@ Widget build(BuildContext context) {
 5. **Add logging** to debug callback registration status
 6. **Handle both silent and visible notifications** - silent notifications should trigger refresh without showing UI
 
+#### Cost Optimization: Top-Level Events Only
+
+**CRITICAL**: To minimize push notification costs, **ONLY send notifications for top-level events**, not nested/sub-item changes.
+
+**Top-Level Events (SEND NOTIFICATIONS):**
+- ✅ Creating/updating/deleting tasks
+- ✅ Creating/updating/deleting grocery lists
+- ✅ Creating/updating/deleting calendar events
+- ✅ Creating announcements
+- ✅ Creating/updating/deleting templates
+
+**Nested Events (DO NOT SEND NOTIFICATIONS - Use Realtime Only):**
+- ❌ Adding items to grocery lists
+- ❌ Checking/unchecking grocery list items
+- ❌ Updating grocery list items
+- ❌ Deleting grocery list items
+- ❌ Any other nested/sub-item operations
+
+**Implementation Pattern:**
+```dart
+// ✅ GOOD - Top-level event (send notification)
+Future<GroceryListModel> createStandaloneList(...) async {
+  // ... create list ...
+  
+  // Send notification for top-level event
+  await FamilyNotificationService().notifyGroceryListChanged(
+    familyId: familyId,
+    action: 'created',
+    listId: createdList.id,
+    listName: name,
+    excludeUserId: createdBy,
+  );
+  
+  return createdList;
+}
+
+// ❌ BAD - Nested event (don't send notification)
+Future<GroceryListItemModel> addItem(...) async {
+  // ... add item ...
+  
+  // DON'T send notification - Realtime will handle it
+  // NOTE: Not sending notification for adding items (nested event)
+  // Notifications are only sent for top-level events
+  // Realtime streams will handle item updates automatically
+  
+  return createdItem;
+}
+```
+
+**Why This Matters:**
+- **Cost Savings**: Adding 10 items to a list = 0 notifications (vs 10+ before)
+- **Realtime Handles It**: Supabase Realtime streams (free) automatically sync nested changes
+- **Better UX**: Users get instant updates via Realtime without notification spam
+- **Reliability**: Top-level events still notify family members for important changes
+
 #### Page-Specific Callbacks (Optional)
 
 Pages can register their own callbacks for more targeted refreshes, but they should NOT clear the global callback in `dispose()`. The global callback ensures data refreshes even when the user is not on the specific page.
@@ -658,6 +713,7 @@ void dispose() {
 7. **TESTABILITY** - Make widgets testable
 8. **CONFIGURATION** - Use constants and environment variables
 9. **GLOBAL NOTIFICATION CALLBACKS** - Always register in main.dart for all notification types
+10. **NOTIFICATION OPTIMIZATION** - Only send notifications for top-level events, not nested changes
 
 **Every line of code should be:**
 - Responsive
