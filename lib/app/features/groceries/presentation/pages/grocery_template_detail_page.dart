@@ -27,6 +27,23 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
   Set<String> _selectedCategories = {}; // Empty set = show all categories
 
   @override
+  void initState() {
+    super.initState();
+    
+    // Always refresh from server when detail page opens (header-detail relationship)
+    // This ensures we have the latest data, especially if items were modified by other users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          ref.invalidate(groceryTemplatesProvider(currentFamily.id));
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _itemController.dispose();
     super.dispose();
@@ -51,9 +68,20 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
               _buildCustomAppBar(context, templates, currentFamily),
               
               Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-                  child: Column(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // Refresh from server when user pulls to refresh
+                    ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
+                    final currentFamily = ref.read(currentFamilyProvider);
+                    if (currentFamily != null) {
+                      ref.invalidate(groceryTemplatesProvider(currentFamily.id));
+                    }
+                    // Wait a moment for the stream to fetch new data
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: SingleChildScrollView(
+                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Category Filters (only in category view)
@@ -123,6 +151,7 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                       SizedBox(height: ResponsiveHelper.h(80)), // Space for bottom input
                     ],
                   ),
+                ),
                 ),
               ),
               
