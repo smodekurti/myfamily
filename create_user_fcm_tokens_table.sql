@@ -47,3 +47,4 @@ CREATE TRIGGER update_user_fcm_tokens_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_user_fcm_tokens_updated_at();
 
+

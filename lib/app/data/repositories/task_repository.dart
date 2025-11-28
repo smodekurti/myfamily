@@ -326,12 +326,33 @@ class TaskRepository {
 
   /// Stream tasks for a specific family (real-time updates)
   Stream<List<TaskModel>> streamTasksForFamily(String familyId) {
-    return _supabase
-        .from('tasks')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .order('created_at', ascending: false)
-        .map((data) => data.map((json) => TaskModelHelpers.fromSupabase(json)).toList());
+    _logger.i('Starting stream for family tasks: $familyId');
+    try {
+      return _supabase
+          .from('tasks')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false)
+          .map((data) {
+            _logger.i('Received ${data.length} tasks from stream');
+            try {
+              final tasks = data.map((json) => TaskModelHelpers.fromSupabase(json)).toList();
+              _logger.i('Successfully parsed ${tasks.length} tasks');
+              return tasks;
+            } catch (e, stackTrace) {
+              _logger.e('Error parsing tasks from stream: $e', error: e, stackTrace: stackTrace);
+              return <TaskModel>[];
+            }
+          })
+          .handleError((error, stackTrace) {
+            _logger.e('Stream error for family tasks: $error', error: error, stackTrace: stackTrace);
+            // Emit empty list on error
+          });
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
+      // Return a stream that emits empty list
+      return Stream.value(<TaskModel>[]);
+    }
   }
 
   /// Stream tasks assigned to a specific user
