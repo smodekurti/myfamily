@@ -66,15 +66,39 @@ class AnnouncementRepository {
   }
 
   /// Get all announcements for a family
-  Stream<List<AnnouncementModel>> streamFamilyAnnouncements(String familyId) {
-    return _supabase
-        .from('announcements')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .order('created_at', ascending: false)
-        .map((data) => (data as List)
-            .map((json) => AnnouncementModelHelpers.fromSupabase(json as Map<String, dynamic>))
-            .toList());
+  /// Children cannot view announcements per restrictions
+  Stream<List<AnnouncementModel>> streamFamilyAnnouncements(String familyId, {String? userId}) async* {
+    try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user can view announcements
+      if (currentUserId != null) {
+        final canView = await _roleService.canViewData(
+          userId: currentUserId,
+          familyId: familyId,
+          dataType: 'announcement',
+        );
+        
+        if (!canView) {
+          _logger.w('User $currentUserId cannot view announcements in family $familyId');
+          yield <AnnouncementModel>[];
+          return;
+        }
+      }
+      
+      yield* _supabase
+          .from('announcements')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false)
+          .map((data) => (data as List)
+              .map((json) => AnnouncementModelHelpers.fromSupabase(json as Map<String, dynamic>))
+              .toList());
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for announcements: $e', error: e, stackTrace: stackTrace);
+      yield <AnnouncementModel>[];
+    }
   }
 
   /// Mark announcement as read
