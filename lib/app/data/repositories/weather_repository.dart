@@ -11,10 +11,11 @@ class WeatherRepository {
   static const String _baseUrl = 'https://api.open-meteo.com/v1';
   static const String _geocodingUrl = 'https://geocoding-api.open-meteo.com/v1';
   
-  /// Get weather for a location (by city name or coordinates)
+  /// Get weather for a location (by city name, zipcode, or coordinates)
   /// Uses Open-Meteo free API - no API key required
   Future<WeatherModel?> getWeather({
     String? cityName,
+    String? zipcode,
     double? latitude,
     double? longitude,
   }) async {
@@ -24,11 +25,12 @@ class WeatherRepository {
       String? city = cityName;
       String? country = '';
 
-      // If only city name provided, get coordinates first
-      if (cityName != null && cityName.isNotEmpty && lat == null && lon == null) {
-        final coords = await _getCoordinatesForCity(cityName);
+      // If city name or zipcode provided, get coordinates first
+      if ((cityName != null && cityName.isNotEmpty || zipcode != null && zipcode.isNotEmpty) && lat == null && lon == null) {
+        final searchQuery = zipcode != null && zipcode.isNotEmpty ? zipcode : cityName!;
+        final coords = await _getCoordinatesForLocation(searchQuery, isZipcode: zipcode != null && zipcode.isNotEmpty);
         if (coords == null) {
-          _logger.w('Could not find coordinates for city: $cityName');
+          _logger.w('Could not find coordinates for location: $searchQuery');
           return null;
         }
         lat = coords['latitude'];
@@ -62,12 +64,17 @@ class WeatherRepository {
     }
   }
 
-  /// Get coordinates for a city name using geocoding API
-  Future<Map<String, dynamic>?> _getCoordinatesForCity(String cityName) async {
+  /// Get coordinates for a location (city name or zipcode) using geocoding API
+  Future<Map<String, dynamic>?> _getCoordinatesForLocation(String location, {bool isZipcode = false}) async {
     try {
+      // Open-Meteo geocoding API supports both city names and postal codes (zipcodes)
+      // For zipcodes, we can search by postal code or include it in the name search
+      final queryParam = isZipcode ? 'postal_code' : 'name';
       final url = Uri.parse(
-        '$_geocodingUrl/search?name=${Uri.encodeComponent(cityName)}&count=1&language=en&format=json'
+        '$_geocodingUrl/search?$queryParam=${Uri.encodeComponent(location)}&count=1&language=en&format=json'
       );
+
+      _logger.i('Geocoding request: $url');
 
       final response = await http.get(url).timeout(AppConstants.requestTimeout);
 
@@ -76,17 +83,32 @@ class WeatherRepository {
         final results = data['results'] as List?;
         if (results != null && results.isNotEmpty) {
           final result = results.first as Map<String, dynamic>;
+          final name = result['name'] as String? ?? location;
+          final admin1 = result['admin1'] as String?; // State/Province
+          final country = result['country'] as String? ?? '';
+          
+          // For zipcodes, construct a better display name
+          final displayName = isZipcode && admin1 != null 
+              ? '$name, $admin1' 
+              : name;
+          
+          _logger.i('Found location: $displayName, $country at ${result['latitude']}, ${result['longitude']}');
+          
           return {
             'latitude': result['latitude'] as double,
             'longitude': result['longitude'] as double,
-            'name': result['name'] as String,
-            'country': result['country'] as String? ?? '',
+            'name': displayName,
+            'country': country,
           };
+        } else {
+          _logger.w('No results found for location: $location');
         }
+      } else {
+        _logger.e('Geocoding API error: ${response.statusCode} - ${response.body}');
       }
       return null;
-    } catch (e) {
-      _logger.e('Geocoding error: $e');
+    } catch (e, stackTrace) {
+      _logger.e('Geocoding error: $e', error: e, stackTrace: stackTrace);
       return null;
     }
   }

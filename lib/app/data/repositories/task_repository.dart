@@ -326,30 +326,39 @@ class TaskRepository {
 
   /// Stream tasks for a specific family (real-time updates)
   Stream<List<TaskModel>> streamTasksForFamily(String familyId) {
-    _logger.i('Starting stream for family tasks: $familyId');
+    _logger.i('🔄 Starting stream for family tasks: $familyId');
     try {
-      return _supabase
+      final stream = _supabase
           .from('tasks')
           .stream(primaryKey: ['id'])
           .eq('family_id', familyId)
-          .order('created_at', ascending: false)
-          .map((data) {
-            _logger.i('Received ${data.length} tasks from stream');
+          .order('created_at', ascending: false);
+      
+      _logger.i('✅ Stream created for family tasks: $familyId');
+      
+      return stream.map((data) {
+            _logger.i('📥 Stream update received: ${data.length} tasks for family $familyId');
             try {
               final tasks = data.map((json) => TaskModelHelpers.fromSupabase(json)).toList();
-              _logger.i('Successfully parsed ${tasks.length} tasks');
+              _logger.i('✅ Successfully parsed ${tasks.length} tasks from stream');
+              // Log task IDs for debugging
+              if (tasks.isNotEmpty) {
+                final taskIds = tasks.map((t) => t.id.substring(0, 8)).join(', ');
+                _logger.i('📋 Task IDs: $taskIds...');
+              }
               return tasks;
             } catch (e, stackTrace) {
-              _logger.e('Error parsing tasks from stream: $e', error: e, stackTrace: stackTrace);
+              _logger.e('❌ Error parsing tasks from stream: $e', error: e, stackTrace: stackTrace);
               return <TaskModel>[];
             }
           })
           .handleError((error, stackTrace) {
-            _logger.e('Stream error for family tasks: $error', error: error, stackTrace: stackTrace);
-            // Emit empty list on error
+            _logger.e('❌ Stream error for family tasks: $error', error: error, stackTrace: stackTrace);
+            // Log error but don't close the stream - it will automatically reconnect
+            _logger.i('🔄 Stream will attempt to reconnect automatically');
           });
     } catch (e, stackTrace) {
-      _logger.e('Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
+      _logger.e('❌ Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
       // Return a stream that emits empty list
       return Stream.value(<TaskModel>[]);
     }
@@ -357,16 +366,35 @@ class TaskRepository {
 
   /// Stream tasks assigned to a specific user
   Stream<List<TaskModel>> streamTasksForUser(String userId, String familyId) {
-    // For now, return a stream that filters family tasks for the user
-    return _supabase
-        .from('tasks')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .order('created_at', ascending: false)
-        .map((data) => data
-            .where((json) => json['assigned_to'] == userId)
-            .map((json) => TaskModelHelpers.fromSupabase(json))
-            .toList());
+    _logger.i('Starting stream for user tasks: userId=$userId, familyId=$familyId');
+    try {
+      // Stream all family tasks and filter for the user
+      return _supabase
+          .from('tasks')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false)
+          .map((data) {
+            try {
+              final tasks = data
+                  .where((json) => json['assigned_to'] == userId)
+                  .map((json) => TaskModelHelpers.fromSupabase(json))
+                  .toList();
+              _logger.i('Received ${tasks.length} tasks for user $userId from stream');
+              return tasks;
+            } catch (e, stackTrace) {
+              _logger.e('Error parsing user tasks from stream: $e', error: e, stackTrace: stackTrace);
+              return <TaskModel>[];
+            }
+          })
+          .handleError((error, stackTrace) {
+            _logger.e('Stream error for user tasks: $error', error: error, stackTrace: stackTrace);
+            // Log error but don't close the stream - it will automatically reconnect
+          });
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for user tasks: $e', error: e, stackTrace: stackTrace);
+      return Stream.value(<TaskModel>[]);
+    }
   }
 
   /// Get completed tasks for a user to calculate streaks

@@ -440,7 +440,13 @@ final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
   
   // If user has selected a specific location, use it
   if (selectedLocation != null && selectedLocation.isNotEmpty) {
-    return await weatherRepo.getWeather(cityName: selectedLocation);
+    // Check if it's a zipcode (numeric, 4-10 digits)
+    final isZipcode = RegExp(r'^\d{4,10}$').hasMatch(selectedLocation.trim());
+    if (isZipcode) {
+      return await weatherRepo.getWeather(zipcode: selectedLocation.trim());
+    } else {
+      return await weatherRepo.getWeather(cityName: selectedLocation);
+    }
   }
   
   // Otherwise, try to use current location
