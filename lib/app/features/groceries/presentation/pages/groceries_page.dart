@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/permission_aware_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -89,10 +90,13 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showCreateListDialog(context),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: PermissionAwareWidget(
+          action: 'create_list',
+          child: FloatingActionButton(
+            onPressed: () => _showCreateListDialog(context),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
         ),
         persistentFooterButtons: [
           TextButton.icon(
@@ -229,51 +233,91 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: ResponsiveHelper.borderRadius(12),
                 ),
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == 'edit') {
-                    _editListName(context, list);
+                    // Check permission before editing
+                    final hasPermission = await checkPermission(ref, 'edit_list');
+                    if (hasPermission) {
+                      _editListName(context, list);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('You do not have permission to edit lists'),
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                        );
+                      }
+                    }
                   } else if (value == 'delete') {
-                    _deleteList(context, list);
+                    // Check permission before deleting
+                    final hasPermission = await checkPermission(ref, 'delete_list');
+                    if (hasPermission) {
+                      _deleteList(context, list);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('You do not have permission to delete lists'),
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                        );
+                      }
+                    }
                   }
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          size: ResponsiveHelper.iconSize(20),
+                  FutureBuilder<bool>(
+                    future: checkPermission(ref, 'edit_list'),
+                    builder: (context, snapshot) {
+                      final canEdit = snapshot.data ?? false;
+                      if (!canEdit) return const SizedBox.shrink();
+                      return PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.edit,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              size: ResponsiveHelper.iconSize(20),
+                            ),
+                            SizedBox(width: ResponsiveHelper.w(12)),
+                            Text(
+                              'Edit Name',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: ResponsiveHelper.w(12)),
-                        Text(
-                          'Edit Name',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                          size: ResponsiveHelper.iconSize(20),
+                  FutureBuilder<bool>(
+                    future: checkPermission(ref, 'delete_list'),
+                    builder: (context, snapshot) {
+                      final canDelete = snapshot.data ?? false;
+                      if (!canDelete) return const SizedBox.shrink();
+                      return PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              color: Theme.of(context).colorScheme.error,
+                              size: ResponsiveHelper.iconSize(20),
+                            ),
+                            SizedBox(width: ResponsiveHelper.w(12)),
+                            Text(
+                              'Delete',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: ResponsiveHelper.w(12)),
-                        Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),

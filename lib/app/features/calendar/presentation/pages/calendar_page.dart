@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/permission_aware_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/models/event_model.dart';
@@ -157,10 +158,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showCreateEventDialog(context, _selectedDay),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: PermissionAwareWidget(
+          action: 'create_event',
+          child: FloatingActionButton(
+            onPressed: () => _showCreateEventDialog(context, _selectedDay),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
         ),
       ),
     );
@@ -911,26 +915,66 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             size: ResponsiveHelper.iconSize(18),
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
-          onSelected: (value) {
+          onSelected: (value) async {
             if (value == 'edit') {
-              _showEditEventDialog(context, event);
+              // Check permission before editing
+              final hasPermission = await checkPermission(ref, 'edit_event');
+              if (hasPermission) {
+                _showEditEventDialog(context, event);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('You do not have permission to edit events'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             } else if (value == 'delete') {
-              _deleteEvent(context, event);
+              // Check permission before deleting
+              final hasPermission = await checkPermission(ref, 'delete_event');
+              if (hasPermission) {
+                _deleteEvent(context, event);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('You do not have permission to delete events'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit'),
+            FutureBuilder<bool>(
+              future: checkPermission(ref, 'edit_event'),
+              builder: (context, snapshot) {
+                final canEdit = snapshot.data ?? false;
+                if (!canEdit) return const SizedBox.shrink();
+                return const PopupMenuItem(
+                  value: 'edit',
+                  child: Text('Edit'),
+                );
+              },
             ),
-            PopupMenuItem(
-              value: 'delete',
-              child: Text(
-                'Delete',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
-              ),
+            FutureBuilder<bool>(
+              future: checkPermission(ref, 'delete_event'),
+              builder: (context, snapshot) {
+                final canDelete = snapshot.data ?? false;
+                if (!canDelete) return const SizedBox.shrink();
+                return PopupMenuItem(
+                  value: 'delete',
+                  child: Text(
+                    'Delete',
+                    style: TextStyle(
+                      color: Colors.red,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

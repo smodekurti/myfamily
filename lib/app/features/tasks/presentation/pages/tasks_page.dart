@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/permission_aware_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -275,19 +276,25 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             if (filteredTasks.isEmpty) {
               return null; // Hide FAB when empty state button is visible
             }
-            return FloatingActionButton(
+            return PermissionAwareWidget(
+              action: 'create_task',
+              child: FloatingActionButton(
+                onPressed: () {
+                  context.push(AppConstants.routeCreateTask);
+                },
+                child: const Icon(Icons.add),
+              ),
+            );
+          },
+          loading: () => null, // Hide FAB while loading
+          error: (_, __) => PermissionAwareWidget(
+            action: 'create_task',
+            child: FloatingActionButton(
               onPressed: () {
                 context.push(AppConstants.routeCreateTask);
               },
               child: const Icon(Icons.add),
-            );
-          },
-          loading: () => null, // Hide FAB while loading
-          error: (_, __) => FloatingActionButton(
-            onPressed: () {
-              context.push(AppConstants.routeCreateTask);
-            },
-            child: const Icon(Icons.add),
+            ),
           ),
         ),
       ),
@@ -908,27 +915,28 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       ),
                     ),
                   
-                  // Edit button (only show if user can edit: created by OR assigned to AND task is not completed)
-                  if (currentUserId != null && 
-                      (task.createdBy == currentUserId || task.assignedTo == currentUserId) &&
-                      task.status != 'completed')
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit,
-                        size: ResponsiveHelper.iconSize(20),
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  // Edit button (check permission and task status)
+                  if (currentUserId != null && task.status != 'completed')
+                    PermissionAwareWidget(
+                      action: 'edit_task',
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.edit,
+                          size: ResponsiveHelper.iconSize(20),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        onPressed: () {
+                          // Navigate to edit page with task data
+                          final taskJson = TaskModelHelpers.toSupabase(task);
+                          context.push(
+                            AppConstants.routeEditTask,
+                            extra: taskJson,
+                          );
+                        },
+                        tooltip: 'Edit chore',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      onPressed: () {
-                        // Navigate to edit page with task data
-                        final taskJson = TaskModelHelpers.toSupabase(task);
-                        context.push(
-                          AppConstants.routeEditTask,
-                          extra: taskJson,
-                        );
-                      },
-                      tooltip: 'Edit chore',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                     ),
                 ],
               ),
