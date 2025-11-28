@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
 import '../models/family_model.dart';
 import 'points_history_repository.dart';
+import '../../core/services/role_permission_service.dart';
 
 class FamilyRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -25,6 +26,9 @@ class FamilyRepository {
       // Generate adult invite code
       final inviteCode = _generateInviteCode('ADULT');
       
+      // Generate parent-specific invite code
+      final parentInviteCode = _generateInviteCode('PARENT');
+      
       final family = FamilyModel(
         id: familyId,
         name: name,
@@ -35,6 +39,10 @@ class FamilyRepository {
         createdAt: now,
         updatedAt: now,
       );
+      
+      // Store parent invite code separately (will be added to model if needed)
+      final familyData = family.toJson();
+      familyData['parent_invite_code'] = parentInviteCode;
 
       // Create family in Supabase
       await _supabase.from('families').insert(family.toJson());
@@ -83,6 +91,9 @@ class FamilyRepository {
       case 'ADULT':
         code.write('A');
         break;
+      case 'PARENT':
+        code.write('P'); // Parent-specific invite code
+        break;
       case 'CHILD':
         code.write('C');
         break;
@@ -99,32 +110,48 @@ class FamilyRepository {
   }
 
   /// Join a family by invite code
-  Future<FamilyModel?> joinFamilyByCode({
+  /// Returns the family model and a flag indicating if role selection is needed
+  Future<Map<String, dynamic>> joinFamilyByCode({
     required String inviteCode,
     required String userId,
+    String? selectedRole, // Optional: role selected by user when parent slots are full
   }) async {
     try {
+      String? roleToAssign;
+      bool needsRoleSelection = false;
+
       // Determine role based on invite code prefix
-      String role = 'member'; // Default role
-      if (inviteCode.startsWith('A')) {
-        role = 'parent'; // Adult invite code
+      if (inviteCode.startsWith('P')) {
+        // Parent-specific invite code - will check parent count after finding family
+        roleToAssign = selectedRole ?? 'parent'; // Default to parent, will validate below
+      } else if (inviteCode.startsWith('A')) {
+        // Adult invite code - check parent count
+        // Will determine role after finding family
       } else if (inviteCode.startsWith('C')) {
-        role = 'child'; // Child invite code
+        // Child invite code - always assign child role
+        roleToAssign = 'child';
       }
 
-      // Try to find family by adult invite code first
+      // Try to find family by different invite code types
       var response = await _supabase
           .from('families')
           .select()
           .eq('invite_code', inviteCode)
           .maybeSingle();
 
+      // If not found, try parent invite code
+      response ??= await _supabase
+          .from('families')
+          .select()
+          .eq('parent_invite_code', inviteCode)
+          .maybeSingle();
+
       // If not found, try child invite code
       response ??= await _supabase
-            .from('families')
-            .select()
-            .eq('child_invite_code', inviteCode)
-            .maybeSingle();
+          .from('families')
+          .select()
+          .eq('child_invite_code', inviteCode)
+          .maybeSingle();
 
       if (response == null) {
         throw Exception('Invalid invite code');
@@ -134,14 +161,57 @@ class FamilyRepository {
 
       // Check if user is already a member
       if (family.members.contains(userId)) {
-        return family;
+        return {
+          'family': family,
+          'needsRoleSelection': false,
+        };
       }
+
+      // For adult invite codes, determine role based on parent count
+      if (inviteCode.startsWith('A')) {
+        final roleService = RolePermissionService();
+        final parentCount = await roleService.getParentCount(family.id);
+        
+        if (parentCount < 2) {
+          roleToAssign = 'parent';
+        } else {
+          // Parent slots are full, need role selection
+          if (selectedRole == null) {
+            needsRoleSelection = true;
+            return {
+              'family': family,
+              'needsRoleSelection': true,
+            };
+          } else {
+            roleToAssign = selectedRole;
+          }
+        }
+      }
+
+      // For parent invite codes, check again with family ID
+      if (inviteCode.startsWith('P')) {
+        final roleService = RolePermissionService();
+        final canAddParent = await roleService.canAddParent(family.id);
+        
+        if (!canAddParent && selectedRole == null) {
+          needsRoleSelection = true;
+          return {
+            'family': family,
+            'needsRoleSelection': true,
+          };
+        } else {
+          roleToAssign = selectedRole ?? 'parent';
+        }
+      }
+
+      // Default to member if no role determined
+      roleToAssign ??= 'member';
 
       // Add user to family members with appropriate role
       await addFamilyMember(
         familyId: family.id,
         uid: userId,
-        role: role,
+        role: roleToAssign,
         displayName: '', // Will be updated from user profile
       );
 
@@ -152,8 +222,14 @@ class FamilyRepository {
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', family.id);
 
-      _logger.i('User $userId joined family: ${family.id}');
-      return family;
+      _logger.i('User $userId joined family: ${family.id} with role: $roleToAssign');
+      
+      // Return updated family
+      final updatedFamily = await getFamily(family.id);
+      return {
+        'family': updatedFamily ?? family,
+        'needsRoleSelection': false,
+      };
     } catch (e) {
       _logger.e('Join family error: $e');
       rethrow;
@@ -717,6 +793,51 @@ class FamilyRepository {
       return inviteCode;
     } catch (e) {
       _logger.e('Generate child invite code error: $e');
+      return null;
+    }
+  }
+
+  /// Generate parent-specific invite code for family
+  /// This code allows users to join as a parent (if slots available)
+  Future<String?> generateParentInviteCodeForFamily(String familyId) async {
+    try {
+      // Check if family already has parent invite code
+      final family = await getFamily(familyId);
+      if (family != null) {
+        final response = await _supabase
+            .from('families')
+            .select('parent_invite_code')
+            .eq('id', familyId)
+            .maybeSingle();
+        
+        if (response != null && response['parent_invite_code'] != null) {
+          return response['parent_invite_code'] as String;
+        }
+      }
+
+      // Generate new parent invite code
+      String inviteCode;
+      bool exists = true;
+      
+      // Ensure unique invite code
+      do {
+        inviteCode = _generateInviteCode('PARENT');
+        exists = await inviteCodeExists(inviteCode);
+      } while (exists);
+
+      // Update family with parent invite code
+      await _supabase
+          .from('families')
+          .update({
+            'parent_invite_code': inviteCode,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', familyId);
+
+      _logger.i('Generated parent invite code for family $familyId: $inviteCode');
+      return inviteCode;
+    } catch (e) {
+      _logger.e('Generate parent invite code error: $e');
       return null;
     }
   }
