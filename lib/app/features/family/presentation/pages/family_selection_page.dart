@@ -202,6 +202,7 @@ class FamilySelectionPage extends ConsumerWidget {
                                           if (family.createdAt != null) ...[
                                             SizedBox(height: ResponsiveHelper.h(4)),
                                             Row(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Icon(
                                                   Icons.calendar_today,
@@ -209,10 +210,13 @@ class FamilySelectionPage extends ConsumerWidget {
                                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                                 ),
                                                 SizedBox(width: ResponsiveHelper.w(4)),
-                                                Text(
-                                                  'Created ${_formatDate(family.createdAt!)}',
-                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                Flexible(
+                                                  child: Text(
+                                                    'Created ${_formatDate(family.createdAt!)}',
+                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
