@@ -39,6 +39,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   void initState() {
     super.initState();
     
+    // Always refresh from server when detail page opens (header-detail relationship)
+    // This ensures we have the latest data, especially if items were modified by other users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(groceryListProvider(widget.listId));
+        ref.invalidate(groceryListItemsProvider(widget.listId));
+      }
+    });
+    
     // Set up callback to refresh grocery list items when a notification is received
     // This is a fallback when realtime stream isn't working
     // Register immediately, then update after first frame
@@ -141,9 +150,17 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 ),
               
               Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-                  child: Column(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // Refresh from server when user pulls to refresh
+                    ref.invalidate(groceryListProvider(widget.listId));
+                    ref.invalidate(groceryListItemsProvider(widget.listId));
+                    // Wait a moment for the stream to fetch new data
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: SingleChildScrollView(
+                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Template Section: Show only when viewing from Shopping tab, hide when from task (hide when searching)
@@ -283,6 +300,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       SizedBox(height: ResponsiveHelper.h(80)), // Space for bottom input
                     ],
                   ),
+                ),
                 ),
               ),
               

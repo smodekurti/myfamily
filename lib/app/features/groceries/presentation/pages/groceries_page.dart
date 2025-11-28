@@ -161,13 +161,25 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   }
 
   Widget _buildListsList(BuildContext context, List<GroceryListModel> lists) {
-    return ListView.builder(
-      padding: ResponsiveHelper.padding(all: 16),
-      itemCount: lists.length,
-      itemBuilder: (context, index) {
-        final list = lists[index];
-        return _buildListCard(context, list);
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Refresh from server when user pulls to refresh
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          ref.invalidate(allGroceryListsProvider(currentFamily.id));
+          ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+        }
+        // Wait a moment for the stream to fetch new data
+        await Future.delayed(const Duration(milliseconds: 500));
       },
+      child: ListView.builder(
+        padding: ResponsiveHelper.padding(all: 16),
+        itemCount: lists.length,
+        itemBuilder: (context, index) {
+          final list = lists[index];
+          return _buildListCard(context, list);
+        },
+      ),
     );
   }
 

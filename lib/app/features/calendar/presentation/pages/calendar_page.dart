@@ -141,19 +141,30 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               
               // Calendar Widget or List View
               Expanded(
-                child: _viewMode == 'List' || _isSearchMode
-                    ? _buildEventsList(context, eventsAsync)
-                    : SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            // Calendar
-                            _buildCalendar(context, eventsAsync),
-                            
-                            // Today's Events Section
-                            _buildTodaysEvents(context, eventsAsync),
-                          ],
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // Refresh from server when user pulls to refresh
+                    final currentFamily = ref.read(currentFamilyProvider);
+                    if (currentFamily != null) {
+                      ref.invalidate(familyEventsProvider(currentFamily.id));
+                    }
+                    // Wait a moment for the stream to fetch new data
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: _viewMode == 'List' || _isSearchMode
+                      ? _buildEventsList(context, eventsAsync)
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // Calendar
+                              _buildCalendar(context, eventsAsync),
+                              
+                              // Today's Events Section
+                              _buildTodaysEvents(context, eventsAsync),
+                            ],
+                          ),
                         ),
-                      ),
+                ),
               ),
             ],
           ),

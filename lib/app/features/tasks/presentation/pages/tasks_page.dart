@@ -151,9 +151,21 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   ),
                 ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-                  child: Column(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // Refresh from server when user pulls to refresh
+                    final currentFamily = ref.read(currentFamilyProvider);
+                    if (currentFamily != null) {
+                      ref.invalidate(familyTasksProvider(currentFamily.id));
+                      ref.invalidate(tasksDueTodayProvider(currentFamily.id));
+                      ref.invalidate(taskStatsProvider(currentFamily.id));
+                    }
+                    // Wait a moment for the stream to fetch new data
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: SingleChildScrollView(
+                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // This Week's Progress Section (hide when searching)
@@ -264,6 +276,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
                     ],
                   ),
+                ),
                 ),
               ),
             ],
