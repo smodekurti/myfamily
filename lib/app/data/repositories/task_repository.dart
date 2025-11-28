@@ -328,6 +328,8 @@ class TaskRepository {
   Stream<List<TaskModel>> streamTasksForFamily(String familyId) {
     _logger.i('🔄 Starting stream for family tasks: $familyId');
     try {
+      // Create the stream with explicit realtime configuration
+      // The stream will automatically fetch initial data and then listen for changes
       final stream = _supabase
           .from('tasks')
           .stream(primaryKey: ['id'])
@@ -336,7 +338,12 @@ class TaskRepository {
       
       _logger.i('✅ Stream created for family tasks: $familyId');
       
-      return stream.map((data) {
+      // Return a stream that:
+      // 1. Maps the data to TaskModel list
+      // 2. Handles errors gracefully
+      // 3. Logs all updates for debugging
+      return stream
+          .map((data) {
             _logger.i('📥 Stream update received: ${data.length} tasks for family $familyId');
             try {
               final tasks = data.map((json) => TaskModelHelpers.fromSupabase(json)).toList();
@@ -345,6 +352,8 @@ class TaskRepository {
               if (tasks.isNotEmpty) {
                 final taskIds = tasks.map((t) => t.id.substring(0, 8)).join(', ');
                 _logger.i('📋 Task IDs: $taskIds...');
+              } else {
+                _logger.i('📋 No tasks found in stream update');
               }
               return tasks;
             } catch (e, stackTrace) {
