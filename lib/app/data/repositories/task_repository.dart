@@ -364,8 +364,22 @@ class TaskRepository {
   }
 
   /// Get tasks for a specific family
-  Future<List<TaskModel>> getTasksForFamily(String familyId) async {
+  /// For children, only returns tasks assigned to them
+  Future<List<TaskModel>> getTasksForFamily(String familyId, {String? userId}) async {
     try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user is a child - children can only see assigned tasks
+      if (currentUserId != null) {
+        final role = await _roleService.getUserRole(currentUserId, familyId);
+        if (role == 'child') {
+          // Children only see tasks assigned to them
+          return await getTasksForUser(currentUserId, familyId);
+        }
+      }
+      
+      // For other roles, return all family tasks
       final response = await _supabase
           .from('tasks')
           .select()
@@ -408,14 +422,23 @@ class TaskRepository {
       final startOfDay = today.toIso8601String();
       final endOfDay = today.add(const Duration(days: 1)).toIso8601String();
 
-      final response = await _supabase
+      var query = _supabase
         .from('tasks')
         .select()
         .eq('family_id', familyId)
         .gte('due_date', startOfDay)
         .lt('due_date', endOfDay)
-        .neq('status', 'completed')
-        .order('due_date', ascending: true);
+        .neq('status', 'completed');
+      
+      // For children, only show tasks assigned to them
+      if (currentUserId != null) {
+        final role = await _roleService.getUserRole(currentUserId, familyId);
+        if (role == 'child') {
+          query = query.eq('assigned_to', currentUserId);
+        }
+      }
+      
+      final response = await query.order('due_date', ascending: true);
 
       // Also filter in memory to ensure we only get tasks due today (handles timezone issues)
       final allTasks = (response as List)
@@ -434,14 +457,34 @@ class TaskRepository {
   }
 
   /// Stream tasks for a specific family (real-time updates)
-  Stream<List<TaskModel>> streamTasksForFamily(String familyId) {
-    // Match the pattern used by grocery lists which works correctly
-    return _supabase
-        .from('tasks')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .order('created_at', ascending: false)
-        .map((data) => data.map((json) => TaskModelHelpers.fromSupabase(json)).toList());
+  /// Stream tasks for a specific family
+  /// For children, only streams tasks assigned to them
+  Stream<List<TaskModel>> streamTasksForFamily(String familyId, {String? userId}) async* {
+    try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user is a child - children can only see assigned tasks
+      if (currentUserId != null) {
+        final role = await _roleService.getUserRole(currentUserId, familyId);
+        if (role == 'child') {
+          // Children only see tasks assigned to them - use streamTasksForUser
+          yield* streamTasksForUser(currentUserId, familyId);
+          return;
+        }
+      }
+      
+      // For other roles, stream all family tasks
+      yield* _supabase
+          .from('tasks')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false)
+          .map((data) => data.map((json) => TaskModelHelpers.fromSupabase(json)).toList());
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
+      yield <TaskModel>[];
+    }
   }
 
   /// Stream tasks assigned to a specific user
