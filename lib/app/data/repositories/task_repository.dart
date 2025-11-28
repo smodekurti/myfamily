@@ -364,22 +364,10 @@ class TaskRepository {
   }
 
   /// Get tasks for a specific family
-  /// For children, only returns tasks assigned to them
+  /// Children can now view all tasks (permissions updated)
   Future<List<TaskModel>> getTasksForFamily(String familyId, {String? userId}) async {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user is a child - children can only see assigned tasks
-      if (currentUserId != null) {
-        final role = await _roleService.getUserRole(currentUserId, familyId);
-        if (role == 'child') {
-          // Children only see tasks assigned to them
-          return await getTasksForUser(currentUserId, familyId);
-        }
-      }
-      
-      // For other roles, return all family tasks
+      // Return all family tasks for all roles
       final response = await _supabase
           .from('tasks')
           .select()
@@ -462,23 +450,10 @@ class TaskRepository {
 
   /// Stream tasks for a specific family (real-time updates)
   /// Stream tasks for a specific family
-  /// For children, only streams tasks assigned to them
+  /// Children can now view all tasks (permissions updated)
   Stream<List<TaskModel>> streamTasksForFamily(String familyId, {String? userId}) async* {
     try {
-      // Get current user if not provided
-      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
-      
-      // Check if user is a child - children can only see assigned tasks
-      if (currentUserId != null) {
-        final role = await _roleService.getUserRole(currentUserId, familyId);
-        if (role == 'child') {
-          // Children only see tasks assigned to them - use streamTasksForUser
-          yield* streamTasksForUser(currentUserId, familyId);
-          return;
-        }
-      }
-      
-      // For other roles, stream all family tasks
+      // Stream all family tasks for all roles
       yield* _supabase
           .from('tasks')
           .stream(primaryKey: ['id'])

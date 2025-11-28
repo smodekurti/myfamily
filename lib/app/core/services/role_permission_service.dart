@@ -110,34 +110,9 @@ class RolePermissionService {
       final role = await getUserRole(userId, familyId);
       if (role == null) return false;
 
-      // Children have restricted view access
-      if (role == 'child') {
-        final restrictions = await getRoleRestrictions(role);
-        
-        // Children can only view assigned tasks
-        if (dataType == 'task' && itemId != null) {
-          final task = await _supabase
-              .from('tasks')
-              .select('assigned_to')
-              .eq('id', itemId)
-              .maybeSingle();
-          
-          if (task != null) {
-            final assignedTo = task['assigned_to'] as String?;
-            return assignedTo == userId;
-          }
-        }
-        
-        // Children cannot view announcements
-        if (dataType == 'announcement') {
-          return !(restrictions['cannot_view_announcements'] ?? false);
-        }
-        
-        // Children can view calendar and grocery lists (read-only)
-        if (dataType == 'calendar_event' || dataType == 'grocery_list') {
-          return restrictions['can_view_calendar'] ?? true;
-        }
-      }
+      // Children now have full view access (permissions updated)
+      // They can create and edit but not delete
+      // No special view restrictions needed anymore
 
       // For other roles, check can_view_all_data permission
       final permissions = await getRolePermissions(role);
