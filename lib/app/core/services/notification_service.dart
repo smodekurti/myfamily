@@ -100,9 +100,20 @@ class NotificationService {
     required DateTime scheduledDate,
     String? payload,
   }) async {
+    // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
-      final initialized = await initialize();
-      if (!initialized) return;
+      final initialized = await initialize(requestPermissions: false);
+      if (!initialized) {
+        _logger.w('Notification service not initialized, cannot schedule notification');
+        return;
+      }
+    }
+
+    // Check if we have permission before trying to schedule
+    final hasPermission = await Permission.notification.isGranted;
+    if (!hasPermission) {
+      _logger.w('Notification permission not granted, cannot schedule notification');
+      return;
     }
 
     try {
@@ -126,8 +137,9 @@ class NotificationService {
         payload: payload,
       );
       _logger.i('Notification scheduled: $id at $scheduledDate');
-    } catch (e) {
-      _logger.e('Schedule notification error: $e');
+    } catch (e, stackTrace) {
+      _logger.e('Schedule notification error: $e', error: e, stackTrace: stackTrace);
+      // Don't rethrow - notification scheduling failure shouldn't block task operations
     }
   }
 
@@ -138,9 +150,20 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
-      final initialized = await initialize();
-      if (!initialized) return;
+      final initialized = await initialize(requestPermissions: false);
+      if (!initialized) {
+        _logger.w('Notification service not initialized, cannot show notification');
+        return;
+      }
+    }
+
+    // Check if we have permission before trying to show
+    final hasPermission = await Permission.notification.isGranted;
+    if (!hasPermission) {
+      _logger.w('Notification permission not granted, cannot show notification');
+      return;
     }
 
     try {
@@ -161,8 +184,9 @@ class NotificationService {
         payload: payload,
       );
       _logger.i('Notification shown: $id');
-    } catch (e) {
-      _logger.e('Show notification error: $e');
+    } catch (e, stackTrace) {
+      _logger.e('Show notification error: $e', error: e, stackTrace: stackTrace);
+      // Don't rethrow - notification showing failure shouldn't block operations
     }
   }
 

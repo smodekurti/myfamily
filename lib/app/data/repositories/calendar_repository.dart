@@ -2,6 +2,7 @@ import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event_model.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/family_notification_service.dart';
 
 class CalendarRepository {
   final _supabase = Supabase.instance.client;
@@ -54,6 +55,19 @@ class CalendarRepository {
         );
       } catch (e) {
         _logger.w('Failed to schedule event reminder: $e');
+      }
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyCalendarEventChanged(
+          familyId: familyId,
+          action: 'created',
+          eventId: createdEvent.id,
+          eventTitle: title,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send calendar event notification: $e');
       }
 
       return createdEvent;
@@ -113,6 +127,19 @@ class CalendarRepository {
         }
       }
 
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyCalendarEventChanged(
+          familyId: updatedEvent.familyId,
+          action: 'updated',
+          eventId: eventId,
+          eventTitle: updatedEvent.title,
+          excludeUserId: updatedEvent.createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send calendar event notification: $e');
+      }
+
       return updatedEvent;
     } catch (e) {
       _logger.e('Update event error: $e');
@@ -123,12 +150,35 @@ class CalendarRepository {
   /// Delete an event
   Future<void> deleteEvent(String eventId) async {
     try {
+      // Get event info before deleting
+      final event = await _supabase
+          .from('calendar_events')
+          .select('family_id, title, created_by')
+          .eq('id', eventId)
+          .single();
+      final familyId = event['family_id'] as String;
+      final eventTitle = event['title'] as String;
+      final createdBy = event['created_by'] as String;
+
       await _supabase
           .from('calendar_events')
           .delete()
           .eq('id', eventId);
 
       _logger.i('Event deleted: $eventId');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyCalendarEventChanged(
+          familyId: familyId,
+          action: 'deleted',
+          eventId: eventId,
+          eventTitle: eventTitle,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send calendar event delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete event error: $e');
       rethrow;

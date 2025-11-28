@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/grocery_template_model.dart';
+import '../../core/services/family_notification_service.dart';
 
 class GroceryTemplateRepository {
   final _supabase = Supabase.instance.client;
@@ -55,8 +56,23 @@ class GroceryTemplateRepository {
           .select()
           .single();
 
-      _logger.i('Grocery template created: ${response['id']}');
-      return _fromSupabase(response);
+      final createdTemplate = _fromSupabase(response);
+      _logger.i('Grocery template created: ${createdTemplate.id}');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryTemplateChanged(
+          familyId: familyId,
+          action: 'created',
+          templateId: createdTemplate.id,
+          templateName: name,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery template notification: $e');
+      }
+
+      return createdTemplate;
     } catch (e) {
       _logger.e('Create template error: $e');
       rethrow;
@@ -219,8 +235,23 @@ class GroceryTemplateRepository {
             .insert(itemsData);
       }
 
+      final createdTemplate = _fromSupabase(templateResponse);
       _logger.i('Template created from list: $templateId');
-      return _fromSupabase(templateResponse);
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryTemplateChanged(
+          familyId: familyId,
+          action: 'created',
+          templateId: createdTemplate.id,
+          templateName: name,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery template notification: $e');
+      }
+
+      return createdTemplate;
     } catch (e) {
       _logger.e('Create template from list error: $e');
       rethrow;
@@ -263,8 +294,23 @@ class GroceryTemplateRepository {
           .select()
           .single();
 
+      final updatedTemplate = _fromSupabase(response);
       _logger.i('Template updated: $templateId');
-      return _fromSupabase(response);
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryTemplateChanged(
+          familyId: familyId,
+          action: 'updated',
+          templateId: templateId,
+          templateName: name,
+          excludeUserId: updatedTemplate.createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery template notification: $e');
+      }
+
+      return updatedTemplate;
     } catch (e) {
       _logger.e('Update template error: $e');
       rethrow;
@@ -274,11 +320,34 @@ class GroceryTemplateRepository {
   /// Delete template
   Future<void> deleteTemplate(String templateId) async {
     try {
+      // Get template info before deleting
+      final template = await _supabase
+          .from('grocery_templates')
+          .select('family_id, name, created_by')
+          .eq('id', templateId)
+          .single();
+      final familyId = template['family_id'] as String;
+      final templateName = template['name'] as String;
+      final createdBy = template['created_by'] as String;
+
       await _supabase
           .from('grocery_templates')
           .delete()
           .eq('id', templateId);
       _logger.i('Template deleted: $templateId');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryTemplateChanged(
+          familyId: familyId,
+          action: 'deleted',
+          templateId: templateId,
+          templateName: templateName,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery template delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete template error: $e');
       rethrow;

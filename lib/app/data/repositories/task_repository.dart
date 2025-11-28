@@ -5,7 +5,7 @@ import 'family_repository.dart';
 import 'achievement_repository.dart';
 import '../../core/utils/streak_calculator.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/services/push_notification_service.dart';
+import '../../core/services/family_notification_service.dart';
 
 class TaskRepository {
   final _supabase = Supabase.instance.client;
@@ -55,48 +55,28 @@ class TaskRepository {
       final createdTask = TaskModelHelpers.fromSupabase(response);
       _logger.i('Task created successfully: ${createdTask.id}');
 
-      // Send push notifications to family members
+      // Send notifications to family members
       try {
-        // Get all family members
-        final familyMembers = await _familyRepo.getFamilyMembers(familyId);
-        final allMemberIds = familyMembers.map((m) => m.uid).toList();
-        
-        if (allMemberIds.isEmpty) {
-          _logger.w('No family members found, skipping notifications');
-        } else {
-          // Send visible notification to assignee (if different from creator)
-          if (assignedTo != createdBy && allMemberIds.contains(assignedTo)) {
-            await PushNotificationService().sendNotificationToUser(
-              userId: assignedTo,
-              title: 'New Task Assigned',
-              body: '$title has been assigned to you',
-              data: {
-                'type': 'task',
-                'task_id': createdTask.id,
-                'action': 'view_task',
-              },
-            );
-            _logger.i('Push notification sent to assignee: $assignedTo');
-          }
-          
-          // Send silent notification (data-only) to all other family members
-          // This triggers the refresh callback so everyone sees the new task
-          final otherMemberIds = allMemberIds.where((id) => id != assignedTo && id != createdBy).toList();
-          if (otherMemberIds.isNotEmpty) {
-            await PushNotificationService().sendNotificationToUsers(
-              userIds: otherMemberIds,
-              title: '', // Empty title = silent notification
-              body: '', // Empty body = silent notification
-              data: {
-                'type': 'task',
-                'task_id': createdTask.id,
-                'action': 'refresh_tasks', // Special action to trigger refresh
-                'silent': 'true', // Mark as silent
-              },
-            );
-            _logger.i('Silent refresh notification sent to ${otherMemberIds.length} family members');
-          }
+        // Send visible notification to assignee (if different from creator)
+        if (assignedTo != createdBy) {
+          await FamilyNotificationService().notifyTaskAssigned(
+            familyId: familyId,
+            assigneeId: assignedTo,
+            taskId: createdTask.id,
+            taskTitle: title,
+            createdById: createdBy,
+          );
         }
+        
+        // Send silent notification to all other family members to trigger refresh
+        await FamilyNotificationService().notifyFamilyDataChanged(
+          familyId: familyId,
+          dataType: 'task',
+          action: 'created',
+          itemId: createdTask.id,
+          itemTitle: title,
+          excludeUserId: createdBy,
+        );
       } catch (e) {
         _logger.w('Failed to send task notifications: $e');
         // Don't fail task creation if notifications fail
@@ -225,20 +205,26 @@ class TaskRepository {
       try {
         // If assignee changed, notify new assignee
         if (assignedTo != null && assignedTo != taskAssignedTo) {
-          // Send push notification to new assignee
-          await PushNotificationService().sendNotificationToUser(
-            userId: assignedTo,
-            title: 'Task Assigned to You',
-            body: '${updatedTask.title} has been assigned to you',
-            data: {
-              'type': 'task',
-              'task_id': taskId,
-              'action': 'view_task',
-            },
+          // Get family ID from the task
+          final taskFamilyId = updatedTask.familyId;
+          await FamilyNotificationService().notifyTaskAssigned(
+            familyId: taskFamilyId,
+            assigneeId: assignedTo,
+            taskId: taskId,
+            taskTitle: updatedTask.title,
+            createdById: updatedTask.createdBy,
           );
-          
-          _logger.i('Push notification sent for task reassignment');
         }
+        
+        // Send silent notification to all family members about the update
+        await FamilyNotificationService().notifyFamilyDataChanged(
+          familyId: updatedTask.familyId,
+          dataType: 'task',
+          action: 'updated',
+          itemId: taskId,
+          itemTitle: updatedTask.title,
+          excludeUserId: updatedTask.createdBy,
+        );
 
         // If due date changed, update reminder
         if (dueDate != null) {
@@ -268,12 +254,36 @@ class TaskRepository {
   /// Delete a task
   Future<void> deleteTask(String taskId) async {
     try {
+      // Get task info before deleting for notifications
+      final taskResponse = await _supabase
+          .from('tasks')
+          .select('family_id, title, created_by')
+          .eq('id', taskId)
+          .single();
+      final familyId = taskResponse['family_id'] as String;
+      final taskTitle = taskResponse['title'] as String;
+      final createdBy = taskResponse['created_by'] as String;
+
       await _supabase
           .from('tasks')
           .delete()
           .eq('id', taskId);
 
       _logger.i('Task deleted successfully: $taskId');
+
+      // Notify family members about deletion
+      try {
+        await FamilyNotificationService().notifyFamilyDataChanged(
+          familyId: familyId,
+          dataType: 'task',
+          action: 'deleted',
+          itemId: taskId,
+          itemTitle: taskTitle,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete task error: $e');
       rethrow;
