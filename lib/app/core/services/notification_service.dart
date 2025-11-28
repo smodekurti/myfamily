@@ -18,12 +18,30 @@ class NotificationService {
     if (_initialized) return true;
 
     try {
-      // Request notification permission
-      final status = await Permission.notification.request();
+      // Check current permission status first
+      var status = await Permission.notification.status;
+      _logger.i('Notification permission status: $status');
+      
+      // Request if not already granted
+      if (!status.isGranted && !status.isPermanentlyDenied) {
+        _logger.i('Requesting notification permission...');
+        status = await Permission.notification.request();
+        _logger.i('Permission request result: $status');
+        
+        // Re-check after a brief delay (iOS sometimes takes a moment)
+        if (!status.isGranted) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          status = await Permission.notification.status;
+          _logger.i('Re-checked permission status: $status');
+        }
+      }
+      
       if (!status.isGranted) {
         _logger.w('Notification permission not granted');
         return false;
       }
+      
+      _logger.i('✅ Notification permission granted');
 
       // Initialize timezone
       tz.initializeTimeZones();

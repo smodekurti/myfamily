@@ -30,11 +30,40 @@ class PushNotificationService {
     if (_initialized) return true;
 
     try {
-      // Request notification permission
-      final status = await Permission.notification.request();
-      if (!status.isGranted) {
-        _logger.w('Notification permission not granted');
-        return false;
+      // Check notification permission status
+      var status = await Permission.notification.status;
+      _logger.i('Initial notification permission status: $status');
+      
+      // Only request if not already granted or permanently denied
+      if (status.isDenied) {
+        _logger.i('Requesting notification permission...');
+        final requestResult = await Permission.notification.request();
+        _logger.i('Permission request result: $requestResult');
+        
+        // Re-check status after request (iOS sometimes takes a moment to update)
+        if (!requestResult.isGranted) {
+          // Wait a moment and re-check (iOS permission dialog might still be processing)
+          await Future.delayed(const Duration(milliseconds: 500));
+          status = await Permission.notification.status;
+          _logger.i('Re-checked permission status after request: $status');
+          
+          if (!status.isGranted) {
+            _logger.w('Notification permission not granted. User can enable it in settings later.');
+            // Continue initialization anyway - user can grant permission later
+          } else {
+            _logger.i('✅ Notification permission granted after re-check');
+          }
+        } else {
+          _logger.i('✅ Notification permission granted');
+        }
+      } else if (status.isPermanentlyDenied) {
+        _logger.w('Notification permission permanently denied. User needs to enable it in settings.');
+        // Continue initialization anyway - token can still be saved
+      } else if (status.isGranted) {
+        _logger.i('✅ Notification permission already granted');
+      } else {
+        _logger.w('Notification permission status: $status (not granted)');
+        // Continue initialization anyway
       }
 
       // Initialize local notifications for foreground messages
@@ -45,12 +74,22 @@ class PushNotificationService {
         requestSoundPermission: true,
       );
       
-      await _localNotifications.initialize(
+      final initialized = await _localNotifications.initialize(
         const InitializationSettings(
           android: androidSettings,
           iOS: iosSettings,
         ),
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          _logger.i('Local notification tapped: ${response.payload}');
+          // Handle local notification tap if needed
+        },
       );
+      
+      if (initialized == true) {
+        _logger.i('Local notifications initialized successfully');
+      } else {
+        _logger.w('Local notifications initialization returned false');
+      }
 
       // Create Android notification channels
       if (Platform.isAndroid) {
@@ -74,6 +113,18 @@ class PushNotificationService {
         _saveTokenToDatabase(newToken);
       });
 
+      // Listen to auth state changes to save token when user logs in
+      _supabase.auth.onAuthStateChange.listen((data) {
+        final event = data.event;
+        if (event == AuthChangeEvent.signedIn && _fcmToken != null) {
+          _logger.i('User signed in, saving FCM token');
+          _saveTokenToDatabase(_fcmToken!);
+        } else if (event == AuthChangeEvent.signedOut) {
+          _logger.i('User signed out, clearing FCM token');
+          _fcmToken = null;
+        }
+      });
+
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
@@ -91,7 +142,62 @@ class PushNotificationService {
       return true;
     } catch (e) {
       _logger.e('Push notification initialization error: $e');
+      // Still mark as initialized to prevent retry loops
+      _initialized = true;
       return false;
+    }
+  }
+
+  /// Request notification permission (call this when user wants to enable notifications)
+  Future<bool> requestPermission() async {
+    try {
+      final status = await Permission.notification.status;
+      
+      if (status.isGranted) {
+        _logger.i('Notification permission already granted');
+        return true;
+      }
+      
+      if (status.isPermanentlyDenied) {
+        _logger.w('Notification permission permanently denied. User must enable in settings.');
+        return false;
+      }
+      
+      final result = await Permission.notification.request();
+      if (result.isGranted) {
+        _logger.i('Notification permission granted');
+        // If we have a token but it wasn't saved before, save it now
+        if (_fcmToken != null) {
+          await _saveTokenToDatabase(_fcmToken!);
+        }
+        return true;
+      }
+      
+      _logger.w('Notification permission denied');
+      return false;
+    } catch (e) {
+      _logger.e('Error requesting notification permission: $e');
+      return false;
+    }
+  }
+
+  /// Check if notification permission is granted
+  Future<bool> hasPermission() async {
+    try {
+      final status = await Permission.notification.status;
+      return status.isGranted;
+    } catch (e) {
+      _logger.e('Error checking notification permission: $e');
+      return false;
+    }
+  }
+
+  /// Open app settings to allow user to enable notifications
+  Future<void> openNotificationSettings() async {
+    try {
+      await openAppSettings();
+    } catch (e) {
+      _logger.e('Error opening app settings: $e');
     }
   }
 
@@ -158,26 +264,80 @@ class PushNotificationService {
   /// Handle foreground messages (when app is open)
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     _logger.i('Foreground message received: ${message.messageId}');
+    _logger.i('Message data: ${message.data}');
+    _logger.i('Message notification: ${message.notification?.title} - ${message.notification?.body}');
+    
+    // Check notification permissions before showing
+    bool hasPermission = false;
+    
+    // Use permission_handler for both Android and iOS
+    final permissionStatus = await Permission.notification.status;
+    hasPermission = permissionStatus.isGranted;
+    
+    if (Platform.isAndroid) {
+      _logger.i('Android notification permission status: $permissionStatus');
+    } else if (Platform.isIOS) {
+      _logger.i('iOS notification permission status: $permissionStatus');
+    }
+    
+    // If permission is not granted, try requesting it
+    // Note: On iOS, if permission was previously denied, this won't show a dialog
+    if (!hasPermission) {
+      final requestResult = await Permission.notification.request();
+      hasPermission = requestResult.isGranted;
+      
+      if (Platform.isAndroid) {
+        _logger.i('Android permission request result: $requestResult');
+      } else if (Platform.isIOS) {
+        _logger.i('iOS permission request result: $requestResult');
+      }
+    }
+    
+    if (!hasPermission) {
+      _logger.w('Notification permission not granted, cannot show notification');
+      return;
+    }
+    
+    _logger.i('✅ Proceeding to show notification');
     
     // Show local notification for foreground messages
+    // iOS doesn't show notifications automatically when app is in foreground
     final notification = message.notification;
-    if (notification != null) {
+    final title = notification?.title ?? message.data['title'] ?? 'New Notification';
+    final body = notification?.body ?? message.data['body'] ?? 'You have a new notification';
+    
+    try {
+      final notificationId = message.messageId?.hashCode ?? 
+                            DateTime.now().millisecondsSinceEpoch.remainder(100000);
+      
+      _logger.i('Attempting to show notification: ID=$notificationId, title="$title", body="$body"');
+      
       await _localNotifications.show(
-        message.hashCode,
-        notification.title ?? 'New Notification',
-        notification.body ?? '',
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
+        notificationId,
+        title,
+        body,
+        NotificationDetails(
+          android: const AndroidNotificationDetails(
             'push_notifications',
             'Push Notifications',
             channelDescription: 'Notifications from Supabase',
             importance: Importance.high,
             priority: Priority.high,
+            showWhen: true,
           ),
-          iOS: DarwinNotificationDetails(),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
         payload: message.data.toString(),
       );
+      
+      _logger.i('✅ Local notification show() completed: $title - $body');
+    } catch (e, stackTrace) {
+      _logger.e('❌ Error showing local notification: $e', error: e, stackTrace: stackTrace);
+      _logger.e('Error details - title: "$title", body: "$body"');
     }
   }
 
@@ -206,7 +366,7 @@ class PushNotificationService {
   }) async {
     try {
       // Call Supabase Edge Function to send notification
-      await _supabase.functions.invoke(
+      final response = await _supabase.functions.invoke(
         'send-push-notification',
         body: {
           'user_id': userId,
@@ -215,7 +375,27 @@ class PushNotificationService {
           'data': data ?? {},
         },
       );
-      _logger.i('Push notification sent to user: $userId');
+      
+      // Log the response to see what happened
+      _logger.i('Push notification response: $response');
+      
+      // Check if notification was actually sent
+      if (response.data != null) {
+        final responseData = response.data as Map<String, dynamic>?;
+        final sent = responseData?['sent'] as int? ?? 0;
+        final failed = responseData?['failed'] as int? ?? 0;
+        final message = responseData?['message'] as String? ?? '';
+        
+        if (sent == 0 && failed == 0) {
+          _logger.w('No FCM tokens found for user: $userId. User may need to log in again or grant notification permissions.');
+        } else if (sent > 0) {
+          _logger.i('Push notification sent to user: $userId (sent: $sent, failed: $failed)');
+        } else {
+          _logger.w('Push notification failed for user: $userId (sent: $sent, failed: $failed, message: $message)');
+        }
+      } else {
+        _logger.i('Push notification sent to user: $userId (no response data)');
+      }
     } catch (e) {
       _logger.e('Error sending push notification: $e');
       rethrow;
@@ -243,6 +423,40 @@ class PushNotificationService {
     } catch (e) {
       _logger.e('Error sending push notifications: $e');
       rethrow;
+    }
+  }
+
+  /// Refresh and save FCM token (call this after login)
+  Future<void> refreshToken() async {
+    try {
+      _fcmToken = await _firebaseMessaging.getToken();
+      if (_fcmToken != null) {
+        _logger.i('FCM Token refreshed: ${_fcmToken!.substring(0, 20)}...');
+        await _saveTokenToDatabase(_fcmToken!);
+      } else {
+        _logger.w('Failed to get FCM token');
+      }
+    } catch (e) {
+      _logger.e('Error refreshing FCM token: $e');
+    }
+  }
+
+  /// Check if user has FCM token in database
+  Future<bool> hasTokenInDatabase() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final result = await _supabase
+          .from('user_fcm_tokens')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      return result != null;
+    } catch (e) {
+      _logger.e('Error checking FCM token: $e');
+      return false;
     }
   }
 
