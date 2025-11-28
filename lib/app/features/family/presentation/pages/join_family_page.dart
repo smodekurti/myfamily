@@ -36,16 +36,24 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
       }
 
       final familyRepo = ref.read(familyRepositoryProvider);
-      await familyRepo.joinFamilyByCode(
+      final joinedFamily = await familyRepo.joinFamilyByCode(
         inviteCode: _codeController.text.trim(),
         userId: currentUser.id,
       );
       
-      // Invalidate the user families provider to force a refresh
-      ref.invalidate(userFamiliesProvider(currentUser.id));
-      
-      // Wait for the stream to update
-      await Future.delayed(const Duration(seconds: 1));
+      if (joinedFamily != null) {
+        // Invalidate the user families provider to force a refresh
+        ref.invalidate(userFamiliesProvider(currentUser.id));
+        
+        // Invalidate family members provider to refresh the members list
+        ref.invalidate(familyMembersProvider(joinedFamily.id));
+        
+        // Invalidate family provider to refresh family data
+        ref.invalidate(familyProvider(joinedFamily.id));
+        
+        // Wait for the streams to update
+        await Future.delayed(const Duration(seconds: 1));
+      }
       
       if (mounted) {
         context.go(AppConstants.routeHome);
