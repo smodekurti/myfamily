@@ -374,7 +374,10 @@ final familyAnnouncementsProvider = StreamProvider.family<List<AnnouncementModel
 /// Calendar providers
 final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((ref, familyId) {
   final calendarRepo = ref.watch(calendarRepositoryProvider);
-  return calendarRepo.streamFamilyEvents(familyId);
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  return calendarRepo.streamFamilyEvents(familyId, userId: userId);
 });
 
 /// Weekly points provider - calculates points earned in the last 7 days
