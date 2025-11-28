@@ -2698,11 +2698,17 @@ final groceryTemplatesProvider = StreamProvider.family<List<GroceryTemplateModel
 
 final standaloneGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
   final listRepo = ref.watch(groceryListRepositoryProvider);
-  return listRepo.streamStandaloneListsForFamily(familyId);
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  return listRepo.streamStandaloneListsForFamily(familyId, userId: userId);
 });
 
 /// Provider for all grocery lists (both standalone and task-linked)
 final allGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
   final listRepo = ref.watch(groceryListRepositoryProvider);
-  return listRepo.streamAllListsForFamily(familyId);
+  // Get current user for role-based filtering
+  final currentUser = ref.watch(currentUserProvider);
+  final userId = currentUser?.id;
+  return listRepo.streamAllListsForFamily(familyId, userId: userId);
 });

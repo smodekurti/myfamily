@@ -196,26 +196,50 @@ class GroceryListRepository {
   }
 
   /// Stream all grocery lists for a family (both standalone and task-linked)
-  Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId) {
-    return _supabase
-        .from('grocery_lists')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .map((data) {
-          // Include all lists (both standalone and task-linked)
-          return data
-              .map((json) => _fromSupabase(json))
-              .toList();
-        })
-        .map((lists) {
-          // Sort by updated_at descending
-          lists.sort((a, b) {
-            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-            return bDate.compareTo(aDate);
+  /// Children can view lists (read-only per restrictions)
+  Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId, {String? userId}) async* {
+    try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user can view lists
+      if (currentUserId != null) {
+        final canView = await _roleService.canViewData(
+          userId: currentUserId,
+          familyId: familyId,
+          dataType: 'grocery_list',
+        );
+        
+        if (!canView) {
+          _logger.w('User $currentUserId cannot view grocery lists in family $familyId');
+          yield <GroceryListModel>[];
+          return;
+        }
+      }
+      
+      yield* _supabase
+          .from('grocery_lists')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .map((data) {
+            // Include all lists (both standalone and task-linked)
+            return data
+                .map((json) => _fromSupabase(json))
+                .toList();
+          })
+          .map((lists) {
+            // Sort by updated_at descending
+            lists.sort((a, b) {
+              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+              return bDate.compareTo(aDate);
+            });
+            return lists;
           });
-          return lists;
-        });
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for all lists: $e', error: e, stackTrace: stackTrace);
+      yield <GroceryListModel>[];
+    }
   }
 
   /// Get grocery list for a task
