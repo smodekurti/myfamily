@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
 import '../models/task_template_model.dart';
+import '../../core/services/family_notification_service.dart';
 
 class TaskTemplateRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -68,8 +69,23 @@ class TaskTemplateRepository {
           .select()
           .single();
 
-      _logger.i('Task template created: ${response['id']}');
-      return TaskTemplateModelHelpers.fromSupabase(response);
+      final createdTemplate = TaskTemplateModelHelpers.fromSupabase(response);
+      _logger.i('Task template created: ${createdTemplate.id}');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyTaskTemplateChanged(
+          familyId: familyId,
+          action: 'created',
+          templateId: createdTemplate.id,
+          templateName: name,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send task template notification: $e');
+      }
+
+      return createdTemplate;
     } catch (e) {
       _logger.e('Create task template error: $e');
       rethrow;
@@ -148,8 +164,27 @@ class TaskTemplateRepository {
           .select()
           .single();
 
+      final updatedTemplate = TaskTemplateModelHelpers.fromSupabase(response);
       _logger.i('Task template updated: $templateId');
-      return TaskTemplateModelHelpers.fromSupabase(response);
+
+      // Notify family members
+      try {
+        // Get family ID from template
+        final template = await getTemplate(templateId);
+        if (template != null) {
+          await FamilyNotificationService().notifyTaskTemplateChanged(
+            familyId: template.familyId,
+            action: 'updated',
+            templateId: templateId,
+            templateName: name ?? template.name,
+            excludeUserId: template.createdBy,
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send task template notification: $e');
+      }
+
+      return updatedTemplate;
     } catch (e) {
       _logger.e('Update task template error: $e');
       rethrow;
@@ -159,12 +194,33 @@ class TaskTemplateRepository {
   /// Delete a task template
   Future<void> deleteTemplate(String templateId) async {
     try {
+      // Get template info before deleting
+      final template = await getTemplate(templateId);
+      final familyId = template?.familyId;
+      final templateName = template?.name;
+      final createdBy = template?.createdBy;
+
       await _supabase
           .from('task_templates')
           .delete()
           .eq('id', templateId);
 
       _logger.i('Task template deleted: $templateId');
+
+      // Notify family members
+      if (familyId != null) {
+        try {
+          await FamilyNotificationService().notifyTaskTemplateChanged(
+            familyId: familyId,
+            action: 'deleted',
+            templateId: templateId,
+            templateName: templateName,
+            excludeUserId: createdBy,
+          );
+        } catch (e) {
+          _logger.w('Failed to send task template delete notification: $e');
+        }
+      }
     } catch (e) {
       _logger.e('Delete task template error: $e');
       rethrow;

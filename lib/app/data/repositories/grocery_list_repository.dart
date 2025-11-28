@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/grocery_template_model.dart';
+import '../../core/services/family_notification_service.dart';
 
 class GroceryListRepository {
   final _supabase = Supabase.instance.client;
@@ -31,8 +32,23 @@ class GroceryListRepository {
           .select()
           .single();
 
-      _logger.i('Standalone grocery list created: ${response['id']}');
-      return _fromSupabase(response);
+      final createdList = _fromSupabase(response);
+      _logger.i('Standalone grocery list created: ${createdList.id}');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryListChanged(
+          familyId: familyId,
+          action: 'created',
+          listId: createdList.id,
+          listName: name,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery list notification: $e');
+      }
+
+      return createdList;
     } catch (e) {
       _logger.e('Create standalone list error: $e');
       rethrow;
@@ -65,8 +81,23 @@ class GroceryListRepository {
           .select()
           .single();
 
-      _logger.i('Grocery list created: ${response['id']}');
-      return _fromSupabase(response);
+      final createdList = _fromSupabase(response);
+      _logger.i('Grocery list created: ${createdList.id}');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryListChanged(
+          familyId: familyId,
+          action: 'created',
+          listId: createdList.id,
+          listName: name,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery list notification: $e');
+      }
+
+      return createdList;
     } catch (e) {
       _logger.e('Create list error: $e');
       rethrow;
@@ -228,7 +259,26 @@ class GroceryListRepository {
           .select()
           .single();
 
-      return _itemFromSupabase(response);
+      final createdItem = _itemFromSupabase(response);
+
+      // Notify family members about new item
+      try {
+        final list = await getListById(listId);
+        if (list != null) {
+          await FamilyNotificationService().notifyFamilyDataChanged(
+            familyId: list.familyId,
+            dataType: 'grocery_list_item',
+            action: 'created',
+            itemId: listId,
+            itemTitle: name,
+            excludeUserId: null, // Item additions are less critical, notify everyone
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send grocery item notification: $e');
+      }
+
+      return createdItem;
     } catch (e) {
       _logger.e('Add item error: $e');
       rethrow;
@@ -333,6 +383,15 @@ class GroceryListRepository {
   /// Toggle item checked status
   Future<GroceryListItemModel> toggleItem(String itemId, bool checked) async {
     try {
+      // Get item info before updating
+      final currentItem = await _supabase
+          .from('grocery_list_items')
+          .select('list_id, name')
+          .eq('id', itemId)
+          .single();
+      final listId = currentItem['list_id'] as String;
+      final itemName = currentItem['name'] as String;
+
       final updates = {
         'checked': checked,
         'checked_at': checked ? DateTime.now().toIso8601String() : null,
@@ -346,7 +405,25 @@ class GroceryListRepository {
           .select()
           .single();
 
-      return _itemFromSupabase(response);
+      final updatedItem = _itemFromSupabase(response);
+
+      // Notify family members about item status change
+      try {
+        final list = await getListById(listId);
+        if (list != null) {
+          await FamilyNotificationService().notifyGroceryListItemChanged(
+            familyId: list.familyId,
+            listId: listId,
+            itemName: itemName,
+            checked: checked,
+            excludeUserId: null, // Item status changes are less critical, notify everyone
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send grocery item notification: $e');
+      }
+
+      return updatedItem;
     } catch (e) {
       _logger.e('Toggle item error: $e');
       rethrow;
@@ -390,10 +467,36 @@ class GroceryListRepository {
   /// Delete item
   Future<void> deleteItem(String itemId) async {
     try {
+      // Get item info before deleting
+      final item = await _supabase
+          .from('grocery_list_items')
+          .select('list_id, name')
+          .eq('id', itemId)
+          .single();
+      final listId = item['list_id'] as String;
+      final itemName = item['name'] as String;
+
       await _supabase
           .from('grocery_list_items')
           .delete()
           .eq('id', itemId);
+
+      // Notify family members
+      try {
+        final list = await getListById(listId);
+        if (list != null) {
+          await FamilyNotificationService().notifyFamilyDataChanged(
+            familyId: list.familyId,
+            dataType: 'grocery_list_item',
+            action: 'deleted',
+            itemId: listId,
+            itemTitle: itemName,
+            excludeUserId: null,
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send grocery item delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete item error: $e');
       rethrow;
@@ -418,8 +521,23 @@ class GroceryListRepository {
           .select()
           .single();
 
+      final updatedList = _fromSupabase(response);
       _logger.i('List name updated: $listId');
-      return _fromSupabase(response);
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryListChanged(
+          familyId: updatedList.familyId,
+          action: 'updated',
+          listId: listId,
+          listName: name,
+          excludeUserId: updatedList.createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery list notification: $e');
+      }
+
+      return updatedList;
     } catch (e) {
       _logger.e('Update list name error: $e');
       rethrow;
@@ -532,6 +650,19 @@ class GroceryListRepository {
           .delete()
           .eq('id', listId);
       _logger.i('List deleted: $listId');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyGroceryListChanged(
+          familyId: list.familyId,
+          action: 'deleted',
+          listId: listId,
+          listName: list.name,
+          excludeUserId: list.createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send grocery list delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete list error: $e');
       rethrow;

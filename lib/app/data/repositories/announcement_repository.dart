@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import '../models/announcement_model.dart';
+import '../../core/services/family_notification_service.dart';
 
 class AnnouncementRepository {
   final _supabase = Supabase.instance.client;
@@ -29,8 +30,22 @@ class AnnouncementRepository {
           .select()
           .single();
 
-      _logger.i('Announcement created: ${response['id']}');
-      return AnnouncementModelHelpers.fromSupabase(response);
+      final createdAnnouncement = AnnouncementModelHelpers.fromSupabase(response);
+      _logger.i('Announcement created: ${createdAnnouncement.id}');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyAnnouncementCreated(
+          familyId: familyId,
+          announcementId: createdAnnouncement.id,
+          title: title,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send announcement notification: $e');
+      }
+
+      return createdAnnouncement;
     } catch (e) {
       _logger.e('Create announcement error: $e');
       rethrow;
@@ -80,12 +95,36 @@ class AnnouncementRepository {
   /// Delete an announcement
   Future<void> deleteAnnouncement(String announcementId) async {
     try {
+      // Get announcement info before deleting
+      final announcement = await _supabase
+          .from('announcements')
+          .select('family_id, title, created_by')
+          .eq('id', announcementId)
+          .single();
+      final familyId = announcement['family_id'] as String;
+      final title = announcement['title'] as String;
+      final createdBy = announcement['created_by'] as String;
+
       await _supabase
           .from('announcements')
           .delete()
           .eq('id', announcementId);
 
       _logger.i('Announcement deleted: $announcementId');
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyFamilyDataChanged(
+          familyId: familyId,
+          dataType: 'announcement',
+          action: 'deleted',
+          itemId: announcementId,
+          itemTitle: title,
+          excludeUserId: createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send announcement delete notification: $e');
+      }
     } catch (e) {
       _logger.e('Delete announcement error: $e');
       rethrow;
@@ -113,8 +152,24 @@ class AnnouncementRepository {
           .select()
           .single();
 
+      final updatedAnnouncement = AnnouncementModelHelpers.fromSupabase(response);
       _logger.i('Announcement updated: $announcementId');
-      return AnnouncementModelHelpers.fromSupabase(response);
+
+      // Notify family members
+      try {
+        await FamilyNotificationService().notifyFamilyDataChanged(
+          familyId: updatedAnnouncement.familyId,
+          dataType: 'announcement',
+          action: 'updated',
+          itemId: announcementId,
+          itemTitle: title ?? updatedAnnouncement.title,
+          excludeUserId: updatedAnnouncement.createdBy,
+        );
+      } catch (e) {
+        _logger.w('Failed to send announcement notification: $e');
+      }
+
+      return updatedAnnouncement;
     } catch (e) {
       _logger.e('Update announcement error: $e');
       rethrow;
