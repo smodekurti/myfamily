@@ -948,35 +948,30 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               }
             }
           },
-          itemBuilder: (context) => [
-            FutureBuilder<bool>(
-              future: checkPermission(ref, 'edit_event'),
-              builder: (context, snapshot) {
-                final canEdit = snapshot.data ?? false;
-                if (!canEdit) return const SizedBox.shrink();
-                return const PopupMenuItem(
-                  value: 'edit',
-                  child: Text('Edit'),
-                );
-              },
-            ),
-            FutureBuilder<bool>(
-              future: checkPermission(ref, 'delete_event'),
-              builder: (context, snapshot) {
-                final canDelete = snapshot.data ?? false;
-                if (!canDelete) return const SizedBox.shrink();
-                return PopupMenuItem(
-                  value: 'delete',
-                  child: Text(
-                    'Delete',
-                    style: TextStyle(
-                      color: Colors.red,
-                    ),
+          itemBuilder: (context) async {
+            final canEdit = await checkPermission(ref, 'edit_event');
+            final canDelete = await checkPermission(ref, 'delete_event');
+            
+            final items = <PopupMenuEntry<String>>[];
+            if (canEdit) {
+              items.add(const PopupMenuItem(
+                value: 'edit',
+                child: Text('Edit'),
+              ));
+            }
+            if (canDelete) {
+              items.add(PopupMenuItem(
+                value: 'delete',
+                child: Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.red,
                   ),
-                );
-              },
-            ),
-          ],
+                ),
+              ));
+            }
+            return items;
+          },
         ),
       ),
     );

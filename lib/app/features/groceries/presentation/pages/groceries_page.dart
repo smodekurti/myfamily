@@ -266,60 +266,55 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                     }
                   }
                 },
-                itemBuilder: (context) => [
-                  FutureBuilder<bool>(
-                    future: checkPermission(ref, 'edit_list'),
-                    builder: (context, snapshot) {
-                      final canEdit = snapshot.data ?? false;
-                      if (!canEdit) return const SizedBox.shrink();
-                      return PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit,
+                itemBuilder: (context) async {
+                  final canEdit = await checkPermission(ref, 'edit_list');
+                  final canDelete = await checkPermission(ref, 'delete_list');
+                  
+                  final items = <PopupMenuEntry<String>>[];
+                  if (canEdit) {
+                    items.add(PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            size: ResponsiveHelper.iconSize(20),
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(12)),
+                          Text(
+                            'Edit Name',
+                            style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
-                              size: ResponsiveHelper.iconSize(20),
                             ),
-                            SizedBox(width: ResponsiveHelper.w(12)),
-                            Text(
-                              'Edit Name',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  FutureBuilder<bool>(
-                    future: checkPermission(ref, 'delete_list'),
-                    builder: (context, snapshot) {
-                      final canDelete = snapshot.data ?? false;
-                      if (!canDelete) return const SizedBox.shrink();
-                      return PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
+                          ),
+                        ],
+                      ),
+                    ));
+                  }
+                  if (canDelete) {
+                    items.add(PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                            size: ResponsiveHelper.iconSize(20),
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(12)),
+                          Text(
+                            'Delete',
+                            style: TextStyle(
                               color: Theme.of(context).colorScheme.error,
-                              size: ResponsiveHelper.iconSize(20),
                             ),
-                            SizedBox(width: ResponsiveHelper.w(12)),
-                            Text(
-                              'Delete',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                          ),
+                        ],
+                      ),
+                    ));
+                  }
+                  return items;
+                },
               ),
             ],
           ),
