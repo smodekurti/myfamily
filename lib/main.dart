@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:logger/logger.dart';
 import 'firebase_options.dart';
 import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
@@ -111,8 +112,20 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
     PushNotificationService().setGroceryListNotificationCallback(() {
       final currentFamily = ref.read(currentFamilyProvider);
       if (currentFamily != null && mounted) {
+        final logger = Logger();
+        logger.i(
+          '🔄 Invalidating grocery list providers for family: ${currentFamily.id}',
+        );
         ref.invalidate(allGroceryListsProvider(currentFamily.id));
         ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
+        logger.i(
+          '✅ Grocery list providers invalidated - stream should reconnect and fetch new data',
+        );
+      } else {
+        final logger = Logger();
+        logger.w(
+          '⚠️ Cannot invalidate grocery lists: currentFamily=${currentFamily?.id}, mounted=$mounted',
+        );
       }
     });
 
