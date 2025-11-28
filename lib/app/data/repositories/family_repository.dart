@@ -40,7 +40,7 @@ class FamilyRepository {
         updatedAt: now,
       );
       
-      // Store parent invite code separately (will be added to model if needed)
+      // Store parent invite code separately (not in model yet)
       final familyData = family.toJson();
       familyData['parent_invite_code'] = parentInviteCode;
 
