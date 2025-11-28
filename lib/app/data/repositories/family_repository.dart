@@ -400,7 +400,24 @@ class FamilyRepository {
 
       if (response == null) return null;
       
-      return FamilyMemberModel.fromJson(response);
+      // Fetch user data to get displayName and photoURL
+      final userResponse = await _supabase
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('id', uid)
+          .maybeSingle();
+      
+      // Construct FamilyMemberModel manually (database uses user_id, not uid)
+      return FamilyMemberModel(
+        uid: uid,
+        displayName: userResponse?['display_name'] as String? ?? 'User',
+        photoURL: userResponse?['avatar_url'] as String?,
+        role: response['role'] as String? ?? 'member',
+        points: response['points'] as int? ?? 0,
+        notificationTokens: (response['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
+        joinedAt: response['joined_at'] != null ? DateTime.parse(response['joined_at'] as String) : null,
+        updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at'] as String) : null,
+      );
     } catch (e) {
       _logger.e('Get family member error: $e');
       return null;
@@ -415,12 +432,32 @@ class FamilyRepository {
     return _supabase
         .from('family_members')
         .stream(primaryKey: ['id'])
-        .map((data) {
+        .asyncMap((data) async {
           final filtered = data.where((item) => 
             item['family_id'] == familyId && item['user_id'] == uid
           );
           if (filtered.isEmpty) return null;
-          return FamilyMemberModel.fromJson(filtered.first);
+          
+          final json = filtered.first;
+          
+          // Fetch user data to get displayName and photoURL
+          final userResponse = await _supabase
+              .from('users')
+              .select('display_name, avatar_url')
+              .eq('id', uid)
+              .maybeSingle();
+          
+          // Construct FamilyMemberModel manually (database uses user_id, not uid)
+          return FamilyMemberModel(
+            uid: uid,
+            displayName: userResponse?['display_name'] as String? ?? 'User',
+            photoURL: userResponse?['avatar_url'] as String?,
+            role: json['role'] as String? ?? 'member',
+            points: json['points'] as int? ?? 0,
+            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
+            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
+            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
+          );
         });
   }
 
