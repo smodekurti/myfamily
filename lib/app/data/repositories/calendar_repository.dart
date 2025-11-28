@@ -299,15 +299,40 @@ class CalendarRepository {
   }
 
   /// Stream events for a family
-  Stream<List<EventModel>> streamFamilyEvents(String familyId) {
-    return _supabase
-        .from('calendar_events')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .order('start_time', ascending: true)
-        .map((data) => data
-            .map((json) => EventModelHelpers.fromSupabase(json))
-            .toList());
+  /// Children can view all events (read-only per restrictions)
+  Stream<List<EventModel>> streamFamilyEvents(String familyId, {String? userId}) async* {
+    try {
+      // Get current user if not provided
+      final currentUserId = userId ?? _supabase.auth.currentUser?.id;
+      
+      // Check if user can view events
+      if (currentUserId != null) {
+        final canView = await _roleService.canViewData(
+          userId: currentUserId,
+          familyId: familyId,
+          dataType: 'calendar_event',
+        );
+        
+        if (!canView) {
+          _logger.w('User $currentUserId cannot view events in family $familyId');
+          yield <EventModel>[];
+          return;
+        }
+      }
+      
+      // Stream all family events (children can view but not edit)
+      yield* _supabase
+          .from('calendar_events')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .order('start_time', ascending: true)
+          .map((data) => data
+              .map((json) => EventModelHelpers.fromSupabase(json))
+              .toList());
+    } catch (e, stackTrace) {
+      _logger.e('Error creating stream for family events: $e', error: e, stackTrace: stackTrace);
+      yield <EventModel>[];
+    }
   }
 }
 
