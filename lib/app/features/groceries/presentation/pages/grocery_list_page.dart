@@ -837,32 +837,39 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: Icon(
-              Icons.edit_outlined,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              size: ResponsiveHelper.iconSize(20),
-            ),
-            onPressed: () => _showAddItemDialog(context, item: item),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            tooltip: 'Edit item',
-          ),
-          // Only show delete button if NOT linked to a task (viewing from shopping list, not task view)
-          if (!isTaskLinked) ...[
-            SizedBox(width: ResponsiveHelper.w(4)),
-            IconButton(
+          PermissionAwareWidget(
+            action: 'edit_list',
+            child: IconButton(
               icon: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                Icons.edit_outlined,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 size: ResponsiveHelper.iconSize(20),
               ),
-              onPressed: () => _deleteItem(context, item),
+              onPressed: () => _showAddItemDialog(context, item: item),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              tooltip: 'Delete item',
+              tooltip: 'Edit item',
             ),
-          ],
+          ),
+          // Only show delete button if NOT linked to a task (viewing from shopping list, not task view)
+          if (!isTaskLinked)
+            PermissionAwareWidget(
+              action: 'edit_list',
+              child: Padding(
+                padding: EdgeInsets.only(left: ResponsiveHelper.w(4)),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                    size: ResponsiveHelper.iconSize(20),
+                  ),
+                  onPressed: () => _deleteItem(context, item),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Delete item',
+                ),
+              ),
+            ),
         ],
       ),
     );
