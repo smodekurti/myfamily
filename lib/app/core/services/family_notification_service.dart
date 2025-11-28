@@ -161,14 +161,44 @@ class FamilyNotificationService {
     String? listName,
     String? excludeUserId,
   }) async {
-    await notifyFamilyDataChanged(
-      familyId: familyId,
-      dataType: 'grocery_list',
-      action: action,
-      itemId: listId,
-      itemTitle: listName,
-      excludeUserId: excludeUserId,
-    );
+    // For important actions (created, deleted), send visible notifications
+    // For updates, send silent notification (data refresh only)
+    if (action == 'created' || action == 'deleted') {
+      final title = action == 'created' 
+          ? 'New Shopping List'
+          : 'Shopping List Deleted';
+      final body = listName != null
+          ? action == 'created'
+              ? '$listName was created'
+              : '$listName was deleted'
+          : action == 'created'
+              ? 'A new shopping list was created'
+              : 'A shopping list was deleted';
+      
+      await notifyFamilyMembers(
+        familyId: familyId,
+        title: title,
+        body: body,
+        data: {
+          'type': 'grocery_list',
+          'action': action,
+          if (listId != null) 'item_id': listId,
+          if (listName != null) 'item_title': listName,
+          'refresh': 'true',
+        },
+        excludeUserId: excludeUserId,
+      );
+    } else {
+      // For updates, send silent notification (data refresh only)
+      await notifyFamilyDataChanged(
+        familyId: familyId,
+        dataType: 'grocery_list',
+        action: action,
+        itemId: listId,
+        itemTitle: listName,
+        excludeUserId: excludeUserId,
+      );
+    }
   }
 
   /// Notify when a grocery list item is checked/unchecked

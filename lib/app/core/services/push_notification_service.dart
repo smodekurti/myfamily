@@ -319,12 +319,39 @@ class PushNotificationService {
     
     // Extract notification data first
     final notification = message.notification;
-    final title = notification?.title ?? message.data['title'] ?? '';
-    final body = notification?.body ?? message.data['body'] ?? '';
+    // For iOS, check both notification object and data payload
+    // iOS APNs may put title/body in different places
+    String title = notification?.title ?? '';
+    String body = notification?.body ?? '';
+    
+    // If title/body are empty, check data payload (iOS sometimes puts them there)
+    if (title.isEmpty) {
+      title = message.data['title'] ?? '';
+    }
+    if (body.isEmpty) {
+      body = message.data['body'] ?? '';
+    }
+    
+    // Also check APNs-specific fields for iOS
+    if (Platform.isIOS) {
+      final apnsData = message.data;
+      if (title.isEmpty && apnsData['aps'] != null) {
+        try {
+          final aps = apnsData['aps'] as Map<String, dynamic>?;
+          final alert = aps?['alert'] as Map<String, dynamic>?;
+          title = alert?['title']?.toString() ?? title;
+          body = alert?['body']?.toString() ?? body;
+        } catch (e) {
+          _logger.w('Could not parse APNs alert: $e');
+        }
+      }
+    }
+    
     final data = message.data;
     
     // Check if this is a silent notification (data-only, no UI)
-    final isSilent = data['silent'] == 'true' || (title.isEmpty && body.isEmpty);
+    // Only treat as silent if explicitly marked AND no title/body
+    final isSilent = data['silent'] == 'true' && title.isEmpty && body.isEmpty;
     
     // Get notification type
     final notificationType = data['type'] as String?;
