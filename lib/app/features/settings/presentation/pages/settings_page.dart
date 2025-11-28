@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:logger/logger.dart';
+import '../../../../core/services/push_notification_service.dart';
 // import 'package:package_info_plus/package_info_plus.dart'; // Optional - can be added later
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
@@ -17,6 +20,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
+  final Logger _logger = Logger();
   String? _appVersion;
   String? _appBuildNumber;
 
@@ -319,6 +323,64 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final authRepo = ref.read(authRepositoryProvider);
     
     try {
+      // If enabling notifications, request permission first
+      if (enabled) {
+        final pushService = PushNotificationService();
+        final hasPermission = await pushService.hasPermission();
+        
+        if (!hasPermission) {
+          _logger.i('Requesting notification permission...');
+          final permissionGranted = await pushService.requestPermission();
+          
+          if (!permissionGranted) {
+            // Permission was denied - check if it's permanently denied
+            final status = await Permission.notification.status;
+            if (status.isPermanentlyDenied) {
+              // Show dialog to open settings
+              if (mounted) {
+                final shouldOpenSettings = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Notification Permission Required'),
+                    content: const Text(
+                      'To receive notifications, please enable them in your device settings.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Open Settings'),
+                      ),
+                    ],
+                  ),
+                );
+                
+                if (shouldOpenSettings == true) {
+                  await pushService.openNotificationSettings();
+                }
+              }
+            } else {
+              // Permission was denied but not permanently - show message
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Notification permission is required to receive notifications'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    duration: AppConstants.snackBarDuration,
+                  ),
+                );
+              }
+            }
+            // Don't save preference if permission wasn't granted
+            return;
+          }
+        }
+      }
+      
+      // Save preference
       await authRepo.updateUserPreferences(
         notificationsEnabled: enabled,
       );
