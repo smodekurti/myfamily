@@ -15,12 +15,13 @@ class WeatherWidget extends ConsumerWidget {
     return weatherAsync.when(
       data: (weather) {
         if (weather == null) {
-          return const SizedBox.shrink(); // Don't show if weather unavailable
+          // Show error card instead of hiding widget
+          return _buildErrorCard(context, ref);
         }
         return _buildWeatherCard(context, weather);
       },
       loading: () => _buildLoadingCard(context),
-      error: (error, stack) => const SizedBox.shrink(), // Silently fail
+      error: (error, stack) => _buildErrorCard(context, ref), // Show error card instead of hiding
     );
   }
 
@@ -75,7 +76,7 @@ class WeatherWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${weather.temperature.round()}°',
+                    '${weather.temperature.round()}°F',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -114,7 +115,7 @@ class WeatherWidget extends ConsumerWidget {
                 _buildWeatherDetail(
                   context,
                   Icons.air,
-                  '${weather.windSpeed.toStringAsFixed(1)} m/s',
+                  '${weather.windSpeed.toStringAsFixed(1)} mph',
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 // Location change icon
@@ -174,6 +175,65 @@ class WeatherWidget extends ConsumerWidget {
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: ResponsiveHelper.w(2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const WeatherLocationPicker(),
+            ),
+          );
+        },
+        borderRadius: ResponsiveHelper.borderRadius(12),
+        child: Container(
+          padding: ResponsiveHelper.padding(all: 16),
+          decoration: BoxDecoration(
+            borderRadius: ResponsiveHelper.borderRadius(12),
+            color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.3),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: ResponsiveHelper.iconSize(32),
+                color: Theme.of(context).colorScheme.error,
+              ),
+              SizedBox(width: ResponsiveHelper.w(16)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Weather Unavailable',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.h(4)),
+                    Text(
+                      'Tap to select a location',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ],
           ),
         ),
       ),

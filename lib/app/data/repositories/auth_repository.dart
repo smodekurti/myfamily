@@ -198,6 +198,15 @@ class AuthRepository {
     return metadata?['consent_version'] as String?;
   }
 
+  /// Check if user has completed walkthrough
+  bool hasCompletedWalkthrough() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    final metadata = user.userMetadata;
+    return metadata?['walkthrough_completed'] == true;
+  }
+
   Future<UserResponse> updateUserProfile({
     String? displayName,
     String? photoURL,

@@ -8,6 +8,7 @@ import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -143,10 +144,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         rethrow;
       }
 
-      // Get public URL
-      final publicUrl = storage.getPublicUrl(filePath);
-
-      return publicUrl;
+      // For private buckets, we store the path (not the signed URL)
+      // The signed URL will be generated on-demand when displaying the avatar
+      // Return the storage path so it can be stored in the database
+      return filePath;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,22 +246,22 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       children: [
                         GestureDetector(
                           onTap: _showImageSourceDialog,
-                          child: CircleAvatar(
-                            radius: ResponsiveHelper.r(60),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            backgroundImage: _selectedImage != null
-                                ? FileImage(_selectedImage!)
-                                : (_currentImageUrl != null
-                                    ? NetworkImage(_currentImageUrl!)
-                                    : null) as ImageProvider?,
-                            child: (_selectedImage == null && _currentImageUrl == null)
-                                ? Icon(
-                                    Icons.person,
-                                    size: ResponsiveHelper.iconSize(60),
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                  )
-                                : null,
-                          ),
+                          child: _selectedImage != null
+                              ? CircleAvatar(
+                                  radius: ResponsiveHelper.r(60),
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  backgroundImage: FileImage(_selectedImage!),
+                                  child: null,
+                                )
+                              : AvatarWidget(
+                                  avatarPath: _currentImageUrl,
+                                  radius: ResponsiveHelper.r(60),
+                                  displayName: _displayNameController.text.trim().isNotEmpty
+                                      ? _displayNameController.text.trim()
+                                      : null,
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  textColor: Theme.of(context).colorScheme.onPrimary,
+                                ),
                         ),
                         Positioned(
                           right: 0,

@@ -15,11 +15,26 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
   final TextEditingController _searchController = TextEditingController();
   final WeatherRepository _weatherRepo = WeatherRepository();
   bool _isValidating = false;
+  bool _isZipcodeInput = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Check if input is a zipcode (supports US 5-digit, US+4, and international formats)
+  bool _isZipcode(String input) {
+    final trimmed = input.trim();
+    // US zipcode: 5 digits (e.g., 10001) or 5+4 format (e.g., 10001-1234)
+    if (RegExp(r'^\d{5}(-\d{4})?$').hasMatch(trimmed)) {
+      return true;
+    }
+    // International zipcode: 4-10 digits (e.g., 60060, 12345, etc.)
+    if (RegExp(r'^\d{4,10}$').hasMatch(trimmed)) {
+      return true;
+    }
+    return false;
   }
 
   Future<void> _selectLocation(String location) async {
@@ -29,13 +44,18 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
       _isValidating = true;
     });
 
-    // Check if input is a zipcode (numeric, 5 digits for US, or other formats)
-    final isZipcode = RegExp(r'^\d{4,10}$').hasMatch(location.trim());
+    // Check if input is a zipcode
+    final isZipcode = _isZipcode(location);
+    
+    // For US zipcode format (5+4), use only the 5-digit part
+    final zipcodeToSearch = isZipcode 
+        ? location.trim().split('-').first // Use only the 5-digit part for US zipcodes
+        : location.trim();
     
     // Validate the location by trying to get weather for it
     final weather = isZipcode
-        ? await _weatherRepo.getWeather(zipcode: location.trim())
-        : await _weatherRepo.getWeather(cityName: location.trim());
+        ? await _weatherRepo.getWeather(zipcode: zipcodeToSearch)
+        : await _weatherRepo.getWeather(cityName: zipcodeToSearch);
     
     if (weather != null && mounted) {
       // Save the selected location (use the resolved city name from weather)
@@ -44,10 +64,18 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
       Navigator.pop(context);
     } else {
       if (mounted) {
+        // Clear the invalid location selection so widget doesn't keep trying to use it
+        // This will cause the provider to fall back to default location
+        ref.read(selectedWeatherLocationProvider.notifier).state = null;
+        
+        final errorMessage = isZipcode
+            ? 'Could not find weather for zipcode "$location". Please verify the zipcode or try searching by city name.'
+            : 'Could not find weather for "$location". Please try another location or zipcode.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not find weather for "$location". Please try another location or zipcode.'),
+            content: Text(errorMessage),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -99,7 +127,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Search for a City',
+                    'Search for a City or Zipcode',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -108,17 +136,23 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                   TextField(
                     controller: _searchController,
                     enabled: !_isValidating,
-                    keyboardType: TextInputType.text,
+                    keyboardType: _isZipcodeInput ? TextInputType.number : TextInputType.text,
                     decoration: InputDecoration(
-                      hintText: 'Enter city name or zipcode (e.g., New York, 10001)',
-                      helperText: 'You can search by city name or zipcode',
+                      hintText: _isZipcodeInput 
+                          ? 'Enter zipcode (e.g., 10001, 60060)'
+                          : 'Enter city name or zipcode (e.g., New York, 10001)',
+                      helperText: _isZipcodeInput
+                          ? 'Searching by zipcode'
+                          : 'You can search by city name or zipcode',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
-                                setState(() {});
+                                setState(() {
+                                  _isZipcodeInput = false;
+                                });
                               },
                             )
                           : null,
@@ -127,7 +161,11 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                       ),
                     ),
                     onChanged: (value) {
-                      setState(() {});
+                      // Detect if user is typing a zipcode
+                      final isZipcode = _isZipcode(value);
+                      setState(() {
+                        _isZipcodeInput = isZipcode;
+                      });
                     },
                     onSubmitted: (value) {
                       if (value.isNotEmpty && !_isValidating) {
