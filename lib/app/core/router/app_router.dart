@@ -34,6 +34,7 @@ import '../../features/settings/presentation/pages/help_page.dart';
 import '../../features/gamification/presentation/pages/leaderboard_page.dart';
 import '../../features/gamification/presentation/pages/points_history_page.dart';
 import '../../features/gamification/presentation/pages/achievements_page.dart';
+import '../../features/onboarding/presentation/pages/walkthrough_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final routerState = ref.watch(routerStateProvider);
@@ -106,14 +107,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             }
             // If user has a version, we'll check version mismatch in the consent page itself
             // For now, allow through - the consent page will handle version checks
+            
+            // Check if user has completed walkthrough
+            if (!authRepo.hasCompletedWalkthrough()) {
+              // User hasn't completed walkthrough, redirect to walkthrough page
+              if (state.matchedLocation == AppConstants.routeWalkthrough) {
+                return null;
+              }
+              return AppConstants.routeWalkthrough;
+            }
           }
-          // User has given consent, proceed with normal flow
+          // User has given consent and completed walkthrough, proceed with normal flow
           // User has one or more families - always show family selection first
           
-          // If user is trying to access auth/get-started/consent, redirect to family selection
+          // If user is trying to access auth/get-started/consent/walkthrough, redirect to family selection
           if (state.matchedLocation.startsWith(AppConstants.routeAuth) ||
               state.matchedLocation == AppConstants.routeGetStarted ||
-              state.matchedLocation == AppConstants.routeConsent) {
+              state.matchedLocation == AppConstants.routeConsent ||
+              state.matchedLocation == AppConstants.routeWalkthrough) {
             return AppConstants.routeFamilySelection;
           }
           
@@ -179,6 +190,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppConstants.routeConsent,
         name: 'consent',
         builder: (context, state) => const ConsentPage(),
+      ),
+      GoRoute(
+        path: AppConstants.routeWalkthrough,
+        name: 'walkthrough',
+        builder: (context, state) => const WalkthroughPage(),
       ),
       
       // Get Started / Family setup routes
@@ -432,10 +448,10 @@ class MainShell extends ConsumerWidget {
     final currentRoute = GoRouterState.of(context).matchedLocation;
     
     // Get page title based on route
-    String title = 'Member Hub';
+    String title = 'Family Wall';
     bool showSearch = false;
     if (currentRoute == AppConstants.routeHome) {
-      title = 'Member Hub';
+      title = 'Family Wall';
     } else if (currentRoute == AppConstants.routeTasks) {
       title = 'Household Chores';
       showSearch = true;

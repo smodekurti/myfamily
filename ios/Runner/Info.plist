@@ -55,6 +55,8 @@
 	<string>We need your location to show weather information for your area.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>We need permission to send you notifications about tasks and events.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to quickly and securely sign in to your account.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

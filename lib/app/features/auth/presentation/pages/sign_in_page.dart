@@ -21,12 +21,135 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _isBiometricAvailable = false;
+  bool _isBiometricEnabled = false;
+  String _biometricTypeName = 'Face ID';
+
+  @override
+  void initState() {
+    super.initState();
+    // Delay biometric check to allow native plugins to initialize
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _checkBiometricAvailability();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    if (!Platform.isIOS) return;
+    
+    try {
+      final biometricService = ref.read(biometricAuthServiceProvider);
+      
+      // Check availability with error handling
+      final isAvailable = await biometricService.isAvailable().catchError((e) {
+        // Plugin may not be ready yet, return false
+        return false;
+      });
+      
+      if (!isAvailable) {
+        if (mounted) {
+          setState(() {
+            _isBiometricAvailable = false;
+            _isBiometricEnabled = false;
+          });
+        }
+        return;
+      }
+      
+      // Check if enabled
+      final isEnabled = await biometricService.isBiometricLoginEnabled().catchError((e) {
+        return false;
+      });
+      
+      // Get type name
+      final typeName = await biometricService.getBiometricTypeName().catchError((e) {
+        return 'Face ID';
+      });
+      
+      if (mounted) {
+        setState(() {
+          _isBiometricAvailable = isAvailable;
+          _isBiometricEnabled = isEnabled;
+          _biometricTypeName = typeName;
+        });
+      }
+    } catch (e) {
+      // Silently fail - biometric not available
+      if (mounted) {
+        setState(() {
+          _isBiometricAvailable = false;
+          _isBiometricEnabled = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithBiometric() async {
+    if (!_isBiometricAvailable || !_isBiometricEnabled) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final biometricService = ref.read(biometricAuthServiceProvider);
+      
+      // Authenticate with Face ID/Touch ID
+      final authenticated = await biometricService.authenticate(
+        reason: 'Please authenticate to sign in',
+      );
+
+      if (!authenticated) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      // Get saved credentials
+      final credentials = await biometricService.getSavedCredentials();
+      
+      if (credentials == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No saved credentials found. Please sign in with email and password.'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Sign in with saved credentials
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signInWithEmailAndPassword(
+        email: credentials['email']!,
+        password: credentials['password']!,
+      );
+      
+      if (mounted) {
+        context.go(AppConstants.routeHome);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Biometric sign in failed: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _signInWithEmail() async {
@@ -36,10 +159,53 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      
       await authRepo.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: email,
+        password: password,
       );
+      
+      // Save credentials for biometric login if on iOS
+      if (Platform.isIOS && mounted) {
+        try {
+          final biometricService = ref.read(biometricAuthServiceProvider);
+          final isAvailable = await biometricService.isAvailable();
+          if (isAvailable && mounted) {
+            // Ask user if they want to enable Face ID
+            final shouldEnable = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('Enable $_biometricTypeName?'),
+                content: Text('Would you like to use $_biometricTypeName to sign in quickly next time?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Not Now'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text('Enable'),
+                  ),
+                ],
+              ),
+            );
+            
+            if (shouldEnable == true && mounted) {
+              await biometricService.saveCredentials(
+                email: email,
+                password: password,
+              );
+              if (mounted) {
+                await _checkBiometricAvailability(); // Refresh state
+              }
+            }
+          }
+        } catch (e) {
+          // Silently fail - don't block sign-in
+        }
+      }
       
       if (mounted) {
         context.go(AppConstants.routeHome);
@@ -142,6 +308,56 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             ),
                           ),
                           SizedBox(height: ResponsiveHelper.h(20)),
+                          
+                          // Face ID / Touch ID button (iOS only, if enabled)
+                          if (Platform.isIOS && _isBiometricAvailable && _isBiometricEnabled) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: ResponsiveHelper.buttonHeight(56),
+                              child: OutlinedButton.icon(
+                                onPressed: _isLoading ? null : _signInWithBiometric,
+                                icon: Icon(
+                                  Icons.face,
+                                  size: ResponsiveHelper.iconSize(20),
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                label: Text(
+                                  'Sign in with $_biometricTypeName',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: ResponsiveHelper.borderRadius(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: ResponsiveHelper.h(16)),
+                            // Divider
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: ResponsiveHelper.padding(horizontal: 16),
+                                  child: Text(
+                                    'Or',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+                            SizedBox(height: ResponsiveHelper.h(16)),
+                          ],
                           
                           // Email field
                           TextFormField(

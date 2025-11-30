@@ -285,6 +285,7 @@ class AppConstants {
   static const String routeEditTask = '/tasks/edit';
   static const String routeGroceries = '/groceries';
   static const String routeGroceryTemplatesManage = '/grocery-templates/manage';
+  static const String routeWalkthrough = '/walkthrough';
   static const String routeFamilySelection = '/family-selection';
   static const String routeGetStarted = '/get-started';
   static const String routeFamilySetup = '/family-setup';

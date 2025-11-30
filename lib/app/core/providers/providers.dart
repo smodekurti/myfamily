@@ -18,6 +18,8 @@ import '../../data/repositories/weather_repository.dart';
 import '../../data/models/weather_model.dart';
 import '../services/location_service.dart';
 import '../services/offline_service.dart';
+import '../services/biometric_auth_service.dart';
+import '../services/avatar_url_service.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/event_model.dart';
 import '../../data/models/points_history_model.dart';
@@ -33,6 +35,16 @@ final _familyRepositoryInstance = FamilyRepository();
 /// Repository providers
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
+});
+
+/// Biometric authentication service provider
+final biometricAuthServiceProvider = Provider<BiometricAuthService>((ref) {
+  return BiometricAuthService();
+});
+
+/// Avatar URL service provider
+final avatarUrlServiceProvider = Provider<AvatarUrlService>((ref) {
+  return AvatarUrlService();
 });
 
 final familyRepositoryProvider = Provider<FamilyRepository>((ref) {
@@ -456,11 +468,20 @@ final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
   if (selectedLocation != null && selectedLocation.isNotEmpty) {
     // Check if it's a zipcode (numeric, 4-10 digits)
     final isZipcode = RegExp(r'^\d{4,10}$').hasMatch(selectedLocation.trim());
-    if (isZipcode) {
-      return await weatherRepo.getWeather(zipcode: selectedLocation.trim());
-    } else {
-    return await weatherRepo.getWeather(cityName: selectedLocation);
+    final weather = isZipcode
+        ? await weatherRepo.getWeather(zipcode: selectedLocation.trim())
+        : await weatherRepo.getWeather(cityName: selectedLocation);
+    
+    // If weather not found for selected location, clear the selection and fall back to default
+    // This prevents the widget from disappearing and stops retrying the invalid location
+    if (weather == null) {
+      // Clear invalid selection to prevent retrying
+      ref.read(selectedWeatherLocationProvider.notifier).state = null;
+      // Fall back to default location
+      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
     }
+    
+    return weather;
   }
   
   // Otherwise, try to use current location
