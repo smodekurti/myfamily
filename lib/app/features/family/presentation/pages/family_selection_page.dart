@@ -89,6 +89,9 @@ class FamilySelectionPage extends ConsumerWidget {
                         separatorBuilder: (context, index) => SizedBox(height: ResponsiveHelper.h(16)),
                         itemBuilder: (context, index) {
                           final family = families[index];
+                          // Fetch actual member count from family_members table
+                          final familyMembersAsync = ref.watch(familyMembersProvider(family.id));
+                          
                           return Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
@@ -142,21 +145,24 @@ class FamilySelectionPage extends ConsumerWidget {
                                           SizedBox(height: ResponsiveHelper.h(4)),
                                           
                                           // Member count and creator info
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.people,
-                                                size: ResponsiveHelper.iconSize(14),
-                                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                              ),
-                                              SizedBox(width: ResponsiveHelper.w(4)),
-                                              Text(
-                                                '${family.members.length} member${family.members.length != 1 ? 's' : ''}',
-                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                                ),
-                                              ),
-                                              if (family.createdBy == currentUser.id) ...[
+                                          familyMembersAsync.when(
+                                            data: (members) {
+                                              final memberCount = members.length;
+                                              return Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.people,
+                                                    size: ResponsiveHelper.iconSize(14),
+                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  ),
+                                                  SizedBox(width: ResponsiveHelper.w(4)),
+                                                  Text(
+                                                    '$memberCount member${memberCount != 1 ? 's' : ''}',
+                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                    ),
+                                                  ),
+                                                  if (family.createdBy == currentUser.id) ...[
                                                 SizedBox(width: ResponsiveHelper.w(8)),
                                                 Container(
                                                   padding: ResponsiveHelper.padding(horizontal: 6, vertical: 2),
@@ -171,9 +177,77 @@ class FamilySelectionPage extends ConsumerWidget {
                                                       fontWeight: FontWeight.w600,
                                                     ),
                                                   ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              );
+                                            },
+                                            loading: () => Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.people,
+                                                  size: ResponsiveHelper.iconSize(14),
+                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                                 ),
+                                                SizedBox(width: ResponsiveHelper.w(4)),
+                                                Text(
+                                                  '...',
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  ),
+                                                ),
+                                                if (family.createdBy == currentUser.id) ...[
+                                                  SizedBox(width: ResponsiveHelper.w(8)),
+                                                  Container(
+                                                    padding: ResponsiveHelper.padding(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                                      borderRadius: ResponsiveHelper.borderRadius(4),
+                                                    ),
+                                                    child: Text(
+                                                      'Creator',
+                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                        color: Theme.of(context).colorScheme.primary,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
-                                            ],
+                                            ),
+                                            error: (_, __) => Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.people,
+                                                  size: ResponsiveHelper.iconSize(14),
+                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                ),
+                                                SizedBox(width: ResponsiveHelper.w(4)),
+                                                Text(
+                                                  '${family.members.length} member${family.members.length != 1 ? 's' : ''}',
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  ),
+                                                ),
+                                                if (family.createdBy == currentUser.id) ...[
+                                                  SizedBox(width: ResponsiveHelper.w(8)),
+                                                  Container(
+                                                    padding: ResponsiveHelper.padding(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                                      borderRadius: ResponsiveHelper.borderRadius(4),
+                                                    ),
+                                                    child: Text(
+                                                      'Creator',
+                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                        color: Theme.of(context).colorScheme.primary,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
                                           ),
                                           
                                           // Invite code (helps distinguish families)

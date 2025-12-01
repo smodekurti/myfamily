@@ -267,30 +267,85 @@ class FamilyRepository {
   /// Get families for user
   Future<List<FamilyModel>> getUserFamilies(String userId) async {
     try {
-      final response = await _supabase
-          .from('families')
-          .select()
-          .contains('members', [userId])
-          .order('created_at', ascending: false);
+      // Query via family_members table (source of truth) instead of members array
+      // This ensures RLS policies work correctly
+      final memberResponse = await _supabase
+          .from('family_members')
+          .select('family_id')
+          .eq('user_id', userId);
 
-      return (response as List)
+      if (memberResponse.isEmpty) {
+        return [];
+      }
+
+      final familyIds = (memberResponse as List)
+          .map((json) => json['family_id'] as String)
+          .toList();
+
+      // Now fetch the families
+      // Build OR query for multiple family IDs
+      PostgrestFilterBuilder query = _supabase
+          .from('families')
+          .select();
+      
+      // Add OR conditions for each family ID
+      if (familyIds.isNotEmpty) {
+        final orConditions = familyIds
+            .map((id) => 'id.eq.$id')
+            .join(',');
+        query = query.or(orConditions);
+      }
+      
+      final response = await query.order('created_at', ascending: false);
+      
+      final familiesList = response as List;
+
+      return familiesList
           .map((json) => FamilyModel.fromJson(json))
           .toList();
-    } catch (e) {
-      _logger.e('Get user families error: $e');
+    } catch (e, stackTrace) {
+      _logger.e('Get user families error: $e', error: e, stackTrace: stackTrace);
       return [];
     }
   }
 
   /// Stream families for user
   Stream<List<FamilyModel>> streamUserFamilies(String userId) {
+    // Stream family_members first to get family IDs the user belongs to
     return _supabase
-        .from('families')
+        .from('family_members')
         .stream(primaryKey: ['id'])
-        .map((data) => data
-            .where((family) => (family['members'] as List).contains(userId))
-            .map((json) => FamilyModel.fromJson(json))
-            .toList());
+        .eq('user_id', userId)
+        .asyncMap((memberData) async {
+          if (memberData.isEmpty) {
+            return <FamilyModel>[];
+          }
+
+          final familyIds = memberData
+              .map((json) => json['family_id'] as String)
+              .toSet()
+              .toList();
+
+          // Now fetch the families
+          // Build OR query for multiple family IDs
+          PostgrestFilterBuilder query = _supabase
+              .from('families')
+              .select();
+          
+          // Add OR conditions for each family ID
+          if (familyIds.isNotEmpty) {
+            final orConditions = familyIds
+                .map((id) => 'id.eq.$id')
+                .join(',');
+            query = query.or(orConditions);
+          }
+          
+          final response = await query.order('created_at', ascending: false);
+
+          return (response as List)
+              .map((json) => FamilyModel.fromJson(json))
+              .toList();
+        });
   }
 
   /// Update family
