@@ -273,6 +273,29 @@ class GroceryListRepository {
     String? source,
   }) async {
     try {
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to edit lists (adding items modifies the list)
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+
+      if (!canEdit) {
+        throw Exception('You do not have permission to add items to grocery lists');
+      }
+
       final now = DateTime.now();
       final itemData = {
         'list_id': listId,
@@ -404,6 +427,37 @@ class GroceryListRepository {
   /// Toggle item checked status
   Future<GroceryListItemModel> toggleItem(String itemId, bool checked) async {
     try {
+      // Get item info first
+      final itemResponse = await _supabase
+          .from('grocery_list_items')
+          .select('list_id')
+          .eq('id', itemId)
+          .single();
+      final listId = itemResponse['list_id'] as String;
+      
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to edit lists (toggling items modifies the list)
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+
+      if (!canEdit) {
+        throw Exception('You do not have permission to modify grocery list items');
+      }
+
       final updates = {
         'checked': checked,
         'checked_at': checked ? DateTime.now().toIso8601String() : null,
@@ -498,6 +552,37 @@ class GroceryListRepository {
   /// Delete item
   Future<void> deleteItem(String itemId) async {
     try {
+      // Get item info first
+      final itemResponse = await _supabase
+          .from('grocery_list_items')
+          .select('list_id')
+          .eq('id', itemId)
+          .single();
+      final listId = itemResponse['list_id'] as String;
+      
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to edit lists (deleting items modifies the list)
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+
+      if (!canEdit) {
+        throw Exception('You do not have permission to delete grocery list items');
+      }
+
       await _supabase
           .from('grocery_list_items')
           .delete()
@@ -518,6 +603,29 @@ class GroceryListRepository {
     required String name,
   }) async {
     try {
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to edit lists
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+
+      if (!canEdit) {
+        throw Exception('You do not have permission to edit grocery lists');
+      }
+
       final updates = {
         'name': name,
         'updated_at': DateTime.now().toIso8601String(),
@@ -558,6 +666,29 @@ class GroceryListRepository {
     required String taskId,
   }) async {
     try {
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) {
+        throw Exception('List not found');
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to edit lists
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+
+      if (!canEdit) {
+        throw Exception('You do not have permission to edit grocery lists');
+      }
+
       final updates = {
         'task_id': taskId,
         'updated_at': DateTime.now().toIso8601String(),
@@ -586,6 +717,23 @@ class GroceryListRepository {
       if (list == null) {
         _logger.w('List not found: $listId');
         return;
+      }
+
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check permission to delete lists
+      final canDelete = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'delete_list',
+      );
+
+      if (!canDelete) {
+        throw Exception('You do not have permission to delete grocery lists');
       }
 
       // Find tasks that reference this list in their categoryData
