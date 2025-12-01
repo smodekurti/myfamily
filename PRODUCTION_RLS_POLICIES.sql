@@ -6,22 +6,65 @@
 -- ============================================================================
 
 -- ============================================================================
--- STEP 1: Enable RLS on All Tables
+-- STEP 1: Enable RLS on All Tables (only if they exist)
 -- ============================================================================
 
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE families ENABLE ROW LEVEL SECURITY;
-ALTER TABLE family_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE grocery_lists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE grocery_list_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE grocery_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE points_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_fcm_tokens ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  -- Enable RLS on tables that exist
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+    ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'families') THEN
+    ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'family_members') THEN
+    ALTER TABLE family_members ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tasks') THEN
+    ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'grocery_lists') THEN
+    ALTER TABLE grocery_lists ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'grocery_list_items') THEN
+    ALTER TABLE grocery_list_items ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'calendar_events') THEN
+    ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  -- Only enable RLS on announcements if the table exists
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'announcements') THEN
+    ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'grocery_templates') THEN
+    ALTER TABLE grocery_templates ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'task_templates') THEN
+    ALTER TABLE task_templates ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'points_history') THEN
+    ALTER TABLE points_history ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'achievements') THEN
+    ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_fcm_tokens') THEN
+    ALTER TABLE user_fcm_tokens ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- STEP 2: Drop Existing Policies (Clean Slate)
@@ -347,7 +390,6 @@ CREATE POLICY "grocery_list_items_insert_family"
       WHERE gl.id = grocery_list_items.list_id
       AND fm.user_id = auth.uid()
     )
-    AND added_by = auth.uid()
   );
 
 -- Family members can update grocery list items in their families
@@ -441,62 +483,71 @@ CREATE POLICY "calendar_events_delete_family"
   );
 
 -- ============================================================================
--- ANNOUNCEMENTS TABLE
+-- ANNOUNCEMENTS TABLE (only if table exists)
 -- ============================================================================
 
--- Family members can view announcements in their families
-CREATE POLICY "announcements_select_family"
-  ON announcements FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM family_members
-      WHERE family_members.family_id = announcements.family_id
-      AND family_members.user_id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'announcements') THEN
+    -- Family members can view announcements in their families
+    DROP POLICY IF EXISTS "announcements_select_family" ON announcements;
+    CREATE POLICY "announcements_select_family"
+      ON announcements FOR SELECT
+      USING (
+        EXISTS (
+          SELECT 1 FROM family_members
+          WHERE family_members.family_id = announcements.family_id
+          AND family_members.user_id = auth.uid()
+        )
+      );
 
--- Family members can create announcements in their families
-CREATE POLICY "announcements_insert_family"
-  ON announcements FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM family_members
-      WHERE family_members.family_id = announcements.family_id
-      AND family_members.user_id = auth.uid()
-    )
-    AND created_by = auth.uid()
-  );
+    -- Family members can create announcements in their families
+    DROP POLICY IF EXISTS "announcements_insert_family" ON announcements;
+    CREATE POLICY "announcements_insert_family"
+      ON announcements FOR INSERT
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM family_members
+          WHERE family_members.family_id = announcements.family_id
+          AND family_members.user_id = auth.uid()
+        )
+        AND created_by = auth.uid()
+      );
 
--- Family members can update announcements in their families
-CREATE POLICY "announcements_update_family"
-  ON announcements FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM family_members
-      WHERE family_members.family_id = announcements.family_id
-      AND family_members.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM family_members
-      WHERE family_members.family_id = announcements.family_id
-      AND family_members.user_id = auth.uid()
-    )
-  );
+    -- Family members can update announcements in their families
+    DROP POLICY IF EXISTS "announcements_update_family" ON announcements;
+    CREATE POLICY "announcements_update_family"
+      ON announcements FOR UPDATE
+      USING (
+        EXISTS (
+          SELECT 1 FROM family_members
+          WHERE family_members.family_id = announcements.family_id
+          AND family_members.user_id = auth.uid()
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM family_members
+          WHERE family_members.family_id = announcements.family_id
+          AND family_members.user_id = auth.uid()
+        )
+      );
 
--- Family members can delete announcements in their families
-CREATE POLICY "announcements_delete_family"
-  ON announcements FOR DELETE
-  USING (
-    created_by = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM family_members fm
-      WHERE fm.family_id = announcements.family_id
-      AND fm.user_id = auth.uid()
-      AND fm.role IN ('admin', 'parent')
-    )
-  );
+    -- Family members can delete announcements in their families
+    DROP POLICY IF EXISTS "announcements_delete_family" ON announcements;
+    CREATE POLICY "announcements_delete_family"
+      ON announcements FOR DELETE
+      USING (
+        created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM family_members fm
+          WHERE fm.family_id = announcements.family_id
+          AND fm.user_id = auth.uid()
+          AND fm.role IN ('admin', 'parent')
+        )
+      );
+  END IF;
+END $$;
 
 -- ============================================================================
 -- GROCERY_TEMPLATES TABLE
