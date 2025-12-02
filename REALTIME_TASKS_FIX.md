@@ -101,3 +101,4 @@ When a task is created on another device, you should see:
 The only thing needed is **Supabase configuration** (Steps 1-2 above).
 
 
+

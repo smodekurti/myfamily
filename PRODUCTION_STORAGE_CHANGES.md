@@ -231,3 +231,4 @@ No code changes needed, but the bucket should remain public.
 - [ ] Users cannot access other users' avatars
 - [ ] Family members can see each other's avatars (if policy allows)
 
+

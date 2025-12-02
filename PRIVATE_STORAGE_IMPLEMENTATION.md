@@ -212,3 +212,4 @@ if (signedUrl != null) {
 - Check if user is authenticated
 - Verify file path matches policy pattern (`avatars/user-id_filename.jpg`)
 
+

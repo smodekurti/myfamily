@@ -29,3 +29,4 @@ class SupabaseConfig {
   static const String deepLinkHost = 'auth-callback';
 }
 
+

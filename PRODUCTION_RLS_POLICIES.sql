@@ -694,3 +694,4 @@ CREATE POLICY "user_fcm_tokens_delete_own"
 -- Run these to verify policies exist:
 -- SELECT schemaname, tablename, policyname FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname;
 
+
