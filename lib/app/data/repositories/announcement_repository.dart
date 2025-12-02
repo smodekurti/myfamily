@@ -172,6 +172,33 @@ class AnnouncementRepository {
     String? message,
   }) async {
     try {
+      // Get announcement info before updating
+      final announcement = await _supabase
+          .from('announcements')
+          .select('family_id, created_by')
+          .eq('id', announcementId)
+          .single();
+      final familyId = announcement['family_id'] as String;
+      final createdBy = announcement['created_by'] as String;
+      
+      // Get current user
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Only creator can update (announcements don't have separate update permission)
+      // But check if user has permission to create announcements (implies update own)
+      final canCreate = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: familyId,
+        action: 'create_announcement',
+      );
+      
+      if (!canCreate || userId != createdBy) {
+        throw Exception('You do not have permission to update this announcement');
+      }
+
       final updateData = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };

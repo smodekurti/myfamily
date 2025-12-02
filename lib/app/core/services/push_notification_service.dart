@@ -242,25 +242,37 @@ class PushNotificationService {
         return;
       }
 
-      // Check if token already exists
-      final existing = await _supabase
-          .from('user_fcm_tokens')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('token', token)
-          .maybeSingle();
-
-      if (existing == null) {
-        // Insert new token
+      // Try to insert first - if it fails due to duplicate, update instead
+      // This handles race conditions where token might be inserted between check and insert
+      try {
         await _supabase.from('user_fcm_tokens').insert({
           'user_id': userId,
           'token': token,
           'device_type': _getDeviceType(),
           'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
         });
+      } catch (insertError) {
+        // If insert fails due to duplicate key, update instead
+        if (insertError is PostgrestException && 
+            insertError.code == '23505' && 
+            insertError.message.contains('user_fcm_tokens_token_key')) {
+          await _supabase
+              .from('user_fcm_tokens')
+              .update({
+                'user_id': userId,
+                'device_type': _getDeviceType(),
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('token', token);
+        } else {
+          // Re-throw if it's a different error
+          rethrow;
+        }
       }
     } catch (e) {
       _logger.e('Error saving FCM token: $e');
+      // Don't rethrow - token save failure shouldn't break the app
     }
   }
 
