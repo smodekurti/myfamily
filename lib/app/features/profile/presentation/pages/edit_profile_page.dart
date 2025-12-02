@@ -126,8 +126,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (user == null) throw Exception('No authenticated user');
 
       // Create unique file path
-      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final filePath = 'avatars/$fileName';
+      // Path structure: avatars/{userId}/{timestamp}.jpg
+      // This matches the RLS policy which expects userId in the folder structure
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = 'avatars/${user.id}/$fileName';
 
       // Upload to Supabase Storage
       final storage = Supabase.instance.client.storage.from('user-content');
@@ -136,9 +138,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       try {
         await storage.upload(filePath, imageFile, fileOptions: const FileOptions(upsert: true));
       } catch (e) {
-        if (e.toString().contains('Bucket not found')) {
+        final errorString = e.toString();
+        if (errorString.contains('Bucket not found')) {
           throw Exception(
-            'Storage bucket not found. Please run the setup_storage_buckets.sql migration in your Supabase SQL Editor.'
+            'Storage bucket not found. Please run the setup_storage_buckets_private.sql migration in your Supabase SQL Editor.'
+          );
+        } else if (errorString.contains('row-level security') || errorString.contains('RLS') || errorString.contains('403')) {
+          throw Exception(
+            'Permission denied. Please ensure the storage bucket RLS policies are set up correctly. Run setup_storage_buckets_private.sql in your Supabase SQL Editor.'
           );
         }
         rethrow;

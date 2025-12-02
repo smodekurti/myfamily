@@ -19,20 +19,29 @@ class AvatarUrlService {
   /// If the URL is cached and not expired, returns cached URL
   /// Otherwise, generates a new signed URL
   /// 
-  /// [avatarPath] should be the storage path (e.g., 'avatars/user-id_timestamp.jpg')
+  /// [avatarPath] should be the storage path (e.g., 'avatars/user-id/timestamp.jpg')
   /// or a full URL (in which case it's returned as-is if it's already a signed URL)
   Future<String?> getAvatarUrl(String? avatarPath) async {
     if (avatarPath == null || avatarPath.isEmpty) {
       return null;
     }
     
+    // Clean up the path - remove any file:// prefix that might have been incorrectly added
+    String cleanPath = avatarPath;
+    if (cleanPath.startsWith('file://')) {
+      _logger.w('Avatar path has incorrect file:// prefix, removing it: $avatarPath');
+      cleanPath = cleanPath.replaceFirst('file://', '');
+      // Remove leading slashes
+      cleanPath = cleanPath.replaceFirst(RegExp(r'^/+'), '');
+    }
+    
     // If it's already a full URL (not a storage path), return as-is
     // This handles cases where old public URLs might still be in the database
-    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
       // Check if it's a Supabase public URL - if so, we need to convert to signed URL
-      if (avatarPath.contains('/storage/v1/object/public/')) {
+      if (cleanPath.contains('/storage/v1/object/public/')) {
         // Extract the path from the public URL
-        final uri = Uri.parse(avatarPath);
+        final uri = Uri.parse(cleanPath);
         final pathParts = uri.path.split('/storage/v1/object/public/');
         if (pathParts.length > 1) {
           final bucketAndPath = pathParts[1];
@@ -45,11 +54,16 @@ class AvatarUrlService {
         }
       }
       // If it's already a signed URL or external URL, return as-is
-      return avatarPath;
+      return cleanPath;
+    }
+    
+    // Remove leading slash if present (storage paths shouldn't start with /)
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
     }
     
     // It's a storage path, generate signed URL
-    return await _generateSignedUrl('user-content', avatarPath);
+    return await _generateSignedUrl('user-content', cleanPath);
   }
   
   /// Generate a signed URL for a storage path

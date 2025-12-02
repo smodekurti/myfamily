@@ -181,8 +181,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       if (!_isSearchMode)
                         listItems.when(
                           data: (items) {
+                            // Don't show category filters or empty state here - let main items section handle empty state
                             if (items.isEmpty) {
-                              return _buildEmptyState(context);
+                              return const SizedBox.shrink();
                             }
                             
                             if (!_isListView) {
@@ -1428,6 +1429,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           source: 'suggestion',
         );
         _itemController.clear();
+        // Invalidate to refresh the list items so the new item appears
+        ref.invalidate(groceryListItemsProvider(widget.listId));
         // Invalidate to refresh suggestions
         final currentFamily = ref.read(currentFamilyProvider);
         if (currentFamily != null) {

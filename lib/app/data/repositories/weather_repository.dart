@@ -201,23 +201,43 @@ class WeatherRepository {
 
   /// Get coordinates for a city name using Open-Meteo Geocoding API
   Future<Map<String, dynamic>?> _getCoordinatesForLocation(String location) async {
-    // Clean the location string - remove state abbreviations and extra commas
-    // e.g., "Buffalo Grove, IL" -> "Buffalo Grove"
+    // Clean the location string - extract city name from "City, State" format
+    // Handles both state abbreviations (e.g., "Los Angeles, CA") and full names (e.g., "Los Angeles, California")
     String cleanLocation = location.trim();
     
-    // Remove state abbreviation pattern (e.g., ", IL", ", CA", etc.)
-    // Match pattern: comma, space, 2 uppercase letters, optional comma
-    cleanLocation = cleanLocation.replaceAll(RegExp(r',\s*[A-Z]{2}\s*,?\s*$'), '');
-    
-    // Remove trailing commas
-    cleanLocation = cleanLocation.replaceAll(RegExp(r',\s*$'), '');
+    // Extract city name by removing everything after the first comma
+    // This handles both "City, State" and "City, State, Country" formats
+    if (cleanLocation.contains(',')) {
+      cleanLocation = cleanLocation.split(',').first.trim();
+    }
     
     // If location is empty after cleaning, use original
     if (cleanLocation.isEmpty) {
       cleanLocation = location.trim();
     }
     
-    return await _getCoordinatesFromOpenMeteo(cleanLocation, isZipcode: false);
+    // Try multiple search strategies for better results
+    // Strategy 1: Try just the city name
+    var result = await _getCoordinatesFromOpenMeteo(cleanLocation, isZipcode: false);
+    if (result != null) {
+      return result;
+    }
+    
+    // Strategy 2: Try with ", US" suffix for US cities
+    result = await _getCoordinatesFromOpenMeteo('$cleanLocation, US', isZipcode: false);
+    if (result != null) {
+      return result;
+    }
+    
+    // Strategy 3: Try original location if it was different
+    if (cleanLocation != location.trim()) {
+      result = await _getCoordinatesFromOpenMeteo(location.trim(), isZipcode: false);
+      if (result != null) {
+        return result;
+      }
+    }
+    
+    return null;
   }
 
   /// Get coordinates using Open-Meteo Geocoding API (fallback for city names)
