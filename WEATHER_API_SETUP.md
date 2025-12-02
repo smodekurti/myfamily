@@ -59,3 +59,4 @@ The app uses the **National Weather Service (NWS) API** for weather data, which 
 - **Rate Limiting**: NWS API has no strict rate limits, but be respectful of the service
 - **Data Source**: All data comes from official US government weather services
 
+
