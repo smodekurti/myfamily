@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
 import '../constants/app_constants.dart';
 import '../extensions/user_extensions.dart';
+import '../../common/widgets/avatar_widget.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/sign_in_page.dart';
@@ -501,19 +502,12 @@ class MainShell extends ConsumerWidget {
           onTap: () => context.go(AppConstants.routeProfile),
           child: Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: CircleAvatar(
+            child: AvatarWidget(
+              avatarPath: currentUser?.avatarUrl,
               radius: 16,
+              displayName: currentUser?.userMetadata?['display_name'] as String?,
               backgroundColor: Theme.of(context).colorScheme.primary,
-              backgroundImage: currentUser?.avatarUrl != null
-                  ? NetworkImage(currentUser!.avatarUrl!)
-                  : null,
-              child: currentUser?.avatarUrl == null
-                  ? Icon(
-                      Icons.person,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    )
-                  : null,
+              textColor: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         ),
@@ -536,18 +530,12 @@ class MainShell extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  AvatarWidget(
+                    avatarPath: currentUser?.avatarUrl,
                     radius: 24,
+                    displayName: currentUser?.displayNameOrEmail,
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    backgroundImage: currentUser?.avatarUrl != null
-                        ? NetworkImage(currentUser!.avatarUrl!)
-                        : null,
-                    child: currentUser?.avatarUrl == null
-                        ? Icon(
-                            Icons.person,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          )
-                        : null,
+                    textColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
