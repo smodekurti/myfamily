@@ -1569,7 +1569,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       if (allChecked) {
         // All items are checked - mark task as complete if not already
         if (task.status != 'completed') {
-          await taskActions.completeTask(task.id);
+          final completedTask = await taskActions.completeTask(task.id);
           
           // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
@@ -1581,9 +1581,30 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('All items completed! Task marked as complete.'),
+                content: Row(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: ResponsiveHelper.iconSize(20),
+                    ),
+                    SizedBox(width: ResponsiveHelper.w(8)),
+                    Expanded(
+                      child: Text(
+                        completedTask.points > 0
+                            ? 'All items completed! +${completedTask.points} points earned!'
+                            : 'All items completed! Task marked as complete.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }

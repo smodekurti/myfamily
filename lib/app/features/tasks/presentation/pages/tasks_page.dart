@@ -720,7 +720,36 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           }
                           return; // Don't complete the task
                         }
-                        await taskActions.completeTask(task.id);
+                        final completedTask = await taskActions.completeTask(task.id);
+                        // Show points earned feedback
+                        if (context.mounted && completedTask.points > 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
+                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    size: ResponsiveHelper.iconSize(20),
+                                  ),
+                                  SizedBox(width: ResponsiveHelper.w(8)),
+                                  Expanded(
+                                    child: Text(
+                                      '+${completedTask.points} points earned!',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
                       } else {
                         await taskActions.updateTask(taskId: task.id, status: 'pending');
                       }
@@ -1177,7 +1206,36 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           }
                           return; // Don't complete the task
                         }
-                        await taskActions.completeTask(task.id);
+                        final completedTask = await taskActions.completeTask(task.id);
+                        // Show points earned feedback
+                        if (context.mounted && completedTask.points > 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
+                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    size: ResponsiveHelper.iconSize(20),
+                                  ),
+                                  SizedBox(width: ResponsiveHelper.w(8)),
+                                  Expanded(
+                                    child: Text(
+                                      '+${completedTask.points} points earned!',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
                       } else {
                         await taskActions.updateTask(taskId: task.id, status: 'pending');
                       }

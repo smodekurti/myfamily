@@ -198,6 +198,70 @@ class HomePage extends ConsumerWidget {
                   thickness: ResponsiveHelper.w(1),
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                 ),
+                SizedBox(height: ResponsiveHelper.h(12)),
+                
+                // Leaderboard Card
+                Card(
+                  child: InkWell(
+                    onTap: () => context.push(AppConstants.routeLeaderboard),
+                    borderRadius: ResponsiveHelper.borderRadius(12),
+                    child: Padding(
+                      padding: ResponsiveHelper.padding(all: 16),
+                      child: Row(
+                        children: [
+                          // Icon container
+                          Container(
+                            width: ResponsiveHelper.w(48),
+                            height: ResponsiveHelper.h(48),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.1),
+                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            ),
+                            child: Icon(
+                              Icons.emoji_events,
+                              color: Colors.amber,
+                              size: ResponsiveHelper.iconSize(24),
+                            ),
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(16)),
+                          // Text content
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Leaderboard',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveHelper.h(4)),
+                                Text(
+                                  'View family rankings',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Chevron
+                          Icon(
+                            Icons.chevron_right,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            size: ResponsiveHelper.iconSize(24),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: ResponsiveHelper.h(12)),
+                Divider(
+                  height: ResponsiveHelper.h(1),
+                  thickness: ResponsiveHelper.w(1),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                ),
                 
                 SizedBox(height: ResponsiveHelper.h(32)),
                 
