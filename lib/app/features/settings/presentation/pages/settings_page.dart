@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:logger/logger.dart';
 import '../../../../core/services/push_notification_service.dart';
 // import 'package:package_info_plus/package_info_plus.dart'; // Optional - can be added later
 import '../../../../common/widgets/background_widget.dart';
@@ -20,7 +19,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final Logger _logger = Logger();
   String? _appVersion;
   String? _appBuildNumber;
 
