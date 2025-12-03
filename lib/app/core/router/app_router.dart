@@ -502,12 +502,16 @@ class MainShell extends ConsumerWidget {
           onTap: () => context.go(AppConstants.routeProfile),
           child: Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: AvatarWidget(
-              avatarPath: currentUser?.avatarUrl,
-              radius: 16,
-              displayName: currentUser?.userMetadata?['display_name'] as String?,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            child: SizedBox(
+              width: 32,
+              height: 32,
+              child: AvatarWidget(
+                avatarPath: currentUser?.avatarUrl,
+                radius: 16,
+                displayName: currentUser?.userMetadata?['display_name'] as String?,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                textColor: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
           ),
         ),
