@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:logger/logger.dart';
 import '../models/user_model.dart';
+import '../../core/services/avatar_url_service.dart';
 
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -217,7 +218,13 @@ class AuthRepository {
 
       final updates = <String, dynamic>{};
       if (displayName != null) updates['display_name'] = displayName;
-      if (photoURL != null) updates['avatar_url'] = photoURL;
+      // Clean avatar URL to remove any file:// prefixes before storing
+      if (photoURL != null) {
+        final cleanedUrl = AvatarUrlService.cleanAvatarPath(photoURL);
+        if (cleanedUrl != null) {
+          updates['avatar_url'] = cleanedUrl;
+        }
+      }
 
       final response = await _supabase.auth.updateUser(
         UserAttributes(data: updates),
@@ -229,7 +236,13 @@ class AuthRepository {
         'updated_at': DateTime.now().toIso8601String(),
       };
       if (displayName != null) dbUpdates['display_name'] = displayName;
-      if (photoURL != null) dbUpdates['avatar_url'] = photoURL;
+      // Clean avatar URL to remove any file:// prefixes before storing
+      if (photoURL != null) {
+        final cleanedUrl = AvatarUrlService.cleanAvatarPath(photoURL);
+        if (cleanedUrl != null) {
+          dbUpdates['avatar_url'] = cleanedUrl;
+        }
+      }
 
       if (dbUpdates.isNotEmpty) {
         try {
