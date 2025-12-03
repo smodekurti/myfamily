@@ -15,6 +15,27 @@ class AvatarUrlService {
   /// This is long enough to avoid frequent regeneration but still allows revocation
   static const int _urlValiditySeconds = 31536000; // 1 year
   
+  /// Static helper to clean avatar paths (removes file:// prefixes)
+  /// Use this before passing paths to NetworkImage or other URI parsers
+  static String? cleanAvatarPath(String? avatarPath) {
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return null;
+    }
+    
+    String cleanPath = avatarPath.trim();
+    
+    // Remove file:// prefix if present (handles file://, file:///, file:////, etc.)
+    if (cleanPath.startsWith('file://')) {
+      cleanPath = cleanPath.replaceFirst(RegExp(r'^file://+'), '');
+      // Remove leading slash if present
+      if (cleanPath.startsWith('/')) {
+        cleanPath = cleanPath.substring(1);
+      }
+    }
+    
+    return cleanPath.isEmpty ? null : cleanPath;
+  }
+  
   /// Get signed URL for an avatar
   /// If the URL is cached and not expired, returns cached URL
   /// Otherwise, generates a new signed URL
@@ -26,13 +47,20 @@ class AvatarUrlService {
       return null;
     }
     
-    // Clean up the path - remove any file:// prefix that might have been incorrectly added
-    String cleanPath = avatarPath;
-    if (cleanPath.startsWith('file://')) {
-      _logger.w('Avatar path has incorrect file:// prefix, removing it: $avatarPath');
-      cleanPath = cleanPath.replaceFirst('file://', '');
-      // Remove leading slashes
-      cleanPath = cleanPath.replaceFirst(RegExp(r'^/+'), '');
+    // Clean up the path using static helper
+    var cleanPath = cleanAvatarPath(avatarPath);
+    if (cleanPath == null) {
+      return null;
+    }
+    
+    // Log if we had to clean the path
+    if (avatarPath != cleanPath && avatarPath.startsWith('file://')) {
+      _logger.w('Avatar path had incorrect file:// prefix, cleaned: $avatarPath -> $cleanPath');
+    }
+    
+    // Remove leading slash if present (storage paths shouldn't start with /)
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
     }
     
     // If it's already a full URL (not a storage path), return as-is
@@ -41,25 +69,25 @@ class AvatarUrlService {
       // Check if it's a Supabase public URL - if so, we need to convert to signed URL
       if (cleanPath.contains('/storage/v1/object/public/')) {
         // Extract the path from the public URL
-        final uri = Uri.parse(cleanPath);
-        final pathParts = uri.path.split('/storage/v1/object/public/');
-        if (pathParts.length > 1) {
-          final bucketAndPath = pathParts[1];
-          final parts = bucketAndPath.split('/');
-          if (parts.length >= 2) {
-            final bucket = parts[0];
-            final path = parts.sublist(1).join('/');
-            return await _generateSignedUrl(bucket, path);
+        try {
+          final uri = Uri.parse(cleanPath);
+          final pathParts = uri.path.split('/storage/v1/object/public/');
+          if (pathParts.length > 1) {
+            final bucketAndPath = pathParts[1];
+            final parts = bucketAndPath.split('/');
+            if (parts.length >= 2) {
+              final bucket = parts[0];
+              final path = parts.sublist(1).join('/');
+              return await _generateSignedUrl(bucket, path);
+            }
           }
+        } catch (e) {
+          _logger.w('Failed to parse URL as URI, treating as storage path: $cleanPath');
+          // If URI parsing fails, treat it as a storage path
         }
       }
       // If it's already a signed URL or external URL, return as-is
       return cleanPath;
-    }
-    
-    // Remove leading slash if present (storage paths shouldn't start with /)
-    if (cleanPath.startsWith('/')) {
-      cleanPath = cleanPath.substring(1);
     }
     
     // It's a storage path, generate signed URL
