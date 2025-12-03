@@ -90,6 +90,10 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
       final avatarService = ref.read(avatarUrlServiceProvider);
       final url = await avatarService.getAvatarUrl(widget.avatarPath);
       
+      // Debug logging
+      print('AvatarWidget: Input path: ${widget.avatarPath}');
+      print('AvatarWidget: Generated URL: $url');
+      
       if (mounted) {
         setState(() {
           _signedUrl = url;
@@ -97,7 +101,9 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
           _hasError = url == null;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('AvatarWidget: Error loading avatar: $e');
+      print('AvatarWidget: Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -106,6 +112,11 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
         });
       }
     }
+  }
+
+  /// Validate if the URL is a proper HTTP/HTTPS URL
+  bool _isValidUrl(String url) {
+    return url.startsWith('http://') || url.startsWith('https://');
   }
 
   @override
@@ -121,10 +132,11 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
     Widget avatar = CircleAvatar(
       radius: widget.radius,
       backgroundColor: backgroundColor,
-      backgroundImage: _signedUrl != null && !_hasError
+      backgroundImage: _signedUrl != null && !_hasError && _isValidUrl(_signedUrl!)
           ? NetworkImage(_signedUrl!)
           : null,
       onBackgroundImageError: widget.onImageError ?? (exception, stackTrace) {
+        print('AvatarWidget: Image load error: $exception');
         if (mounted) {
           setState(() {
             _hasError = true;
