@@ -96,21 +96,33 @@ class AvatarUrlService {
   
   /// Generate a signed URL for a storage path
   Future<String?> _generateSignedUrl(String bucket, String path) async {
+    _logger.i('Generating signed URL for: $bucket/$path');
+    
     // Check cache first
     final cacheKey = '$bucket/$path';
     if (_urlCache.containsKey(cacheKey)) {
       final expiry = _urlExpiry[cacheKey];
       if (expiry != null && expiry.isAfter(DateTime.now())) {
+        _logger.i('Using cached URL for: $cacheKey');
         return _urlCache[cacheKey];
       }
     }
     
     try {
       final storage = _supabase.storage.from(bucket);
+      _logger.i('Calling createSignedUrl for path: $path');
       final signedUrl = await storage.createSignedUrl(
         path,
         _urlValiditySeconds,
       );
+      
+      _logger.i('Generated signed URL: $signedUrl');
+      
+      // Validate the signed URL
+      if (!signedUrl.startsWith('http://') && !signedUrl.startsWith('https://')) {
+        _logger.e('Invalid signed URL generated (not HTTP/HTTPS): $signedUrl');
+        return null;
+      }
       
       // Cache the URL
       _urlCache[cacheKey] = signedUrl;
@@ -121,6 +133,7 @@ class AvatarUrlService {
       return signedUrl;
     } catch (e, stackTrace) {
       _logger.e('Error generating signed URL for avatar: $e', error: e, stackTrace: stackTrace);
+      _logger.e('Bucket: $bucket, Path: $path');
       return null;
     }
   }

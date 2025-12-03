@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -529,24 +530,12 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                         final canRemove = isCreator && !isCurrentUser;
                                         
                                         return ListTile(
-                                          leading: CircleAvatar(
+                                          leading: AvatarWidget(
+                                            avatarPath: member.photoURL,
                                             radius: ResponsiveHelper.r(20),
+                                            displayName: member.displayName,
                                             backgroundColor: Theme.of(context).colorScheme.primary,
-                                            backgroundImage: member.photoURL != null
-                                                ? NetworkImage(member.photoURL!)
-                                                : null,
-                                            child: member.photoURL == null
-                                                ? Text(
-                                                    member.displayName.isNotEmpty
-                                                        ? member.displayName.substring(0, 1).toUpperCase()
-                                                        : '?',
-                                                    style: TextStyle(
-                                                      color: Theme.of(context).colorScheme.onPrimary,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: ResponsiveHelper.sp(14),
-                                                    ),
-                                                  )
-                                                : null,
+                                            textColor: Theme.of(context).colorScheme.onPrimary,
                                           ),
                                           title: Text(member.displayName),
                                           subtitle: Text(

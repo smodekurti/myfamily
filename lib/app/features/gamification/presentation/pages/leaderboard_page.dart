@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/models/family_model.dart';
@@ -224,23 +225,12 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                 ),
               ),
             SizedBox(width: ResponsiveHelper.w(12)),
-            CircleAvatar(
+            AvatarWidget(
+              avatarPath: member.photoURL,
               radius: ResponsiveHelper.w(24),
+              displayName: member.displayName,
               backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              backgroundImage: member.photoURL != null
-                  ? NetworkImage(member.photoURL!)
-                  : null,
-              child: member.photoURL == null
-                  ? Text(
-                      member.displayName.isNotEmpty
-                          ? member.displayName[0].toUpperCase()
-                          : '?',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    )
-                  : null,
+              textColor: Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
