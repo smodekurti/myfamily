@@ -102,9 +102,7 @@ class TaskRepository {
           itemTitle: title,
           excludeUserId: createdBy,
         );
-        } catch (e) {
-        _logger.w('Failed to send task notifications: $e');
-        // Don't fail task creation if notifications fail
+        } catch (e) {        // Don't fail task creation if notifications fail
       }
 
       // Schedule due date reminder if due date is set
@@ -115,9 +113,7 @@ class TaskRepository {
             taskTitle: title,
             dueDate: dueDate,
           );
-        } catch (e) {
-          _logger.w('Failed to schedule task reminder: $e');
-        }
+        } catch (e) {        }
       }
 
       return createdTask;
@@ -294,9 +290,7 @@ class TaskRepository {
           // Due date was removed, cancel reminder
           await NotificationService().cancelTaskNotifications(taskId);
         }
-      } catch (e) {
-        _logger.w('Failed to update task notifications: $e');
-      }
+      } catch (e) {      }
 
       return updatedTask;
     } catch (e) {
@@ -350,9 +344,7 @@ class TaskRepository {
           itemTitle: taskTitle,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send delete notification: $e');
-      }
+      } catch (e) {      }
     } catch (e) {
       _logger.e('Delete task error: $e');
       rethrow;
@@ -571,9 +563,7 @@ class TaskRepository {
       // Cancel due date reminder since task is completed
       try {
         await NotificationService().cancelTaskNotifications(taskId);
-      } catch (e) {
-        _logger.w('Failed to cancel task reminder: $e');
-      }
+      } catch (e) {      }
 
       // Check if this is a recurring task and create the next occurrence
       if (categoryData != null && categoryData['recurrenceType'] != null) {

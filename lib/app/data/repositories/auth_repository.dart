@@ -88,9 +88,7 @@ class AuthRepository {
         throw Exception('Failed to open Google Sign-In: $error');
       });
 
-      if (googleUser == null) {
-        _logger.w('Google sign in cancelled by user');
-        return null;
+      if (googleUser == null) {        return null;
       }
 
       // Get the authentication details
@@ -274,7 +272,6 @@ class AuthRepository {
 
       // Note: Supabase doesn't have a direct delete account method
       // You need to implement this on the backend or use RLS policies
-      _logger.w('Account deletion requested for user: ${user.id}');
     } catch (e) {
       _logger.e('Delete account error: $e');
       rethrow;
@@ -307,7 +304,6 @@ class AuthRepository {
         await _supabase.from('users').insert(userModel.toSupabase());
       } catch (insertError) {
         // If insert fails (user already exists), try update
-        _logger.w('Insert failed, trying update: $insertError');
         await _supabase
             .from('users')
             .update(userModel.toSupabase())

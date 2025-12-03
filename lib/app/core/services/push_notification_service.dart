@@ -90,20 +90,15 @@ class PushNotificationService {
           await Future.delayed(const Duration(milliseconds: 500));
           status = await Permission.notification.status;
           
-          if (!status.isGranted) {
-            _logger.w('Notification permission not granted. User can enable it in settings later.');
-            // Continue initialization anyway - user can grant permission later
+          if (!status.isGranted) {            // Continue initialization anyway - user can grant permission later
           } else {
           }
         } else {
         }
       } else if (!requestPermissions) {
-      } else if (status.isPermanentlyDenied) {
-        _logger.w('Notification permission permanently denied. User needs to enable it in settings.');
-        // Continue initialization anyway - token can still be saved
+      } else if (status.isPermanentlyDenied) {        // Continue initialization anyway - token can still be saved
       } else if (status.isGranted) {
       } else {
-        _logger.w('Notification permission status: $status (not granted)');
         // Continue initialization anyway
       }
 
@@ -126,9 +121,7 @@ class PushNotificationService {
       );
       
       if (initialized == true) {
-      } else {
-        _logger.w('Local notifications initialization returned false');
-      }
+      } else {      }
 
       // Create Android notification channels
       if (Platform.isAndroid) {
@@ -191,9 +184,7 @@ class PushNotificationService {
         return true;
       }
       
-      if (status.isPermanentlyDenied) {
-        _logger.w('Notification permission permanently denied. User must enable in settings.');
-        return false;
+      if (status.isPermanentlyDenied) {        return false;
       }
       
       final result = await Permission.notification.request();
@@ -203,10 +194,7 @@ class PushNotificationService {
           await _saveTokenToDatabase(_fcmToken!);
         }
         return true;
-      }
-      
-      _logger.w('Notification permission denied');
-      return false;
+      }      return false;
     } catch (e) {
       _logger.e('Error requesting notification permission: $e');
       return false;
@@ -237,9 +225,7 @@ class PushNotificationService {
   Future<void> _saveTokenToDatabase(String token) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        _logger.w('No user logged in, cannot save FCM token');
-        return;
+      if (userId == null) {        return;
       }
 
       // Try to insert first - if it fails due to duplicate, update instead
@@ -330,9 +316,7 @@ class PushNotificationService {
           final alert = aps?['alert'] as Map<String, dynamic>?;
           title = alert?['title']?.toString() ?? title;
           body = alert?['body']?.toString() ?? body;
-        } catch (e) {
-          _logger.w('Could not parse APNs alert: $e');
-        }
+        } catch (e) {        }
       }
     }
     
@@ -357,37 +341,27 @@ class PushNotificationService {
       if (_onTaskNotificationReceived != null) {
         _onTaskNotificationReceived!();
         callbackTriggered = true;
-      } else {
-        _logger.w('⚠️ Task notification received but callback is not registered. Page may not be mounted.');
-      }
+      } else {      }
     } else if (notificationType == 'grocery_list' || notificationType == 'grocery_list_item') {
       if (_onGroceryListNotificationReceived != null) {
         _onGroceryListNotificationReceived!();
         callbackTriggered = true;
-      } else {
-        _logger.w('⚠️ Grocery notification received but callback is not registered. Page may not be mounted.');
-      }
+      } else {      }
     } else if (notificationType == 'event' || notificationType == 'calendar_event') {
       if (_onEventNotificationReceived != null) {
         _onEventNotificationReceived!();
         callbackTriggered = true;
-      } else {
-        _logger.w('⚠️ Event notification received but callback is not registered. Page may not be mounted.');
-      }
+      } else {      }
     } else if (notificationType == 'announcement') {
       if (_onAnnouncementNotificationReceived != null) {
         _onAnnouncementNotificationReceived!();
         callbackTriggered = true;
-      } else {
-        _logger.w('⚠️ Announcement notification received but callback is not registered. Page may not be mounted.');
-      }
+      } else {      }
     } else if (notificationType == 'grocery_template' || notificationType == 'task_template') {
       if (_onTemplateNotificationReceived != null) {
         _onTemplateNotificationReceived!();
         callbackTriggered = true;
-      } else {
-        _logger.w('⚠️ Template notification received but callback is not registered. Page may not be mounted.');
-      }
+      } else {      }
     }
     
     // For silent notifications, we've already processed the data refresh
@@ -424,9 +398,7 @@ class PushNotificationService {
             if (isDirectAssignment) {
             }
           }
-        } catch (e) {
-          _logger.w('Could not verify task assignment: $e');
-        }
+        } catch (e) {        }
       }
       
       // Check if this is an event where the current user is a participant
@@ -448,13 +420,9 @@ class PushNotificationService {
             if (isDirectAssignment) {
             }
           }
-        } catch (e) {
-          _logger.w('Could not verify event participation: $e');
-        }
+        } catch (e) {        }
       }
-    } else {
-      _logger.w('⚠️ No current user found - cannot verify direct assignment');
-    }
+    } else {    }
     
     bool hasPermission = false;
     final permissionStatus = await Permission.notification.status;
@@ -479,30 +447,18 @@ class PushNotificationService {
       final requestResult = await Permission.notification.request();
       if (requestResult.isGranted) {
         hasPermission = true;
-      } else {
-        _logger.w('⚠️ Permission not granted after request for direct assignment');
-      }
+      } else {      }
     }
     
     // If still no permission and not permanently denied, try to show anyway (some platforms allow it)
     // For direct assignments, we want to ensure the user is notified
     if (!hasPermission && !permissionStatus.isPermanentlyDenied) {
-      if (isDirectAssignment) {
-        _logger.w('⚠️ Direct assignment notification - permission not granted, but attempting to show anyway');
-        // Continue to try showing - some platforms may still allow it
-      } else {
-        _logger.w('⚠️ Notification permission not granted. Data refresh was already processed, but UI notification cannot be shown.');
-        _logger.w('💡 User can enable notifications in app settings. Silent updates will continue to work.');
-        return;
+      if (isDirectAssignment) {        // Continue to try showing - some platforms may still allow it
+      } else {        return;
       }
     } else if (permissionStatus.isPermanentlyDenied) {
-      if (isDirectAssignment) {
-        _logger.w('⚠️ Direct assignment notification - permission permanently denied. Attempting to show anyway.');
-        // For direct assignments, still try to show - user might have enabled it in settings
-      } else {
-        _logger.w('⚠️ Notification permission permanently denied. Data refresh was already processed.');
-        _logger.w('💡 User must enable notifications in system settings to see UI notifications.');
-        return;
+      if (isDirectAssignment) {        // For direct assignments, still try to show - user might have enabled it in settings
+      } else {        return;
       }
     }
     
@@ -626,13 +582,9 @@ class PushNotificationService {
         final responseData = response.data as Map<String, dynamic>?;
         final sent = responseData?['sent'] as int? ?? 0;
         final failed = responseData?['failed'] as int? ?? 0;
-        final message = responseData?['message'] as String? ?? '';
         
         if (sent == 0 && failed == 0) {
-          _logger.w('No FCM tokens found for user: $userId. User may need to log in again or grant notification permissions.');
         } else if (sent > 0) {
-        } else {
-          _logger.w('Push notification failed for user: $userId (sent: $sent, failed: $failed, message: $message)');
         }
       } else {
       }
@@ -671,9 +623,7 @@ class PushNotificationService {
       _fcmToken = await _firebaseMessaging.getToken();
       if (_fcmToken != null) {
         await _saveTokenToDatabase(_fcmToken!);
-      } else {
-        _logger.w('Failed to get FCM token');
-      }
+      } else {      }
     } catch (e) {
       _logger.e('Error refreshing FCM token: $e');
     }

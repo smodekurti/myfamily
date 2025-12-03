@@ -668,9 +668,7 @@ class FamilyRepository {
 
         currentPoints = (memberResponse['points'] as int?) ?? 0;
       } catch (e) {
-        // If points column doesn't exist, log warning and use 0
-        _logger.w('Points column may not exist yet. Please run add_family_members_points_column.sql migration. Error: $e');
-        currentPoints = 0;
+        // If points column doesn't exist, log warning and use 0        currentPoints = 0;
       }
 
       final newPoints = currentPoints + points;
@@ -729,9 +727,7 @@ class FamilyRepository {
 
         currentPoints = (memberResponse['points'] as int?) ?? 0;
       } catch (e) {
-        // If points column doesn't exist, log warning and use 0
-        _logger.w('Points column may not exist yet. Please run add_family_members_points_column.sql migration. Error: $e');
-        currentPoints = 0;
+        // If points column doesn't exist, log warning and use 0        currentPoints = 0;
       }
 
       final newPoints = (currentPoints - points).clamp(0, double.infinity).toInt(); // Don't go below 0

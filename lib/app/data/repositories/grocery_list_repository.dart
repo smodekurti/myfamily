@@ -56,9 +56,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery list notification: $e');
-      }
+      } catch (e) {      }
 
       return createdList;
     } catch (e) {
@@ -115,9 +113,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery list notification: $e');
-      }
+      } catch (e) {      }
 
       return createdList;
     } catch (e) {
@@ -649,9 +645,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: updatedList.createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery list notification: $e');
-      }
+      } catch (e) {      }
 
       return updatedList;
     } catch (e) {
@@ -714,9 +708,7 @@ class GroceryListRepository {
     try {
       // Check if list is referenced by any tasks via categoryData
       final list = await getListById(listId);
-      if (list == null) {
-        _logger.w('List not found: $listId');
-        return;
+      if (list == null) {        return;
       }
 
       // Get current user
@@ -812,9 +804,7 @@ class GroceryListRepository {
           listName: list.name,
           excludeUserId: list.createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery list delete notification: $e');
-      }
+      } catch (e) {      }
     } catch (e) {
       _logger.e('Delete list error: $e');
       rethrow;

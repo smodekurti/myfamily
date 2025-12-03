@@ -188,3 +188,4 @@ To verify APNs is configured correctly:
 
 This is a **one-time setup** that takes about 5 minutes. Once configured, iOS push notifications will work from any device (Android, iOS, web) to iOS devices.
 
+

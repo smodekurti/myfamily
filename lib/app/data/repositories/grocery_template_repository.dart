@@ -67,9 +67,7 @@ class GroceryTemplateRepository {
           templateName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery template notification: $e');
-      }
+      } catch (e) {      }
 
       return createdTemplate;
     } catch (e) {
@@ -244,9 +242,7 @@ class GroceryTemplateRepository {
           templateName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery template notification: $e');
-      }
+      } catch (e) {      }
 
       return createdTemplate;
     } catch (e) {
@@ -302,9 +298,7 @@ class GroceryTemplateRepository {
           templateName: name,
           excludeUserId: updatedTemplate.createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery template notification: $e');
-      }
+      } catch (e) {      }
 
       return updatedTemplate;
     } catch (e) {
@@ -340,9 +334,7 @@ class GroceryTemplateRepository {
           templateName: templateName,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send grocery template delete notification: $e');
-      }
+      } catch (e) {      }
     } catch (e) {
       _logger.e('Delete template error: $e');
       rethrow;

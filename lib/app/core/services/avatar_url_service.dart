@@ -53,10 +53,6 @@ class AvatarUrlService {
       return null;
     }
     
-    // Log if we had to clean the path
-    if (avatarPath != cleanPath && avatarPath.startsWith('file://')) {
-      _logger.w('Avatar path had incorrect file:// prefix, cleaned: $avatarPath -> $cleanPath');
-    }
     
     // Remove leading slash if present (storage paths shouldn't start with /)
     if (cleanPath.startsWith('/')) {
@@ -82,7 +78,6 @@ class AvatarUrlService {
             }
           }
         } catch (e) {
-          _logger.w('Failed to parse URL as URI, treating as storage path: $cleanPath');
           // If URI parsing fails, treat it as a storage path
         }
       }
@@ -96,27 +91,21 @@ class AvatarUrlService {
   
   /// Generate a signed URL for a storage path
   Future<String?> _generateSignedUrl(String bucket, String path) async {
-    _logger.i('Generating signed URL for: $bucket/$path');
-    
     // Check cache first
     final cacheKey = '$bucket/$path';
     if (_urlCache.containsKey(cacheKey)) {
       final expiry = _urlExpiry[cacheKey];
       if (expiry != null && expiry.isAfter(DateTime.now())) {
-        _logger.i('Using cached URL for: $cacheKey');
         return _urlCache[cacheKey];
       }
     }
     
     try {
       final storage = _supabase.storage.from(bucket);
-      _logger.i('Calling createSignedUrl for path: $path');
       final signedUrl = await storage.createSignedUrl(
         path,
         _urlValiditySeconds,
       );
-      
-      _logger.i('Generated signed URL: $signedUrl');
       
       // Validate the signed URL
       if (!signedUrl.startsWith('http://') && !signedUrl.startsWith('https://')) {

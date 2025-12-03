@@ -773,6 +773,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     ),
                     SizedBox(height: ResponsiveHelper.h(2)),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Priority indicator - show for all priorities
                         Row(
@@ -796,7 +797,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           ),
                           SizedBox(width: ResponsiveHelper.w(4)),
                         ],
-                        Expanded(
+                        Flexible(
                           child: Text(
                             statusText,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -804,6 +805,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               color: statusColor,
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
