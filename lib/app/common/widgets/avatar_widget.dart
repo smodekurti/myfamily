@@ -90,14 +90,25 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
       final avatarService = ref.read(avatarUrlServiceProvider);
       final url = await avatarService.getAvatarUrl(widget.avatarPath);
       
+      // Debug logging
+      print('AvatarWidget: Input path: ${widget.avatarPath}');
+      print('AvatarWidget: Generated URL: $url');
+      
+      // Validate the URL before using it
+      final isValid = url != null && _isValidUrl(url);
+      print('AvatarWidget: URL is valid: $isValid');
+      
       if (mounted) {
         setState(() {
-          _signedUrl = url;
+          // Only set the URL if it's valid, otherwise treat as error
+          _signedUrl = isValid ? url : null;
           _isLoading = false;
-          _hasError = url == null;
+          _hasError = !isValid;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('AvatarWidget: Error loading avatar: $e');
+      print('AvatarWidget: Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -106,6 +117,11 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
         });
       }
     }
+  }
+
+  /// Validate if the URL is a proper HTTP/HTTPS URL
+  bool _isValidUrl(String url) {
+    return url.startsWith('http://') || url.startsWith('https://');
   }
 
   @override
@@ -118,13 +134,15 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
         Theme.of(context).scaffoldBackgroundColor;
     final borderWidth = widget.borderWidth ?? ResponsiveHelper.w(2);
 
+    // Only use NetworkImage if we have a valid HTTP/HTTPS URL
+    final hasValidUrl = _signedUrl != null && !_hasError && _isValidUrl(_signedUrl!);
+    
     Widget avatar = CircleAvatar(
       radius: widget.radius,
       backgroundColor: backgroundColor,
-      backgroundImage: _signedUrl != null && !_hasError
-          ? NetworkImage(_signedUrl!)
-          : null,
+      backgroundImage: hasValidUrl ? NetworkImage(_signedUrl!) : null,
       onBackgroundImageError: widget.onImageError ?? (exception, stackTrace) {
+        print('AvatarWidget: Image load error: $exception');
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -132,7 +150,7 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
           });
         }
       },
-      child: _signedUrl == null || _hasError || _isLoading
+      child: !hasValidUrl || _isLoading
           ? _isLoading
               ? SizedBox(
                   width: widget.radius,

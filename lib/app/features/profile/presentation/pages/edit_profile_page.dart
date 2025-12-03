@@ -200,11 +200,26 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         photoURL: photoUrl,
       );
 
+      // Clear avatar URL cache for the old and new URLs
+      final avatarService = ref.read(avatarUrlServiceProvider);
+      if (_currentImageUrl != null) {
+        avatarService.clearCache(_currentImageUrl);
+      }
+      if (photoUrl != null) {
+        avatarService.clearCache(photoUrl);
+      }
+
       // Refresh current user and family members to update avatars
       ref.invalidate(currentUserProvider);
       final currentFamily = ref.read(currentFamilyProvider);
       if (currentFamily != null) {
         ref.invalidate(familyMembersProvider(currentFamily.id));
+        
+        // Invalidate user profile provider for current user to refresh avatar everywhere
+        final currentUser = ref.read(currentUserProvider);
+        if (currentUser != null) {
+          ref.invalidate(userProfileProvider(currentUser.id));
+        }
       }
 
       if (mounted) {

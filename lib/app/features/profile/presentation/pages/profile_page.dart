@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/extensions/user_extensions.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -40,19 +41,12 @@ class ProfilePage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Profile picture
-                        CircleAvatar(
+                        AvatarWidget(
+                          avatarPath: currentUser?.avatarUrl,
                           radius: ResponsiveHelper.r(40),
+                          displayName: currentUser?.userMetadata?['display_name'] as String?,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: currentUser?.avatarUrl != null
-                              ? NetworkImage(currentUser!.avatarUrl!)
-                              : null,
-                          child: currentUser?.avatarUrl == null
-                              ? Icon(
-                                  Icons.person,
-                                  size: ResponsiveHelper.iconSize(40),
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                )
-                              : null,
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         ),
                         SizedBox(height: ResponsiveHelper.h(16)),
                         
