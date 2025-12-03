@@ -29,9 +29,7 @@ class WeatherRepository {
           lat = coords['latitude'] as double;
           lon = coords['longitude'] as double;
           city = coords['name'] as String?;
-        } else {
-          _logger.w('Could not find coordinates for zipcode: $zipcode');
-          return null;
+        } else {          return null;
         }
       }
       // If city name provided, get coordinates first
@@ -41,9 +39,7 @@ class WeatherRepository {
           lat = coords['latitude'] as double;
           lon = coords['longitude'] as double;
           city = coords['name'] as String? ?? cityName;
-        } else {
-          _logger.w('Could not find coordinates for city: $cityName');
-          return null;
+        } else {          return null;
         }
       }
       // If coordinates provided, use them directly
@@ -186,9 +182,7 @@ class WeatherRepository {
             };
           }
         }
-      } else if (response.statusCode == 404) {
-        _logger.w('Zipcode not found in Zippopotam: $cleanZipcode');
-      }
+      } else if (response.statusCode == 404) {      }
       
       // Fallback to Open-Meteo geocoding if Zippopotam fails
       return await _getCoordinatesFromOpenMeteo(zipcode, isZipcode: true);
@@ -287,12 +281,8 @@ class WeatherRepository {
             'name': displayName,
             'country': country,
           };
-        } else {
-          _logger.w('Open-Meteo geocoding returned no results for: $location (searchQuery: $searchQuery)');
         }
-      } else {
-        _logger.w('Open-Meteo geocoding API error: ${response.statusCode}');
-      }
+      } else {      }
       
       return null;
     } catch (e, stackTrace) {

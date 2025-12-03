@@ -65,9 +65,7 @@ class CalendarRepository {
           eventTitle: title,
           startTime: startTime,
         );
-      } catch (e) {
-        _logger.w('Failed to schedule event reminder: $e');
-      }
+      } catch (e) {      }
 
       // Notify family members
       // Pass participants for direct assignment (push notifications to participants)
@@ -80,9 +78,7 @@ class CalendarRepository {
           excludeUserId: createdBy,
           participants: participants, // Pass participants for direct assignment
         );
-      } catch (e) {
-        _logger.w('Failed to send calendar event notification: $e');
-      }
+      } catch (e) {      }
 
       return createdEvent;
     } catch (e) {
@@ -160,9 +156,7 @@ class CalendarRepository {
             eventTitle: updatedEvent.title,
             startTime: startTime,
           );
-        } catch (e) {
-          _logger.w('Failed to update event reminder: $e');
-        }
+        } catch (e) {        }
       }
 
       // Notify family members
@@ -178,9 +172,7 @@ class CalendarRepository {
               ? updatedEvent.participants 
               : null, // Pass participants for direct assignment
         );
-      } catch (e) {
-        _logger.w('Failed to send calendar event notification: $e');
-      }
+      } catch (e) {      }
 
       return updatedEvent;
     } catch (e) {
@@ -234,9 +226,7 @@ class CalendarRepository {
           eventTitle: eventTitle,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send calendar event delete notification: $e');
-      }
+      } catch (e) {      }
     } catch (e) {
       _logger.e('Delete event error: $e');
       rethrow;

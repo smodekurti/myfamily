@@ -40,7 +40,6 @@ class ConsentRepository {
 
       if (response == null) {
         // Fallback to default content if database doesn't have it
-        _logger.w('No consent content in database, using defaults');
         return _getDefaultContent();
       }
 

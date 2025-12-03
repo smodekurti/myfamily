@@ -36,7 +36,6 @@ class NotificationService {
       }
       
       if (!status.isGranted) {
-        _logger.w('Notification permission not granted (will request when needed)');
         // Don't return false - we can still initialize the service
         // Permission will be requested when user actually schedules a notification
       } else {
@@ -95,17 +94,13 @@ class NotificationService {
     // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
       final initialized = await initialize(requestPermissions: false);
-      if (!initialized) {
-        _logger.w('Notification service not initialized, cannot schedule notification');
-        return;
+      if (!initialized) {        return;
       }
     }
 
     // Check if we have permission before trying to schedule
     final hasPermission = await Permission.notification.isGranted;
-    if (!hasPermission) {
-      _logger.w('Notification permission not granted, cannot schedule notification');
-      return;
+    if (!hasPermission) {      return;
     }
 
     try {
@@ -144,17 +139,13 @@ class NotificationService {
     // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
       final initialized = await initialize(requestPermissions: false);
-      if (!initialized) {
-        _logger.w('Notification service not initialized, cannot show notification');
-        return;
+      if (!initialized) {        return;
       }
     }
 
     // Check if we have permission before trying to show
     final hasPermission = await Permission.notification.isGranted;
-    if (!hasPermission) {
-      _logger.w('Notification permission not granted, cannot show notification');
-      return;
+    if (!hasPermission) {      return;
     }
 
     try {

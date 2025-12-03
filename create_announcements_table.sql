@@ -73,3 +73,4 @@ CREATE POLICY "Users can mark announcements as read" ON announcements
   );
 
 
+

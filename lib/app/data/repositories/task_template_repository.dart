@@ -80,9 +80,7 @@ class TaskTemplateRepository {
           templateName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send task template notification: $e');
-      }
+      } catch (e) {      }
 
       return createdTemplate;
     } catch (e) {
@@ -178,9 +176,7 @@ class TaskTemplateRepository {
             excludeUserId: template.createdBy,
           );
         }
-      } catch (e) {
-        _logger.w('Failed to send task template notification: $e');
-      }
+      } catch (e) {      }
 
       return updatedTemplate;
     } catch (e) {
@@ -214,9 +210,7 @@ class TaskTemplateRepository {
             templateName: templateName,
             excludeUserId: createdBy,
           );
-        } catch (e) {
-          _logger.w('Failed to send task template delete notification: $e');
-        }
+        } catch (e) {        }
       }
     } catch (e) {
       _logger.e('Delete task template error: $e');

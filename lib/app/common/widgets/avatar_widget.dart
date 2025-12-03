@@ -90,13 +90,8 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
       final avatarService = ref.read(avatarUrlServiceProvider);
       final url = await avatarService.getAvatarUrl(widget.avatarPath);
       
-      // Debug logging
-      print('AvatarWidget: Input path: ${widget.avatarPath}');
-      print('AvatarWidget: Generated URL: $url');
-      
       // Validate the URL before using it
       final isValid = url != null && _isValidUrl(url);
-      print('AvatarWidget: URL is valid: $isValid');
       
       if (mounted) {
         setState(() {
@@ -106,9 +101,7 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
           _hasError = !isValid;
         });
       }
-    } catch (e, stackTrace) {
-      print('AvatarWidget: Error loading avatar: $e');
-      print('AvatarWidget: Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -137,19 +130,26 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
     // Only use NetworkImage if we have a valid HTTP/HTTPS URL
     final hasValidUrl = _signedUrl != null && !_hasError && _isValidUrl(_signedUrl!);
     
+    // Only set onBackgroundImageError when backgroundImage is not null
+    // Flutter assertion requires: backgroundImage != null || onBackgroundImageError == null
+    final ImageErrorListener? errorHandler = hasValidUrl
+        ? (exception, stackTrace) {
+            if (mounted) {
+              setState(() {
+                _hasError = true;
+                _signedUrl = null;
+              });
+            }
+            // Call custom error handler if provided
+            widget.onImageError?.call(exception, stackTrace);
+          }
+        : null;
+    
     Widget avatar = CircleAvatar(
       radius: widget.radius,
       backgroundColor: backgroundColor,
       backgroundImage: hasValidUrl ? NetworkImage(_signedUrl!) : null,
-      onBackgroundImageError: widget.onImageError ?? (exception, stackTrace) {
-        print('AvatarWidget: Image load error: $exception');
-        if (mounted) {
-          setState(() {
-            _hasError = true;
-            _signedUrl = null;
-          });
-        }
-      },
+      onBackgroundImageError: errorHandler,
       child: !hasValidUrl || _isLoading
           ? _isLoading
               ? SizedBox(

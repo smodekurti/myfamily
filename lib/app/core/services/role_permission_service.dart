@@ -35,9 +35,7 @@ class RolePermissionService {
           .eq('role', role.toLowerCase())
           .maybeSingle();
 
-      if (response == null) {
-        _logger.w('No permissions found for role: $role, returning empty permissions');
-        return {};
+      if (response == null) {        return {};
       }
 
       final permissions = response['permissions'] as Map<String, dynamic>;
@@ -57,9 +55,7 @@ class RolePermissionService {
           .eq('role', role.toLowerCase())
           .maybeSingle();
 
-      if (response == null) {
-        _logger.w('No restrictions found for role: $role, returning empty restrictions');
-        return {};
+      if (response == null) {        return {};
       }
 
       final restrictions = response['restrictions'] as Map<String, dynamic>;
@@ -78,16 +74,12 @@ class RolePermissionService {
   }) async {
     try {
       final role = await getUserRole(userId, familyId);
-      if (role == null) {
-        _logger.w('User $userId has no role in family $familyId');
-        return false;
+      if (role == null) {        return false;
       }
 
       // Map action to permission key
       final permissionKey = _actionToPermissionKey(action);
-      if (permissionKey == null) {
-        _logger.w('Unknown action: $action');
-        return false;
+      if (permissionKey == null) {        return false;
       }
 
       // Get role permissions

@@ -141,3 +141,4 @@ Your service account JSON file should contain something like this (this is what 
 - [ ] Set `FCM_PROJECT_ID` to your Firebase project ID (just the ID, no JSON)
 - [ ] Deployed the Edge Function: `supabase functions deploy send-push-notification`
 
+

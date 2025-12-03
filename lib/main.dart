@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,11 +22,7 @@ void main() async {
       await _initializeApp();
     },
     (error, stack) {
-      // Handle errors
-      if (kDebugMode) {
-        debugPrint('Uncaught error: $error');
-        debugPrint('Stack trace: $stack');
-      }
+      // Handle errors silently in production
     },
     zoneSpecification: ZoneSpecification(
       print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
@@ -59,13 +54,28 @@ Future<void> _initializeApp() async {
   // Initialize Supabase
   // Note: Supabase SDK INFO messages are from the SDK itself and cannot be suppressed
   // They use the standard Dart print() function which is controlled by Flutter's logging
-  await Supabase.initialize(
-    url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabaseAnonKey,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
-    ),
-  );
+  
+  // Validate Supabase configuration
+  if (!SupabaseConfig.isConfigured) {
+    // In debug mode, we can continue but Supabase operations will fail
+    // In production, you might want to show an error screen instead
+  }
+  
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl.isNotEmpty 
+          ? SupabaseConfig.supabaseUrl 
+          : 'https://placeholder.supabase.co', // Placeholder to prevent immediate crash
+      anonKey: SupabaseConfig.supabaseAnonKey.isNotEmpty 
+          ? SupabaseConfig.supabaseAnonKey 
+          : 'placeholder-key', // Placeholder to prevent immediate crash
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+    );
+  } catch (e) {
+    // Continue without Supabase - the app will show errors when trying to use Supabase features
+  }
 
   // Initialize services WITHOUT requesting permissions
   // Permissions will be requested when user actually needs the features

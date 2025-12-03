@@ -27,9 +27,7 @@ class FamilyNotificationService {
       final familyMembers = await _familyRepo.getFamilyMembers(familyId);
       final allMemberIds = familyMembers.map((m) => m.uid).toList();
 
-      if (allMemberIds.isEmpty) {
-        _logger.w('No family members found for family $familyId');
-        return;
+      if (allMemberIds.isEmpty) {        return;
       }
 
       // Exclude the user who made the change
@@ -76,9 +74,7 @@ class FamilyNotificationService {
       final familyMembers = await _familyRepo.getFamilyMembers(familyId);
       final allMemberIds = familyMembers.map((m) => m.uid).toList();
 
-      if (allMemberIds.isEmpty) {
-        _logger.w('No family members found for family $familyId');
-        return;
+      if (allMemberIds.isEmpty) {        return;
       }
 
       // Determine which users to notify

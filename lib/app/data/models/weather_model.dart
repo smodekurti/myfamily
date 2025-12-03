@@ -22,3 +22,4 @@ class WeatherModel with _$WeatherModel {
 }
 
 
+

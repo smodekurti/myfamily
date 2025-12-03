@@ -53,9 +53,7 @@ class AnnouncementRepository {
           title: title,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send announcement notification: $e');
-      }
+      } catch (e) {      }
 
       return createdAnnouncement;
     } catch (e) {
@@ -156,9 +154,7 @@ class AnnouncementRepository {
           itemTitle: title,
           excludeUserId: createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send announcement delete notification: $e');
-      }
+      } catch (e) {      }
     } catch (e) {
       _logger.e('Delete announcement error: $e');
       rethrow;
@@ -225,9 +221,7 @@ class AnnouncementRepository {
           itemTitle: title ?? updatedAnnouncement.title,
           excludeUserId: updatedAnnouncement.createdBy,
         );
-      } catch (e) {
-        _logger.w('Failed to send announcement notification: $e');
-      }
+      } catch (e) {      }
 
       return updatedAnnouncement;
     } catch (e) {
