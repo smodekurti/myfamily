@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/extensions/user_extensions.dart';
@@ -542,22 +543,12 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
                               width: ResponsiveHelper.w(3),
                             ),
                           ),
-                          child: CircleAvatar(
+                          child: AvatarWidget(
+                            avatarPath: avatarUrl,
                             radius: ResponsiveHelper.r(28),
+                            displayName: displayName,
                             backgroundColor: Theme.of(context).colorScheme.primary,
-                            backgroundImage: avatarUrl != null
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: avatarUrl == null
-                                ? Text(
-                                    displayName?.substring(0, 1).toUpperCase() ?? '?',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: ResponsiveHelper.sp(20),
-                                    ),
-                                  )
-                                : null,
+                            textColor: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                         SizedBox(height: ResponsiveHelper.h(4)),
@@ -598,24 +589,12 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
                             width: ResponsiveHelper.w(isSelected ? 3 : 2),
                           ),
                         ),
-                        child: CircleAvatar(
+                        child: AvatarWidget(
+                          avatarPath: member.photoURL,
                           radius: ResponsiveHelper.r(28),
+                          displayName: member.displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: member.photoURL != null
-                              ? NetworkImage(member.photoURL!)
-                              : null,
-                          child: member.photoURL == null
-                              ? Text(
-                                  member.displayName.isNotEmpty
-                                      ? member.displayName.substring(0, 1).toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(20),
-                                  ),
-                                )
-                              : null,
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                       SizedBox(height: ResponsiveHelper.h(4)),
@@ -665,22 +644,12 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
                             width: ResponsiveHelper.w(3),
                           ),
                         ),
-                        child: CircleAvatar(
+                        child: AvatarWidget(
+                          avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(28),
+                          displayName: displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: avatarUrl != null
-                              ? NetworkImage(avatarUrl)
-                              : null,
-                          child: avatarUrl == null
-                              ? Text(
-                                  displayName?.substring(0, 1).toUpperCase() ?? '?',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(20),
-                                  ),
-                                )
-                              : null,
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                       SizedBox(height: ResponsiveHelper.h(4)),
