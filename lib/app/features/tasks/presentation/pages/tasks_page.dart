@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/widgets/permission_aware_widget.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -831,84 +832,39 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       data: (profile) {
                         // Use profile data if available, otherwise fallback
                         final avatarUrl = profile?.photoURL ?? initialAvatarUrl;
-                        final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                         // Update display name from profile if available
                         if (profile?.displayName != null && profile!.displayName.isNotEmpty) {
                           displayName = profile.displayName;
                         }
                         
-                        final photoUrl = avatarUrl; // Local variable for type safety
-                        return CircleAvatar(
+                        return AvatarWidget(
+                          avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(14),
+                          displayName: displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: hasPhoto && photoUrl != null
-                              ? NetworkImage(photoUrl)
-                              : null,
-                          onBackgroundImageError: (exception, stackTrace) {
-                            // Image failed to load, will show fallback
-                          },
-                          child: hasPhoto
-                              ? null
-                              : Text(
-                                  displayName.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(11),
-                                  ),
-                                ),
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         );
                       },
                       loading: () {
                         final avatarUrl = initialAvatarUrl;
-                        final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                         
-                        final photoUrl = avatarUrl; // Local variable for type safety
-                        return CircleAvatar(
+                        return AvatarWidget(
+                          avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(14),
+                          displayName: displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: hasPhoto && photoUrl != null
-                              ? NetworkImage(photoUrl)
-                              : null,
-                          onBackgroundImageError: (exception, stackTrace) {
-                            // Image failed to load, will show fallback
-                          },
-                          child: hasPhoto
-                              ? null
-                              : Text(
-                                  displayName.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(11),
-                                  ),
-                                ),
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         );
                       },
                       error: (error, stack) {
                         final avatarUrl = initialAvatarUrl;
-                        final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                         
-                        final photoUrl = avatarUrl; // Local variable for type safety
-                        return CircleAvatar(
+                        return AvatarWidget(
+                          avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(14),
+                          displayName: displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: hasPhoto && photoUrl != null
-                              ? NetworkImage(photoUrl)
-                              : null,
-                          onBackgroundImageError: (exception, stackTrace) {
-                            // Image failed to load, will show fallback
-                          },
-                          child: hasPhoto
-                              ? null
-                              : Text(
-                                  displayName.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: ResponsiveHelper.sp(11),
-                                  ),
-                                ),
+                          textColor: Theme.of(context).colorScheme.onPrimary,
                         );
                       },
                     );
@@ -1291,21 +1247,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           error: (_, __) => assignedMember.photoURL,
                         );
                         
-                        return CircleAvatar(
+                        return AvatarWidget(
+                          avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(12),
-                          backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                          displayName: assignedMember.displayName,
                           backgroundColor: Theme.of(context).colorScheme.primary,
-                          child: avatarUrl == null
-                              ? Text(
-                                  assignedMember.displayName.isNotEmpty
-                                      ? assignedMember.displayName[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    fontSize: ResponsiveHelper.sp(10),
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
+                          textColor: Colors.white,
                         );
                       },
                     ),
@@ -1467,21 +1414,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         error: (_, __) => member.photoURL,
                       );
                       
-                      return CircleAvatar(
+                      return AvatarWidget(
+                        avatarPath: avatarUrl,
                         radius: ResponsiveHelper.r(16),
-                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        displayName: member.displayName,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: avatarUrl == null
-                            ? Text(
-                                member.displayName.isNotEmpty
-                                    ? member.displayName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.sp(14),
-                                  color: Colors.white,
-                                ),
-                              )
-                            : null,
+                        textColor: Colors.white,
                       );
                     },
                   ),

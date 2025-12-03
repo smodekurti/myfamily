@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/widgets/permission_aware_widget.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/models/event_model.dart';
@@ -328,27 +329,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircleAvatar(
+                            AvatarWidget(
+                              avatarPath: member.photoURL,
                               radius: ResponsiveHelper.r(12),
+                              displayName: member.displayName,
                               backgroundColor: Theme.of(context).colorScheme.primary,
-                              backgroundImage: member.photoURL != null && member.photoURL!.isNotEmpty
-                                  ? NetworkImage(member.photoURL!)
-                                  : null,
-                              onBackgroundImageError: (exception, stackTrace) {
-                                // Silently handle error
-                              },
-                              child: member.photoURL == null || member.photoURL!.isEmpty
-                                  ? Text(
-                                      member.displayName.isNotEmpty
-                                          ? member.displayName.substring(0, 1).toUpperCase()
-                                          : '?',
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.onPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: ResponsiveHelper.sp(10),
-                                      ),
-                                    )
-                                  : null,
+                              textColor: Theme.of(context).colorScheme.onPrimary,
                             ),
                             SizedBox(width: ResponsiveHelper.w(8)),
                             ConstrainedBox(
@@ -865,30 +851,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   final creatorProfileAsync = ref.watch(userProfileProvider(event.createdBy));
                   return creatorProfileAsync.when(
                     data: (profile) {
-                      final avatarUrl = profile?.photoURL;
-                      final hasPhoto = avatarUrl != null && avatarUrl.isNotEmpty;
                       final displayName = profile?.displayName ?? '?';
+                      final avatarUrl = profile?.photoURL;
                       
-                      final photoUrl = avatarUrl; // Local variable for type safety
-                      return CircleAvatar(
+                      return AvatarWidget(
+                        avatarPath: avatarUrl,
                         radius: ResponsiveHelper.r(10),
+                        displayName: displayName,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: hasPhoto && photoUrl != null
-                            ? NetworkImage(photoUrl)
-                            : null,
-                        onBackgroundImageError: (exception, stackTrace) {
-                          // Silently handle error
-                        },
-                        child: hasPhoto
-                            ? null
-                            : Text(
-                                displayName.substring(0, 1).toUpperCase(),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: ResponsiveHelper.sp(10),
-                                ),
-                              ),
+                        textColor: Theme.of(context).colorScheme.onPrimary,
                       );
                     },
                     loading: () => CircleAvatar(
