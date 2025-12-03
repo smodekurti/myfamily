@@ -94,11 +94,16 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
       print('AvatarWidget: Input path: ${widget.avatarPath}');
       print('AvatarWidget: Generated URL: $url');
       
+      // Validate the URL before using it
+      final isValid = url != null && _isValidUrl(url);
+      print('AvatarWidget: URL is valid: $isValid');
+      
       if (mounted) {
         setState(() {
-          _signedUrl = url;
+          // Only set the URL if it's valid, otherwise treat as error
+          _signedUrl = isValid ? url : null;
           _isLoading = false;
-          _hasError = url == null;
+          _hasError = !isValid;
         });
       }
     } catch (e, stackTrace) {
