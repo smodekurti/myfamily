@@ -134,12 +134,13 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
         Theme.of(context).scaffoldBackgroundColor;
     final borderWidth = widget.borderWidth ?? ResponsiveHelper.w(2);
 
+    // Only use NetworkImage if we have a valid HTTP/HTTPS URL
+    final hasValidUrl = _signedUrl != null && !_hasError && _isValidUrl(_signedUrl!);
+    
     Widget avatar = CircleAvatar(
       radius: widget.radius,
       backgroundColor: backgroundColor,
-      backgroundImage: _signedUrl != null && !_hasError && _isValidUrl(_signedUrl!)
-          ? NetworkImage(_signedUrl!)
-          : null,
+      backgroundImage: hasValidUrl ? NetworkImage(_signedUrl!) : null,
       onBackgroundImageError: widget.onImageError ?? (exception, stackTrace) {
         print('AvatarWidget: Image load error: $exception');
         if (mounted) {
@@ -149,7 +150,7 @@ class _AvatarWidgetState extends ConsumerState<AvatarWidget> {
           });
         }
       },
-      child: _signedUrl == null || _hasError || _isLoading
+      child: !hasValidUrl || _isLoading
           ? _isLoading
               ? SizedBox(
                   width: widget.radius,
