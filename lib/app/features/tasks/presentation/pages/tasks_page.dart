@@ -590,7 +590,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             ref.invalidate(familyMembersProvider(familyId));
           },
           activeColor: Theme.of(context).colorScheme.primary,
-        ),
+            ),
+          ),
         title: Text(
           task.title,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
