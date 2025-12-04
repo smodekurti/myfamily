@@ -764,29 +764,29 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     
     return ListTile(
       contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
-      // Only show checkbox if linked to a task (viewing from task view)
-      leading: isTaskLinked
-          ? Checkbox(
-              value: item.checked,
-              onChanged: (value) async {
-                final listRepo = ref.read(groceryListRepositoryProvider);
-                await listRepo.toggleItem(item.id, value ?? false);
-                // Invalidate provider to force refresh
+      // Always show checkbox for all grocery list items
+      leading: Checkbox(
+        value: item.checked,
+        onChanged: (value) async {
+          final listRepo = ref.read(groceryListRepositoryProvider);
+          await listRepo.toggleItem(item.id, value ?? false);
+          // Invalidate provider to force refresh
+          if (mounted && context.mounted) {
+            ref.invalidate(groceryListItemsProvider(widget.listId));
+            // Small delay to ensure database write completes, then check task status
+            if (isTaskLinked) {
+              Future.delayed(const Duration(milliseconds: 200), () {
                 if (mounted && context.mounted) {
-                  ref.invalidate(groceryListItemsProvider(widget.listId));
-                  // Small delay to ensure database write completes, then check task status
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    if (mounted && context.mounted) {
-                      // Check if all items are checked and update task status accordingly
-                      _checkAndUpdateTaskStatus();
-                    }
-                  });
+                  // Check if all items are checked and update task status accordingly
+                  _checkAndUpdateTaskStatus();
                 }
-              },
-              activeColor: Theme.of(context).colorScheme.primary,
-              shape: const CircleBorder(),
-            )
-          : null,
+              });
+            }
+          }
+        },
+        activeColor: Theme.of(context).colorScheme.primary,
+        shape: const CircleBorder(),
+      ),
       title: Text(
         item.name,
         style: TextStyle(
@@ -1230,13 +1230,12 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ),
         child: Row(
           children: [
-            // Only show checkbox if linked to a task (viewing from task view)
-            if (isTaskLinked) ...[
-              SizedBox(
-                width: ResponsiveHelper.w(32),
-                height: ResponsiveHelper.h(32),
-                child: Checkbox(
-                  value: item.checked,
+            // Always show checkbox for all grocery list items
+            SizedBox(
+              width: ResponsiveHelper.w(32),
+              height: ResponsiveHelper.h(32),
+              child: Checkbox(
+                value: item.checked,
                 onChanged: (value) async {
                   final listRepo = ref.read(groceryListRepositoryProvider);
                   await listRepo.toggleItem(item.id, value ?? false);
@@ -1244,22 +1243,23 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   if (mounted && context.mounted) {
                     ref.invalidate(groceryListItemsProvider(widget.listId));
                     // Small delay to ensure database write completes, then check task status
-                    Future.delayed(const Duration(milliseconds: 200), () {
-                      if (mounted && context.mounted) {
-                        // Check if all items are checked and update task status accordingly
-                        _checkAndUpdateTaskStatus();
-                      }
-                    });
+                    if (isTaskLinked) {
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        if (mounted && context.mounted) {
+                          // Check if all items are checked and update task status accordingly
+                          _checkAndUpdateTaskStatus();
+                        }
+                      });
+                    }
                   }
                 },
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  shape: const CircleBorder(),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
+                activeColor: Theme.of(context).colorScheme.primary,
+                shape: const CircleBorder(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
               ),
-              SizedBox(width: ResponsiveHelper.w(8)),
-            ],
+            ),
+            SizedBox(width: ResponsiveHelper.w(8)),
             // Item name and details
             Expanded(
               child: Column(
