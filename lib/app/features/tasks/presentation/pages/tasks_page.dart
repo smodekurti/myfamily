@@ -14,7 +14,7 @@ import '../../../../data/models/task_model.dart';
 import '../../../../data/models/family_model.dart';
 import 'package:intl/intl.dart';
 
-// Filter state provider
+// Filter state provider - default to 'all' for "All Chores"
 final taskFilterProvider = StateProvider<String>((ref) => 'all');
 
 // View mode provider: 'list', 'simple_list', 'grid', 'grouped_category', 'grouped_assignee', 'grouped_due_date'
