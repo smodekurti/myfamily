@@ -104,6 +104,41 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         body: SafeArea(
           child: Column(
             children: [
+              // Progress bar (below AppBar)
+              if (!searchMode)
+                familyTasks.when(
+                  data: (tasks) {
+                    final completed = tasks.where((t) => t.status == 'completed').length;
+                    final total = tasks.length;
+                    final progress = total > 0 ? completed / total : 0.0;
+                    
+                    return Container(
+                      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+                      color: Theme.of(context).colorScheme.surface,
+                      child: Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).colorScheme.primary,
+                            ),
+                            minHeight: ResponsiveHelper.h(4),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => Container(
+                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      minHeight: ResponsiveHelper.h(4),
+                    ),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
               // Search bar (shown when search mode is active)
               if (searchMode)
                 Container(
