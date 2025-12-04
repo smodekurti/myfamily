@@ -786,12 +786,18 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       color: Theme.of(context).cardColor,
       child: InkWell(
         onTap: () {
-          // Navigate to task detail/edit page
-          final taskJson = TaskModelHelpers.toSupabase(task);
-          context.push(
-            AppConstants.routeEditTask,
-            extra: taskJson,
-          );
+          // Navigate to grocery list if grocery task, else task detail/edit page
+          if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+            final groceryListId = task.categoryData!['groceryListId'] as String;
+            context.push('/grocery-list/$groceryListId?from=task');
+          } else {
+            // Navigate to task detail/edit page
+            final taskJson = TaskModelHelpers.toSupabase(task);
+            context.push(
+              AppConstants.routeEditTask,
+              extra: taskJson,
+            );
+          }
         },
         borderRadius: ResponsiveHelper.borderRadius(12),
         child: ListTile(
