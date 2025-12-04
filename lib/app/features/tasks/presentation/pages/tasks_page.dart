@@ -250,6 +250,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             return _buildEmptyState(context);
                           }
                           
+                          // Limit to top 5 tasks if not showing all
+                          final tasksToShow = _showAllTasks ? filteredTasks : filteredTasks.take(5).toList();
+                          final hasMoreTasks = filteredTasks.length > 5;
+                          
                           final members = familyMembers.when(
                               data: (m) => m,
                             loading: () => <FamilyMemberModel>[],
@@ -261,27 +265,41 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             // Use the view mode to determine how to display tasks
                             if (viewMode == 'list') {
                               return Column(
-                                children: filteredTasks.map((task) {
-                                  return _buildNewTaskCard(
-                                    context,
-                                    ref,
-                                    task,
-                                    members,
-                                    currentFamily.id,
-                                    currentUser?.id,
-                                  );
-                                }).toList(),
+                                children: [
+                                  ...tasksToShow.map((task) {
+                                    return _buildNewTaskCard(
+                                      context,
+                                      ref,
+                                      task,
+                                      members,
+                                      currentFamily.id,
+                                      currentUser?.id,
+                                    );
+                                  }).toList(),
+                                  if (hasMoreTasks && !_showAllTasks)
+                                    _buildViewAllLink(context),
+                                  if (hasMoreTasks && _showAllTasks)
+                                    _buildShowLessLink(context),
+                                ],
                               );
                             } else {
                               // Use the existing _buildTasksView for other view modes
-                          return _buildTasksView(
-                            context,
-                            ref,
-                            filteredTasks,
-                            members,
-                            currentFamily.id,
-                            currentUser?.id,
-                            viewMode,
+                          return Column(
+                            children: [
+                              _buildTasksView(
+                                context,
+                                ref,
+                                tasksToShow,
+                                members,
+                                currentFamily.id,
+                                currentUser?.id,
+                                viewMode,
+                              ),
+                              if (hasMoreTasks && !_showAllTasks)
+                                _buildViewAllLink(context),
+                              if (hasMoreTasks && _showAllTasks)
+                                _buildShowLessLink(context),
+                            ],
                           );
                             }
                         },
