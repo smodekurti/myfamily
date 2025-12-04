@@ -115,15 +115,24 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     return Container(
                       padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
                       color: Theme.of(context).colorScheme.surface,
-                      child: Column(
+                      child: Row(
                         children: [
-                          LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).colorScheme.primary,
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).colorScheme.primary,
+                              ),
+                              minHeight: ResponsiveHelper.h(8),
                             ),
-                            minHeight: ResponsiveHelper.h(4),
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(12)),
+                          Text(
+                            '$completed/$total',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -132,9 +141,17 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   loading: () => Container(
                     padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
                     color: Theme.of(context).colorScheme.surface,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      minHeight: ResponsiveHelper.h(4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            minHeight: ResponsiveHelper.h(8),
+                          ),
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(12)),
+                        const Text('0/0'),
+                      ],
                     ),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
