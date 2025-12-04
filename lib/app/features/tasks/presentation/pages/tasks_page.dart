@@ -32,6 +32,7 @@ class TasksPage extends ConsumerStatefulWidget {
 class _TasksPageState extends ConsumerState<TasksPage> {
   final TextEditingController _searchController = TextEditingController();
   final Logger _logger = Logger();
+  bool _showAllTasks = false;
   
   @override
   void initState() {
