@@ -266,6 +266,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             if (viewMode == 'list') {
                               return Column(
                                 children: [
+                                  if (hasMoreTasks && !_showAllTasks)
+                                    _buildViewAllLink(context),
+                                  if (hasMoreTasks && _showAllTasks)
+                                    _buildShowLessLink(context),
                                   ...tasksToShow.map((task) {
                                     return _buildNewTaskCard(
                                       context,
@@ -276,16 +280,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                       currentUser?.id,
                                     );
                                   }).toList(),
-                                  if (hasMoreTasks && !_showAllTasks)
-                                    _buildViewAllLink(context),
-                                  if (hasMoreTasks && _showAllTasks)
-                                    _buildShowLessLink(context),
                                 ],
                               );
                             } else {
                               // Use the existing _buildTasksView for other view modes
                           return Column(
                             children: [
+                              if (hasMoreTasks && !_showAllTasks)
+                                _buildViewAllLink(context),
+                              if (hasMoreTasks && _showAllTasks)
+                                _buildShowLessLink(context),
                               _buildTasksView(
                                 context,
                                 ref,
@@ -295,10 +299,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                 currentUser?.id,
                                 viewMode,
                               ),
-                              if (hasMoreTasks && !_showAllTasks)
-                                _buildViewAllLink(context),
-                              if (hasMoreTasks && _showAllTasks)
-                                _buildShowLessLink(context),
                             ],
                           );
                             }
