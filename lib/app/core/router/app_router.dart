@@ -451,11 +451,13 @@ class MainShell extends ConsumerWidget {
     // Get page title based on route
     String title = 'Family Wall';
     bool showSearch = false;
+    bool showProgress = false;
     if (currentRoute == AppConstants.routeHome) {
       title = 'Family Wall';
     } else if (currentRoute == AppConstants.routeTasks) {
       title = 'Household Chores';
       showSearch = true;
+      showProgress = true;
     } else if (currentRoute == AppConstants.routeCreateTask) {
       title = 'New Chore';
     } else if (currentRoute == AppConstants.routeGroceries) {
@@ -494,6 +496,39 @@ class MainShell extends ConsumerWidget {
                     ref.read(searchQueryProvider.notifier).state = '';
                   }
                 },
+              );
+            },
+          ),
+        // Progress indicator (only on tasks page)
+        if (showProgress)
+          Consumer(
+            builder: (context, ref, child) {
+              final currentFamily = ref.watch(currentFamilyProvider);
+              if (currentFamily == null) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Center(child: Text('0/0')),
+                );
+              }
+              final familyTasks = ref.watch(familyTasksProvider(currentFamily.id));
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Center(
+                  child: familyTasks.when(
+                    data: (tasks) {
+                      final completed = tasks.where((t) => t.status == 'completed').length;
+                      final total = tasks.length;
+                      return Text(
+                        '$completed/$total',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    },
+                    loading: () => const Text('0/0'),
+                    error: (_, __) => const Text('0/0'),
+                  ),
+                ),
               );
             },
           ),
