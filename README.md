@@ -4,42 +4,83 @@ A playful, cross-platform family management app that makes day-to-day coordinati
 
 ## 🎯 Features
 
-### ✅ Implemented (v1.0)
-- **Authentication & Family Setup**
-  - Firebase Authentication with Google Sign-In
-  - Apple Sign-In support (iOS)
-  - Create or join family with invite codes
-  - User profile management
+### ✅ Fully Implemented (v1.0)
 
-- **Responsive UI Framework**
+- **Authentication & Onboarding**
+  - Google Sign-In (iOS & Android)
+  - Apple Sign-In (iOS)
+  - Email/Password authentication
+  - Consent screen with version tracking
+  - User profile creation and management
+
+- **Family Management**
+  - Create family with invite codes
+  - Join family with adult/child invite codes
+  - Family selection and switching
+  - Family settings and member management
+  - Role-based access control (Parent, Caretaker, Guardian, Member, Child)
+
+- **Tasks & Chores**
+  - Create, edit, and assign tasks
+  - Task categories (Chore, Grocery)
+  - Due dates and priorities
+  - Task completion with points
+  - Real-time task updates
+  - Task filtering (All, My Chores, Due Today, Completed)
+
+- **Grocery Management**
+  - Create shopping lists (standalone & task-linked)
+  - Shopping templates
+  - Import items from templates
+  - Categorize items
+  - Check/uncheck items
+  - List and category views
+
+- **Calendar & Events**
+  - Monthly, week, day, and list views
+  - Create, edit, and delete events
+  - Event participants
+  - Event colors
+  - Filter events by member
+
+- **Gamification**
+  - Points system (awarded on task completion)
+  - Weekly and all-time leaderboards
+  - Points history tracking
+  - Achievements system
+
+- **Notifications**
+  - Push notifications (FCM)
+  - Local notifications (fallback)
+  - Real-time data refresh
+  - Notification preferences
+
+- **Settings & Support**
+  - Theme selection (Light/Dark/System)
+  - Notification preferences
+  - Account settings
+  - Help & Support page with FAQ
+  - App version information
+
+- **Responsive UI**
   - Material 3 design system
   - Light/Dark/System theme modes
   - Responsive breakpoints (mobile/tablet/desktop)
   - Text scaling clamp (0.9-1.3)
-  - No hardcoded values - all responsive
-
-- **Navigation & Routing**
-  - Bottom navigation with 5 main tabs
-  - Go Router for deep linking
-  - Protected routes with authentication guards
-
-### 🚧 In Development
-- **Tasks & Chores Management**
-- **Family Calendar & Events**
-- **Grocery Master Lists & Trip Flow**
-- **Gamification & Leaderboards**
-- **Family Chat & Notifications**
+  - No hardcoded values - fully responsive
 
 ## 🏗️ Architecture
 
 ### Tech Stack
-- **Flutter** (latest stable)
-- **State Management:** Riverpod with hooks_riverpod
+- **Flutter** (3.9.2+)
+- **State Management:** Riverpod (flutter_riverpod)
 - **Routing:** go_router
-- **Backend:** Firebase (Auth, Firestore, Functions, Storage)
+- **Backend:** Supabase (Database, Auth, Storage, Realtime)
+- **Push Notifications:** Firebase Cloud Messaging (FCM)
 - **UI Framework:** Material 3 with flutter_screenutil
-- **Responsive:** responsive_framework with custom breakpoints
+- **Responsive:** Custom ResponsiveHelper with breakpoints
 - **Data Models:** Freezed with JSON serialization
+- **Biometric Auth:** local_auth (Face ID, Touch ID, Fingerprint)
 
 ### Project Structure
 ```
@@ -88,26 +129,34 @@ lib/
    flutter pub get
    ```
 
-3. **Firebase Setup**
-   ```bash
-   # Follow the detailed setup guide
-   cat scripts/firebase_bootstrap.md
-   ```
+3. **Configure Supabase**
+   - Create a Supabase project at https://supabase.com
+   - Get your project URL and anon key from Settings > API
+   - Update `lib/app/core/config/supabase_config.dart` with your credentials
+   - OR use environment variables:
+     ```bash
+     flutter run --dart-define=SUPABASE_URL=https://... --dart-define=SUPABASE_ANON_KEY=...
+     ```
 
-4. **Run the app**
+4. **Set up Database**
+   - Run SQL migration scripts in order (see `DATABASE_MIGRATIONS.md`)
+   - Enable Realtime for tables that need live updates
+   - Set up RLS policies (see `PRODUCTION_RLS_POLICIES.sql`)
+
+5. **Configure Firebase (for Push Notifications)**
+   - Create a Firebase project
+   - Add iOS and Android apps
+   - Download and place configuration files:
+     - `ios/Runner/GoogleService-Info.plist`
+     - `android/app/google-services.json`
+   - Set up FCM server key (see `PUSH_NOTIFICATIONS_SETUP.md`)
+
+6. **Run the app**
    ```bash
    flutter run
    ```
 
-### Firebase Configuration
-
-The Firebase project is pre-configured with:
-- **Project ID:** `myfamily-e897d`
-- **Storage Bucket:** `myfamily-e897d.firebasestorage.app`
-
-Configuration files are already included:
-- `ios/Runner/GoogleService-Info.plist`
-- `android/app/google-services.json`
+For detailed setup instructions, see `DEVELOPER_GUIDE.md`.
 
 ## 🎨 Design System
 
@@ -139,21 +188,36 @@ The app UI follows the provided screenshots with:
 
 ## 🧪 Testing
 
-### Golden Tests
+See `test/README.md` for comprehensive testing guide.
+
+### Run All Tests
 ```bash
-# Run golden tests at key breakpoints
+flutter test
+```
+
+### Run Specific Test Types
+```bash
+# Unit tests
+flutter test test/unit/
+
+# Widget tests
+flutter test test/widget/
+
+# Golden tests (visual regression)
 flutter test test/golden/
 ```
 
-### Unit Tests
+### Test Coverage
 ```bash
-flutter test test/unit/
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
 ```
 
-### Widget Tests
-```bash
-flutter test test/widget/
-```
+### Test Structure
+- **Unit Tests** (`test/unit/`) - Business logic, repositories, services
+- **Widget Tests** (`test/widget/`) - UI components, pages, user interactions
+- **Golden Tests** (`test/golden/`) - Visual regression at breakpoints (320, 390, 480, 600, 840)
 
 ## 🔧 Development
 
@@ -184,25 +248,28 @@ firebase appdistribution:distribute \
   --file build/app/outputs/flutter-apk/app-release.apk
 ```
 
-## 📋 Roadmap
+## 📋 Current Status
 
-### Phase 1 (Current)
+### ✅ Completed (v1.0)
 - [x] Authentication & Family Setup
-- [x] Basic UI Framework
-- [x] Navigation Structure
-- [x] Home Dashboard
+- [x] Tasks & Chores Management
+- [x] Calendar & Events
+- [x] Grocery Lists & Templates
+- [x] Gamification & Leaderboards
+- [x] Push Notifications
+- [x] Settings & Help Pages
+- [x] Role-Based Access Control
+- [x] Real-time Data Sync
+- [x] Responsive UI Framework
 
-### Phase 2 (Next)
-- [ ] Tasks & Chores Management
-- [ ] Calendar & Events
-- [ ] Grocery Master Lists
-- [ ] Basic Gamification
-
-### Phase 3 (Future)
+### 🚀 Future Enhancements (v1.1+)
+- [ ] Family Chat
+- [ ] Recurring Tasks
 - [ ] Advanced Grocery Trip Flow
-- [ ] Family Chat & Notifications
 - [ ] Financial Tracking
-- [ ] Advanced Gamification & Leaderboards
+- [ ] Weather Widget on Home
+- [ ] Offline Support
+- [ ] Map Picker for Addresses
 
 ## 🤝 Contributing
 
@@ -216,13 +283,22 @@ firebase appdistribution:distribute \
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 📚 Documentation
+
+- **[Developer Guide](DEVELOPER_GUIDE.md)** - Complete setup and development guide
+- **[Testing Guide](test/README.md)** - How to write and run tests
+- **[Database Migrations](DATABASE_MIGRATIONS.md)** - SQL migration scripts
+- **[Release Checklist](RELEASE_1.0_CHECKLIST.md)** - Feature completion status
+- **[Architecture](architecture.mdc)** - System architecture overview
+- **[Product Requirements](prd.mdc)** - Product specification
+
 ## 🆘 Support
 
 For support and questions:
+- Check the [Developer Guide](DEVELOPER_GUIDE.md) for setup help
+- Review [Troubleshooting](#troubleshooting) section
 - Create an issue in this repository
-- Check the [Firebase Bootstrap Guide](scripts/firebase_bootstrap.md)
-- Review the [Architecture Documentation](architecture.mdc)
-- Read the [Product Requirements](prd.mdc)
+- Check existing documentation files in the project root
 
 ---
 
