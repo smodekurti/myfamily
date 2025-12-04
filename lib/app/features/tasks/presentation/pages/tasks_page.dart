@@ -96,12 +96,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }
 
     final familyTasks = ref.watch(familyTasksProvider(currentFamily.id));
-    // Watch family members to ensure stream is active and updates
     final familyMembers = ref.watch(familyMembersProvider(currentFamily.id));
 
     return BackgroundWidget(
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        appBar: _buildCustomAppBar(context, ref, familyTasks),
         body: SafeArea(
           child: Column(
             children: [
@@ -153,130 +153,107 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    // Refresh from server when user pulls to refresh
                     final currentFamily = ref.read(currentFamilyProvider);
                     if (currentFamily != null) {
                       ref.invalidate(familyTasksProvider(currentFamily.id));
                       ref.invalidate(tasksDueTodayProvider(currentFamily.id));
                       ref.invalidate(taskStatsProvider(currentFamily.id));
                     }
-                    // Wait a moment for the stream to fetch new data
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: SingleChildScrollView(
                     padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // This Week's Progress Section (hide when searching)
-                      if (!searchMode)
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // This Week Status Section
+                        if (!searchMode)
+                          familyTasks.when(
+                            data: (tasks) {
+                              return Column(
+                                children: [
+                                  _buildThisWeekStatus(context, tasks),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                ],
+                              );
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        
+                        // Filter Tabs (3 only: All Chores, My Chores, Due Today)
+                        if (!searchMode) ...[
+                          _buildFilterTabs(context, filter),
+                          SizedBox(height: ResponsiveHelper.h(16)),
+                        ],
+                        
+                        // Upcoming Chores Section Header
+                        _buildUpcomingChoresHeader(context, ref),
+                        SizedBox(height: ResponsiveHelper.h(16)),
+                        
+                        // Tasks List
                         familyTasks.when(
                           data: (tasks) {
+                            var filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
+                            
+                            if (searchMode && searchQuery.isNotEmpty) {
+                              filteredTasks = _searchTasks(filteredTasks, searchQuery);
+                            }
+                            
+                            if (filteredTasks.isEmpty) {
+                              return _buildEmptyState(context);
+                            }
+                            
+                            final members = familyMembers.when(
+                              data: (m) => m,
+                              loading: () => <FamilyMemberModel>[],
+                              error: (_, __) => <FamilyMemberModel>[],
+                            );
+                            
                             return Column(
-                              children: [
-                                _buildProgressSection(context, ref, tasks),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                              ],
+                              children: filteredTasks.map((task) {
+                                return _buildNewTaskCard(
+                                  context,
+                                  ref,
+                                  task,
+                                  members,
+                                  currentFamily.id,
+                                  currentUser?.id,
+                                );
+                              }).toList(),
                             );
                           },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                      
-                      // Filter Buttons (hide when searching)
-                      if (!searchMode) ...[
-                        _buildFilterButtons(context, filter),
-                        SizedBox(height: ResponsiveHelper.h(12)),
-                        _buildViewModeSelector(context),
-                        SizedBox(height: ResponsiveHelper.h(16)),
-                      ],
-                      
-                      // Section title
-                      Text(
-                        searchMode ? 'Search Results' : 'Upcoming Chores',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.h(16)),
-                      
-                      // Tasks List with different view modes
-                      familyTasks.when(
-                        data: (tasks) {
-                          var filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
-                          
-                          // Apply search filter if in search mode
-                          if (searchMode && searchQuery.isNotEmpty) {
-                            filteredTasks = _searchTasks(filteredTasks, searchQuery);
-                          }
-                          
-                          final isEmpty = filteredTasks.isEmpty;
-                          
-                          if (isEmpty) {
-                            return _buildEmptyState(context);
-                          }
-                          
-                          final members = familyMembers.when(
-                            data: (m) {
-                              return m;
-                            },
-                            loading: () => <FamilyMemberModel>[],
-                            error: (_, __) => <FamilyMemberModel>[],
-                          );
-                          
-                          final viewMode = ref.watch(taskViewModeProvider);
-                          return _buildTasksView(
-                            context,
-                            ref,
-                            filteredTasks,
-                            members,
-                            currentFamily.id,
-                            currentUser?.id,
-                            viewMode,
-                          );
-                        },
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, stackTrace) {
-                          // Log the full error for debugging
-                          _logger.e('Tasks error: $error', error: error, stackTrace: stackTrace);
-                          return Center(
-                            child: Padding(
-                              padding: ResponsiveHelper.padding(all: 24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: ResponsiveHelper.iconSize(48),
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                  SizedBox(height: ResponsiveHelper.h(16)),
-                                  Text(
-                                    'Error loading tasks',
-                                    style: Theme.of(context).textTheme.titleLarge,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  SizedBox(height: ResponsiveHelper.h(8)),
-                                  Text(
-                                    error.toString().length > 100 
-                                        ? '${error.toString().substring(0, 100)}...'
-                                        : error.toString(),
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          loading: () => const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) {
+                            _logger.e('Tasks error: $error', error: error, stackTrace: stackTrace);
+                            return Center(
+                              child: Padding(
+                                padding: ResponsiveHelper.padding(all: 24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: ResponsiveHelper.iconSize(48),
+                                      color: Theme.of(context).colorScheme.error,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                                    SizedBox(height: ResponsiveHelper.h(16)),
+                                    Text(
+                                      'Error loading tasks',
+                                      style: Theme.of(context).textTheme.titleLarge,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                      
-                      SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
-                    ],
+                            );
+                          },
+                        ),
+                        
+                        SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
+                      ],
+                    ),
                   ),
-                ),
                 ),
               ),
             ],
@@ -285,30 +262,411 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         floatingActionButton: familyTasks.when(
           data: (tasks) {
             final filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
-            // Only show FAB if there are tasks (not in empty state)
             if (filteredTasks.isEmpty) {
-              return null; // Hide FAB when empty state button is visible
+              return null;
             }
             return PermissionAwareWidget(
               action: 'create_task',
               child: FloatingActionButton(
-              onPressed: () {
-                context.push(AppConstants.routeCreateTask);
-              },
-              child: const Icon(Icons.add),
+                onPressed: () => context.push(AppConstants.routeCreateTask),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: const Icon(Icons.add),
               ),
             );
           },
-          loading: () => null, // Hide FAB while loading
+          loading: () => null,
           error: (_, __) => PermissionAwareWidget(
             action: 'create_task',
             child: FloatingActionButton(
-            onPressed: () {
-              context.push(AppConstants.routeCreateTask);
-            },
-            child: const Icon(Icons.add),
+              onPressed: () => context.push(AppConstants.routeCreateTask),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.add),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildCustomAppBar(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<TaskModel>> familyTasks,
+  ) {
+    final searchMode = ref.watch(searchModeProvider);
+    
+    return AppBar(
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
+      title: const Text('Household Chores'),
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      actions: [
+        // Search icon
+        Consumer(
+          builder: (context, ref, child) {
+            return IconButton(
+              icon: Icon(searchMode ? Icons.close : Icons.search),
+              onPressed: () {
+                ref.read(searchModeProvider.notifier).state = !searchMode;
+                if (!searchMode) {
+                  ref.read(searchQueryProvider.notifier).state = '';
+                }
+              },
+            );
+          },
+        ),
+        // Progress indicator
+        Padding(
+          padding: ResponsiveHelper.padding(horizontal: 8),
+          child: Center(
+            child: familyTasks.when(
+              data: (tasks) {
+                final completed = tasks.where((t) => t.status == 'completed').length;
+                final total = tasks.length;
+                return Text(
+                  '$completed/$total',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+              loading: () => const Text('0/0'),
+              error: (_, __) => const Text('0/0'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThisWeekStatus(BuildContext context, List<TaskModel> tasks) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final overdueTasks = tasks.where((task) {
+      if (task.status == 'completed' || task.dueDate == null) return false;
+      final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+      return due.isBefore(today);
+    }).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'This Week',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: ResponsiveHelper.h(8)),
+        Row(
+          children: [
+            Icon(
+              Icons.access_time,
+              size: ResponsiveHelper.iconSize(16),
+              color: Theme.of(context).colorScheme.error,
+            ),
+            SizedBox(width: ResponsiveHelper.w(8)),
+            Text(
+              '$overdueTasks tasks overdue',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterTabs(BuildContext context, String currentFilter) {
+    final filters = [
+      {'id': 'all', 'label': 'All Chores'},
+      {'id': 'my', 'label': 'My Chores'},
+      {'id': 'today', 'label': 'Due Today'},
+    ];
+
+    return Row(
+      children: filters.map((filter) {
+        final isSelected = currentFilter == filter['id'];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: filter == filters.last ? 0 : ResponsiveHelper.w(8),
+            ),
+            child: Material(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: ResponsiveHelper.borderRadius(8),
+              child: InkWell(
+                onTap: () {
+                  ref.read(taskFilterProvider.notifier).state = filter['id']!;
+                },
+                borderRadius: ResponsiveHelper.borderRadius(8),
+                child: Container(
+                  padding: ResponsiveHelper.padding(vertical: 10),
+                  alignment: Alignment.center,
+                  child: Text(
+                    filter['label']!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildUpcomingChoresHeader(BuildContext context, WidgetRef ref) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Upcoming Chores',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.list),
+              iconSize: ResponsiveHelper.iconSize(20),
+              onPressed: () {
+                // Toggle view mode if needed
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              iconSize: ResponsiveHelper.iconSize(20),
+              onPressed: () {
+                // Show filter options
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewTaskCard(
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    final assignedMember = members.firstWhere(
+      (m) => m.uid == task.assignedTo,
+      orElse: () => const FamilyMemberModel(
+        uid: '',
+        displayName: '',
+        role: 'member',
+        points: 0,
+      ),
+    );
+
+    // Calculate overdue days
+    String statusText;
+    Color statusColor;
+    if (task.status == 'completed') {
+      statusText = 'Done';
+      statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+    } else if (task.dueDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+      final difference = due.difference(today).inDays;
+      
+      if (difference < 0) {
+        statusText = '${difference.abs()} days overdue';
+        statusColor = Theme.of(context).colorScheme.error;
+      } else if (difference == 0) {
+        statusText = 'Due today';
+        statusColor = Theme.of(context).colorScheme.primary;
+      } else {
+        statusText = 'Due in $difference days';
+        statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
+      }
+    } else {
+      statusText = 'No due date';
+      statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+    }
+
+    final initialAvatarUrl = assignedMember.photoURL;
+    final displayName = assignedMember.displayName.isNotEmpty
+        ? assignedMember.displayName
+        : '?';
+
+    return Card(
+      margin: ResponsiveHelper.padding(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveHelper.borderRadius(12),
+      ),
+      elevation: 0,
+      color: Theme.of(context).cardColor,
+      child: ListTile(
+        leading: Checkbox(
+          value: task.status == 'completed',
+          onChanged: (value) async {
+            final taskActions = ref.read(taskActionsProvider);
+            if (value == true) {
+              final canComplete = await _checkGroceryTaskComplete(context, task);
+              if (!canComplete) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Please check all items in the grocery list before completing this task.'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+                return;
+              }
+              final completedTask = await taskActions.completeTask(task.id);
+              if (context.mounted && completedTask.points > 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: ResponsiveHelper.iconSize(20),
+                        ),
+                        SizedBox(width: ResponsiveHelper.w(8)),
+                        Expanded(
+                          child: Text(
+                            '+${completedTask.points} points earned!',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            } else {
+              await taskActions.updateTask(taskId: task.id, status: 'pending');
+            }
+            ref.invalidate(familyTasksProvider(familyId));
+            ref.invalidate(tasksDueTodayProvider(familyId));
+            ref.invalidate(familyMembersProvider(familyId));
+          },
+          activeColor: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          task.title,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+            decoration: task.status == 'completed' ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        subtitle: Row(
+          children: [
+            Icon(
+              Icons.access_time,
+              size: ResponsiveHelper.iconSize(14),
+              color: statusColor,
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            Text(
+              statusText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: statusColor,
+              ),
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (task.assignedTo.isNotEmpty)
+              Consumer(
+                builder: (context, ref, child) {
+                  final userProfileAsync = ref.watch(userProfileProvider(task.assignedTo));
+                  return userProfileAsync.when(
+                    data: (profile) {
+                      final avatarUrl = profile?.photoURL ?? initialAvatarUrl;
+                      final name = profile?.displayName ?? displayName;
+                      return AvatarWidget(
+                        avatarPath: avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName: name,
+                        backgroundColor: Colors.green,
+                        textColor: Colors.white,
+                      );
+                    },
+                    loading: () => AvatarWidget(
+                      avatarPath: initialAvatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName: displayName,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                    ),
+                    error: (_, __) => AvatarWidget(
+                      avatarPath: initialAvatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName: displayName,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                    ),
+                  );
+                },
+              ),
+            SizedBox(width: ResponsiveHelper.w(8)),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.edit),
+                        title: const Text('Edit'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Handle edit
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.delete),
+                        title: const Text('Delete'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Handle delete
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
