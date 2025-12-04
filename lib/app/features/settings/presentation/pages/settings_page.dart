@@ -286,6 +286,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     if (selectedTheme != null && selectedTheme != currentTheme) {
+      // Update theme immediately
       ref.read(themeModeProvider.notifier).state = selectedTheme;
       
       // Save to user preferences
