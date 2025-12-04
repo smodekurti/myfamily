@@ -1763,6 +1763,152 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     );
   }
 
+  /// Simple list view - minimal, clean list format with checkboxes
+  Widget _buildSimpleListView(
+    BuildContext context,
+    WidgetRef ref,
+    List<TaskModel> tasks,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    if (tasks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: tasks.length,
+      separatorBuilder: (context, index) => Divider(
+        height: ResponsiveHelper.h(1),
+        thickness: ResponsiveHelper.h(1),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return _buildSimpleListItem(
+          context,
+          ref,
+          task,
+          members,
+          familyId,
+          currentUserId,
+        );
+      },
+    );
+  }
+
+  /// Build a simple list item with checkbox and task title
+  Widget _buildSimpleListItem(
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+    List<FamilyMemberModel> members,
+    String familyId,
+    String? currentUserId,
+  ) {
+    final taskActions = ref.read(taskActionsProvider);
+    final isCompleted = task.status == 'completed';
+
+    return InkWell(
+      onTap: () {
+        // Navigate to grocery list if grocery task, else task detail/edit page
+        if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+          final groceryListId = task.categoryData!['groceryListId'] as String;
+          context.push('/grocery-list/$groceryListId?from=task');
+        } else {
+          // Navigate to task detail/edit page
+          final taskJson = TaskModelHelpers.toSupabase(task);
+          context.push(
+            AppConstants.routeEditTask,
+            extra: taskJson,
+          );
+        }
+      },
+      child: Padding(
+        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Checkbox
+            GestureDetector(
+              onTap: () {}, // Prevent tap from propagating to parent InkWell
+              child: Checkbox(
+                value: isCompleted,
+                onChanged: (value) async {
+                  if (value == true) {
+                    final canComplete = await _checkGroceryTaskComplete(context, task);
+                    if (!canComplete) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Please check all items in the grocery list before completing this task.'),
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    final completedTask = await taskActions.completeTask(task.id);
+                    if (context.mounted && completedTask.points > 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                size: ResponsiveHelper.iconSize(20),
+                              ),
+                              SizedBox(width: ResponsiveHelper.w(8)),
+                              Expanded(
+                                child: Text(
+                                  '+${completedTask.points} points earned!',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } else {
+                    await taskActions.updateTask(taskId: task.id, status: 'pending');
+                  }
+                  ref.invalidate(familyTasksProvider(familyId));
+                  ref.invalidate(tasksDueTodayProvider(familyId));
+                  ref.invalidate(familyMembersProvider(familyId));
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+                shape: const CircleBorder(),
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.w(12)),
+            // Task title
+            Expanded(
+              child: Text(
+                task.title,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  color: isCompleted
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGridView(
     BuildContext context,
     WidgetRef ref,
