@@ -250,9 +250,18 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             return _buildEmptyState(context);
                           }
                           
+                          // Sort by earliest due date (null dates go to end)
+                          final sortedTasks = List<TaskModel>.from(filteredTasks);
+                          sortedTasks.sort((a, b) {
+                            if (a.dueDate == null && b.dueDate == null) return 0;
+                            if (a.dueDate == null) return 1; // null dates go to end
+                            if (b.dueDate == null) return -1;
+                            return a.dueDate!.compareTo(b.dueDate!); // earliest first
+                          });
+                          
                           // Limit to top 5 tasks if not showing all
-                          final tasksToShow = _showAllTasks ? filteredTasks : filteredTasks.take(5).toList();
-                          final hasMoreTasks = filteredTasks.length > 5;
+                          final tasksToShow = _showAllTasks ? sortedTasks : sortedTasks.take(5).toList();
+                          final hasMoreTasks = sortedTasks.length > 5;
                           
                           final members = familyMembers.when(
                               data: (m) => m,
@@ -268,8 +277,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                 children: [
                                   if (hasMoreTasks && !_showAllTasks)
                                     _buildViewAllLink(context),
-                                  if (hasMoreTasks && _showAllTasks)
-                                    _buildShowLessLink(context),
                                   ...tasksToShow.map((task) {
                                     return _buildNewTaskCard(
                                       context,
@@ -280,6 +287,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                       currentUser?.id,
                                     );
                                   }).toList(),
+                                  if (hasMoreTasks && _showAllTasks)
+                                    _buildShowLessLink(context),
                                 ],
                               );
                             } else {
@@ -288,8 +297,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             children: [
                               if (hasMoreTasks && !_showAllTasks)
                                 _buildViewAllLink(context),
-                              if (hasMoreTasks && _showAllTasks)
-                                _buildShowLessLink(context),
                               _buildTasksView(
                                 context,
                                 ref,
@@ -299,6 +306,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                 currentUser?.id,
                                 viewMode,
                               ),
+                              if (hasMoreTasks && _showAllTasks)
+                                _buildShowLessLink(context),
                             ],
                           );
                             }
@@ -1276,7 +1285,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       ),
     );
   }
-
+  
   List<TaskModel> _searchTasks(List<TaskModel> tasks, String query) {
     if (query.isEmpty) return tasks;
     
