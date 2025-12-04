@@ -451,13 +451,11 @@ class MainShell extends ConsumerWidget {
     // Get page title based on route
     String title = 'Family Wall';
     bool showSearch = false;
-    bool showProgress = false;
     if (currentRoute == AppConstants.routeHome) {
       title = 'Family Wall';
     } else if (currentRoute == AppConstants.routeTasks) {
       title = 'Household Chores';
       showSearch = true;
-      showProgress = true;
     } else if (currentRoute == AppConstants.routeCreateTask) {
       title = 'New Chore';
     } else if (currentRoute == AppConstants.routeGroceries) {
