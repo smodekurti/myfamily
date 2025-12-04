@@ -261,18 +261,34 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               error: (_, __) => <FamilyMemberModel>[],
                             );
                             
-                            return Column(
-                              children: filteredTasks.map((task) {
-                                return _buildNewTaskCard(
-                                  context,
-                                  ref,
-                                  task,
-                                  members,
-                                  currentFamily.id,
-                                  currentUser?.id,
-                                );
-                              }).toList(),
-                            );
+                            final viewMode = ref.watch(taskViewModeProvider);
+                            
+                            // Use the view mode to determine how to display tasks
+                            if (viewMode == 'list') {
+                              return Column(
+                                children: filteredTasks.map((task) {
+                                  return _buildNewTaskCard(
+                                    context,
+                                    ref,
+                                    task,
+                                    members,
+                                    currentFamily.id,
+                                    currentUser?.id,
+                                  );
+                                }).toList(),
+                              );
+                            } else {
+                              // Use the existing _buildTasksView for other view modes
+                              return _buildTasksView(
+                                context,
+                                ref,
+                                filteredTasks,
+                                members,
+                                currentFamily.id,
+                                currentUser?.id,
+                                viewMode,
+                              );
+                            }
                           },
                           loading: () => const Center(child: CircularProgressIndicator()),
                           error: (error, stackTrace) {
@@ -433,6 +449,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   }
 
   Widget _buildUpcomingChoresHeader(BuildContext context, WidgetRef ref) {
+    final viewMode = ref.watch(taskViewModeProvider);
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -448,20 +466,296 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             IconButton(
               icon: const Icon(Icons.list),
               iconSize: ResponsiveHelper.iconSize(20),
+              tooltip: 'View options',
               onPressed: () {
-                // Toggle view mode if needed
+                _showViewModeDialog(context, ref, viewMode);
               },
             ),
             IconButton(
               icon: const Icon(Icons.filter_list),
               iconSize: ResponsiveHelper.iconSize(20),
+              tooltip: 'Filter options',
               onPressed: () {
-                // Show filter options
+                _showFilterDialog(context, ref);
               },
             ),
           ],
         ),
       ],
+    );
+  }
+
+  void _showViewModeDialog(BuildContext context, WidgetRef ref, String currentMode) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ResponsiveHelper.r(20)),
+        ),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: ResponsiveHelper.padding(all: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'View Options',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              _buildViewModeOption(
+                context,
+                ref,
+                icon: Icons.view_list,
+                label: 'List',
+                mode: 'list',
+                isSelected: currentMode == 'list',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildViewModeOption(
+                context,
+                ref,
+                icon: Icons.grid_view,
+                label: 'Grid',
+                mode: 'grid',
+                isSelected: currentMode == 'grid',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildViewModeOption(
+                context,
+                ref,
+                icon: Icons.category,
+                label: 'Group by Category',
+                mode: 'grouped_category',
+                isSelected: currentMode == 'grouped_category',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildViewModeOption(
+                context,
+                ref,
+                icon: Icons.person,
+                label: 'Group by Assignee',
+                mode: 'grouped_assignee',
+                isSelected: currentMode == 'grouped_assignee',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildViewModeOption(
+                context,
+                ref,
+                icon: Icons.calendar_today,
+                label: 'Group by Due Date',
+                mode: 'grouped_due_date',
+                isSelected: currentMode == 'grouped_due_date',
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewModeOption(
+    BuildContext context,
+    WidgetRef ref, {
+    required IconData icon,
+    required String label,
+    required String mode,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        ref.read(taskViewModeProvider.notifier).state = mode;
+        Navigator.pop(context);
+      },
+      borderRadius: ResponsiveHelper.borderRadius(12),
+      child: Container(
+        padding: ResponsiveHelper.padding(all: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: ResponsiveHelper.borderRadius(12),
+          border: isSelected
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: ResponsiveHelper.w(2),
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: ResponsiveHelper.iconSize(24),
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+            SizedBox(width: ResponsiveHelper.w(16)),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+                size: ResponsiveHelper.iconSize(24),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFilterDialog(BuildContext context, WidgetRef ref) {
+    final currentFilter = ref.watch(taskFilterProvider);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ResponsiveHelper.r(20)),
+        ),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: ResponsiveHelper.padding(all: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Filter Tasks',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              _buildFilterOption(
+                context,
+                ref,
+                icon: Icons.list_alt,
+                label: 'All Chores',
+                filter: 'all',
+                isSelected: currentFilter == 'all',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildFilterOption(
+                context,
+                ref,
+                icon: Icons.person,
+                label: 'My Chores',
+                filter: 'my',
+                isSelected: currentFilter == 'my',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildFilterOption(
+                context,
+                ref,
+                icon: Icons.today,
+                label: 'Due Today',
+                filter: 'today',
+                isSelected: currentFilter == 'today',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildFilterOption(
+                context,
+                ref,
+                icon: Icons.priority_high,
+                label: 'High Priority',
+                filter: 'high',
+                isSelected: currentFilter == 'high',
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              _buildFilterOption(
+                context,
+                ref,
+                icon: Icons.check_circle,
+                label: 'Completed',
+                filter: 'completed',
+                isSelected: currentFilter == 'completed',
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterOption(
+    BuildContext context,
+    WidgetRef ref, {
+    required IconData icon,
+    required String label,
+    required String filter,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        ref.read(taskFilterProvider.notifier).state = filter;
+        Navigator.pop(context);
+      },
+      borderRadius: ResponsiveHelper.borderRadius(12),
+      child: Container(
+        padding: ResponsiveHelper.padding(all: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: ResponsiveHelper.borderRadius(12),
+          border: isSelected
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: ResponsiveHelper.w(2),
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: ResponsiveHelper.iconSize(24),
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+            SizedBox(width: ResponsiveHelper.w(16)),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+                size: ResponsiveHelper.iconSize(24),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
