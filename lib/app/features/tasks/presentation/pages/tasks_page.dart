@@ -212,50 +212,50 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     }
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
-                  child: SingleChildScrollView(
-                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                child: SingleChildScrollView(
+                  padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                         // This Week Status Section
-                        if (!searchMode)
-                          familyTasks.when(
-                            data: (tasks) {
-                              return Column(
-                                children: [
+                      if (!searchMode)
+                        familyTasks.when(
+                          data: (tasks) {
+                            return Column(
+                              children: [
                                   _buildThisWeekStatus(context, tasks),
-                                  SizedBox(height: ResponsiveHelper.h(16)),
-                                ],
-                              );
-                            },
-                            loading: () => const SizedBox.shrink(),
-                            error: (_, __) => const SizedBox.shrink(),
-                          ),
-                        
+                                SizedBox(height: ResponsiveHelper.h(16)),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      
                         // Upcoming Chores Section Header
                         _buildUpcomingChoresHeader(context, ref),
                         SizedBox(height: ResponsiveHelper.h(16)),
                         
                         // Tasks List
-                        familyTasks.when(
-                          data: (tasks) {
-                            var filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
-                            
-                            if (searchMode && searchQuery.isNotEmpty) {
-                              filteredTasks = _searchTasks(filteredTasks, searchQuery);
-                            }
-                            
+                      familyTasks.when(
+                        data: (tasks) {
+                          var filteredTasks = _filterTasks(tasks, filter, currentUser?.id);
+                          
+                          if (searchMode && searchQuery.isNotEmpty) {
+                            filteredTasks = _searchTasks(filteredTasks, searchQuery);
+                          }
+                          
                             if (filteredTasks.isEmpty) {
-                              return _buildEmptyState(context);
-                            }
-                            
-                            final members = familyMembers.when(
+                            return _buildEmptyState(context);
+                          }
+                          
+                          final members = familyMembers.when(
                               data: (m) => m,
-                              loading: () => <FamilyMemberModel>[],
-                              error: (_, __) => <FamilyMemberModel>[],
-                            );
-                            
-                            final viewMode = ref.watch(taskViewModeProvider);
+                            loading: () => <FamilyMemberModel>[],
+                            error: (_, __) => <FamilyMemberModel>[],
+                          );
+                          
+                          final viewMode = ref.watch(taskViewModeProvider);
                             
                             // Use the view mode to determine how to display tasks
                             if (viewMode == 'list') {
@@ -273,46 +273,46 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               );
                             } else {
                               // Use the existing _buildTasksView for other view modes
-                              return _buildTasksView(
-                                context,
-                                ref,
-                                filteredTasks,
-                                members,
-                                currentFamily.id,
-                                currentUser?.id,
-                                viewMode,
-                              );
+                          return _buildTasksView(
+                            context,
+                            ref,
+                            filteredTasks,
+                            members,
+                            currentFamily.id,
+                            currentUser?.id,
+                            viewMode,
+                          );
                             }
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) {
-                            _logger.e('Tasks error: $error', error: error, stackTrace: stackTrace);
-                            return Center(
-                              child: Padding(
-                                padding: ResponsiveHelper.padding(all: 24),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      size: ResponsiveHelper.iconSize(48),
-                                      color: Theme.of(context).colorScheme.error,
-                                    ),
-                                    SizedBox(height: ResponsiveHelper.h(16)),
-                                    Text(
-                                      'Error loading tasks',
-                                      style: Theme.of(context).textTheme.titleLarge,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (error, stackTrace) {
+                          _logger.e('Tasks error: $error', error: error, stackTrace: stackTrace);
+                          return Center(
+                            child: Padding(
+                              padding: ResponsiveHelper.padding(all: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: ResponsiveHelper.iconSize(48),
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                  Text(
+                                    'Error loading tasks',
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                        ),
-                        
-                        SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
-                      ],
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      SizedBox(height: ResponsiveHelper.h(80)), // Space for FAB
+                    ],
                     ),
                   ),
                 ),
@@ -424,7 +424,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               icon: const Icon(Icons.filter_list),
               iconSize: ResponsiveHelper.iconSize(20),
               tooltip: 'Filter options',
-              onPressed: () {
+            onPressed: () {
                 _showFilterDialog(context, ref);
               },
             ),
@@ -1799,7 +1799,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     );
   }
 
-  /// Build a simple list item with checkbox and task title
+  /// Build a simple list item with checkbox, task title, and edit option
   Widget _buildSimpleListItem(
     BuildContext context,
     WidgetRef ref,
@@ -1811,87 +1811,87 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final taskActions = ref.read(taskActionsProvider);
     final isCompleted = task.status == 'completed';
 
-    return InkWell(
-      onTap: () {
-        // Navigate to grocery list if grocery task, else task detail/edit page
-        if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
-          final groceryListId = task.categoryData!['groceryListId'] as String;
-          context.push('/grocery-list/$groceryListId?from=task');
-        } else {
-          // Navigate to task detail/edit page
-          final taskJson = TaskModelHelpers.toSupabase(task);
-          context.push(
-            AppConstants.routeEditTask,
-            extra: taskJson,
-          );
-        }
-      },
-      child: Padding(
-        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Checkbox
-            GestureDetector(
-              onTap: () {}, // Prevent tap from propagating to parent InkWell
-              child: Checkbox(
-                value: isCompleted,
-                onChanged: (value) async {
-                  if (value == true) {
-                    final canComplete = await _checkGroceryTaskComplete(context, task);
-                    if (!canComplete) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Please check all items in the grocery list before completing this task.'),
-                            backgroundColor: Theme.of(context).colorScheme.error,
-                          ),
-                        );
-                      }
-                      return;
-                    }
-                    final completedTask = await taskActions.completeTask(task.id);
-                    if (context.mounted && completedTask.points > 0) {
+    return Padding(
+      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Checkbox
+          GestureDetector(
+            onTap: () {}, // Prevent tap from propagating
+            child: Checkbox(
+              value: isCompleted,
+              onChanged: (value) async {
+                if (value == true) {
+                  final canComplete = await _checkGroceryTaskComplete(context, task);
+                  if (!canComplete) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: ResponsiveHelper.iconSize(20),
-                              ),
-                              SizedBox(width: ResponsiveHelper.w(8)),
-                              Expanded(
-                                child: Text(
-                                  '+${completedTask.points} points earned!',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
+                          content: const Text('Please check all items in the grocery list before completing this task.'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
                     }
-                  } else {
-                    await taskActions.updateTask(taskId: task.id, status: 'pending');
+                    return;
                   }
-                  ref.invalidate(familyTasksProvider(familyId));
-                  ref.invalidate(tasksDueTodayProvider(familyId));
-                  ref.invalidate(familyMembersProvider(familyId));
-                },
-                activeColor: Theme.of(context).colorScheme.primary,
-                shape: const CircleBorder(),
-              ),
+                  final completedTask = await taskActions.completeTask(task.id);
+                  if (context.mounted && completedTask.points > 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(
+                              Icons.star,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: ResponsiveHelper.iconSize(20),
+                            ),
+                            SizedBox(width: ResponsiveHelper.w(8)),
+                            Expanded(
+                              child: Text(
+                                '+${completedTask.points} points earned!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  await taskActions.updateTask(taskId: task.id, status: 'pending');
+                }
+                ref.invalidate(familyTasksProvider(familyId));
+                ref.invalidate(tasksDueTodayProvider(familyId));
+                ref.invalidate(familyMembersProvider(familyId));
+              },
+              activeColor: Theme.of(context).colorScheme.primary,
+              shape: const CircleBorder(),
             ),
-            SizedBox(width: ResponsiveHelper.w(12)),
-            // Task title
-            Expanded(
+          ),
+          SizedBox(width: ResponsiveHelper.w(12)),
+          // Task title - tappable to navigate
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                // Navigate to grocery list if grocery task, else task detail/edit page
+                if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+                  final groceryListId = task.categoryData!['groceryListId'] as String;
+                  context.push('/grocery-list/$groceryListId?from=task');
+                } else {
+                  // Navigate to task detail/edit page
+                  final taskJson = TaskModelHelpers.toSupabase(task);
+                  context.push(
+                    AppConstants.routeEditTask,
+                    extra: taskJson,
+                  );
+                }
+              },
               child: Text(
                 task.title,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -1903,8 +1903,34 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          SizedBox(width: ResponsiveHelper.w(8)),
+          // Edit option
+          IconButton(
+            icon: Icon(
+              Icons.edit,
+              size: ResponsiveHelper.iconSize(20),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+            onPressed: () {
+              // Navigate to grocery list if grocery task, else task detail/edit page
+              if (task.category == 'grocery' && task.categoryData?['groceryListId'] != null) {
+                final groceryListId = task.categoryData!['groceryListId'] as String;
+                context.push('/grocery-list/$groceryListId?from=task');
+              } else {
+                // Navigate to task detail/edit page
+                final taskJson = TaskModelHelpers.toSupabase(task);
+                context.push(
+                  AppConstants.routeEditTask,
+                  extra: taskJson,
+                );
+              }
+            },
+            tooltip: 'Edit task',
+            padding: ResponsiveHelper.padding(all: 8),
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }
