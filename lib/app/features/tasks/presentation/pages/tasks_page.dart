@@ -523,10 +523,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       ),
       elevation: 0,
       color: Theme.of(context).cardColor,
-      child: ListTile(
-        leading: Checkbox(
-          value: task.status == 'completed',
-          onChanged: (value) async {
+      child: InkWell(
+        onTap: () {
+          // Navigate to task detail/edit page
+          final taskJson = TaskModelHelpers.toSupabase(task);
+          context.push(
+            AppConstants.routeEditTask,
+            extra: taskJson,
+          );
+        },
+        borderRadius: ResponsiveHelper.borderRadius(12),
+        child: ListTile(
+          leading: GestureDetector(
+            onTap: () {}, // Prevent tap from propagating to parent InkWell
+            child: Checkbox(
+              value: task.status == 'completed',
+              onChanged: (value) async {
             final taskActions = ref.read(taskActionsProvider);
             if (value == true) {
               final canComplete = await _checkGroceryTaskComplete(context, task);
@@ -652,7 +664,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         title: const Text('Edit'),
                         onTap: () {
                           Navigator.pop(context);
-                          // Handle edit
+                          // Navigate to edit page
+                          final taskJson = TaskModelHelpers.toSupabase(task);
+                          context.push(
+                            AppConstants.routeEditTask,
+                            extra: taskJson,
+                          );
                         },
                       ),
                       ListTile(
@@ -669,6 +686,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               },
             ),
           ],
+        ),
         ),
       ),
     );
