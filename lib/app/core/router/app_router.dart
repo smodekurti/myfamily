@@ -499,39 +499,6 @@ class MainShell extends ConsumerWidget {
               );
             },
           ),
-        // Progress indicator (only on tasks page)
-        if (showProgress)
-          Consumer(
-            builder: (context, ref, child) {
-              final currentFamily = ref.watch(currentFamilyProvider);
-              if (currentFamily == null) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Center(child: Text('0/0')),
-                );
-              }
-              final familyTasks = ref.watch(familyTasksProvider(currentFamily.id));
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Center(
-                  child: familyTasks.when(
-                    data: (tasks) {
-                      final completed = tasks.where((t) => t.status == 'completed').length;
-                      final total = tasks.length;
-                      return Text(
-                        '$completed/$total',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      );
-                    },
-                    loading: () => const Text('0/0'),
-                    error: (_, __) => const Text('0/0'),
-                  ),
-                ),
-              );
-            },
-          ),
         // Profile icon
         GestureDetector(
           onTap: () => context.go(AppConstants.routeProfile),
