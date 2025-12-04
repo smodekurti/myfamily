@@ -101,7 +101,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     return BackgroundWidget(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: _buildCustomAppBar(context, ref, familyTasks),
         body: SafeArea(
           child: Column(
             children: [
@@ -270,6 +269,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               child: FloatingActionButton(
                 onPressed: () => context.push(AppConstants.routeCreateTask),
                 backgroundColor: Theme.of(context).colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: ResponsiveHelper.borderRadius(16),
+                ),
                 child: const Icon(Icons.add),
               ),
             );
@@ -280,6 +282,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             child: FloatingActionButton(
               onPressed: () => context.push(AppConstants.routeCreateTask),
               backgroundColor: Theme.of(context).colorScheme.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: ResponsiveHelper.borderRadius(16),
+              ),
               child: const Icon(Icons.add),
             ),
           ),
@@ -288,62 +293,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     );
   }
 
-  PreferredSizeWidget _buildCustomAppBar(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<List<TaskModel>> familyTasks,
-  ) {
-    final searchMode = ref.watch(searchModeProvider);
-    
-    return AppBar(
-      leading: Builder(
-        builder: (context) => IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => Scaffold.of(context).openDrawer(),
-        ),
-      ),
-      title: const Text('Household Chores'),
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      actions: [
-        // Search icon
-        Consumer(
-          builder: (context, ref, child) {
-            return IconButton(
-              icon: Icon(searchMode ? Icons.close : Icons.search),
-              onPressed: () {
-                ref.read(searchModeProvider.notifier).state = !searchMode;
-                if (!searchMode) {
-                  ref.read(searchQueryProvider.notifier).state = '';
-                }
-              },
-            );
-          },
-        ),
-        // Progress indicator
-        Padding(
-          padding: ResponsiveHelper.padding(horizontal: 8),
-          child: Center(
-            child: familyTasks.when(
-              data: (tasks) {
-                final completed = tasks.where((t) => t.status == 'completed').length;
-                final total = tasks.length;
-                return Text(
-                  '$completed/$total',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                );
-              },
-              loading: () => const Text('0/0'),
-              error: (_, __) => const Text('0/0'),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildThisWeekStatus(BuildContext context, List<TaskModel> tasks) {
     final now = DateTime.now();
@@ -495,7 +444,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       final difference = due.difference(today).inDays;
       
       if (difference < 0) {
-        statusText = '${difference.abs()} days overdue';
+        final daysOverdue = difference.abs();
+        statusText = daysOverdue == 1 ? '1 day overdue' : '$daysOverdue days overdue';
         statusColor = Theme.of(context).colorScheme.error;
       } else if (difference == 0) {
         statusText = 'Due today';
