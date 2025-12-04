@@ -232,12 +232,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                             error: (_, __) => const SizedBox.shrink(),
                           ),
                         
-                        // Filter Tabs (3 only: All Chores, My Chores, Due Today)
-                        if (!searchMode) ...[
-                          _buildFilterTabs(context, filter),
-                          SizedBox(height: ResponsiveHelper.h(16)),
-                        ],
-                        
                         // Upcoming Chores Section Header
                         _buildUpcomingChoresHeader(context, ref),
                         SizedBox(height: ResponsiveHelper.h(16)),
@@ -402,51 +396,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     );
   }
 
-  Widget _buildFilterTabs(BuildContext context, String currentFilter) {
-    final filters = [
-      {'id': 'all', 'label': 'All Chores'},
-      {'id': 'my', 'label': 'My Chores'},
-      {'id': 'today', 'label': 'Due Today'},
-    ];
-
-    return Row(
-      children: filters.map((filter) {
-        final isSelected = currentFilter == filter['id'];
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: filter == filters.last ? 0 : ResponsiveHelper.w(8),
-            ),
-            child: Material(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: ResponsiveHelper.borderRadius(8),
-              child: InkWell(
-                onTap: () {
-                  ref.read(taskFilterProvider.notifier).state = filter['id']!;
-                },
-                borderRadius: ResponsiveHelper.borderRadius(8),
-                child: Container(
-                  padding: ResponsiveHelper.padding(vertical: 10),
-                  alignment: Alignment.center,
-                  child: Text(
-                    filter['label']!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildUpcomingChoresHeader(BuildContext context, WidgetRef ref) {
     final viewMode = ref.watch(taskViewModeProvider);
