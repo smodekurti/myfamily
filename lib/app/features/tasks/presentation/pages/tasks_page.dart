@@ -17,7 +17,7 @@ import 'package:intl/intl.dart';
 // Filter state provider
 final taskFilterProvider = StateProvider<String>((ref) => 'all');
 
-// View mode provider: 'list', 'grid', 'grouped_category', 'grouped_assignee', 'grouped_due_date'
+// View mode provider: 'list', 'simple_list', 'grid', 'grouped_category', 'grouped_assignee', 'grouped_due_date'
 final taskViewModeProvider = StateProvider<String>((ref) => 'list');
 
 class TasksPage extends ConsumerStatefulWidget {
@@ -469,6 +469,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         label: 'List',
                         mode: 'list',
                         isSelected: currentMode == 'list',
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(12)),
+                      _buildViewModeOption(
+                        context,
+                        ref,
+                        icon: Icons.format_list_bulleted,
+                        label: 'Simple List',
+                        mode: 'simple_list',
+                        isSelected: currentMode == 'simple_list',
                       ),
                       SizedBox(height: ResponsiveHelper.h(12)),
                       _buildViewModeOption(
@@ -1617,6 +1626,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             SizedBox(width: ResponsiveHelper.w(4)),
             _buildViewModeButton(
               context,
+              icon: Icons.format_list_bulleted,
+              label: 'Simple',
+              mode: 'simple_list',
+              isSelected: viewMode == 'simple_list',
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            _buildViewModeButton(
+              context,
               icon: Icons.grid_view,
               label: 'Grid',
               mode: 'grid',
@@ -1708,6 +1725,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     String viewMode,
   ) {
     switch (viewMode) {
+      case 'simple_list':
+        return _buildSimpleListView(context, ref, tasks, members, familyId, currentUserId);
       case 'grid':
         return _buildGridView(context, ref, tasks, members, familyId, currentUserId);
       case 'grouped_category':

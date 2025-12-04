@@ -66,16 +66,16 @@ class AvatarUrlService {
       if (cleanPath.contains('/storage/v1/object/public/')) {
         // Extract the path from the public URL
         try {
-          final uri = Uri.parse(cleanPath);
-          final pathParts = uri.path.split('/storage/v1/object/public/');
-          if (pathParts.length > 1) {
-            final bucketAndPath = pathParts[1];
-            final parts = bucketAndPath.split('/');
-            if (parts.length >= 2) {
-              final bucket = parts[0];
-              final path = parts.sublist(1).join('/');
-              return await _generateSignedUrl(bucket, path);
-            }
+        final uri = Uri.parse(cleanPath);
+        final pathParts = uri.path.split('/storage/v1/object/public/');
+        if (pathParts.length > 1) {
+          final bucketAndPath = pathParts[1];
+          final parts = bucketAndPath.split('/');
+          if (parts.length >= 2) {
+            final bucket = parts[0];
+            final path = parts.sublist(1).join('/');
+            return await _generateSignedUrl(bucket, path);
+          }
           }
         } catch (e) {
           // If URI parsing fails, treat it as a storage path
