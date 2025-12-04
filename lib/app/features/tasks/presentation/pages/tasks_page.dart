@@ -1213,6 +1213,70 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }
   }
   
+  /// Build "View All" link to show all tasks
+  Widget _buildViewAllLink(BuildContext context) {
+    return Padding(
+      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showAllTasks = true;
+          });
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'View All',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            Icon(
+              Icons.arrow_downward,
+              size: ResponsiveHelper.iconSize(16),
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build "Show Less" link to collapse back to top 5
+  Widget _buildShowLessLink(BuildContext context) {
+    return Padding(
+      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showAllTasks = false;
+          });
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Show Less',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.w(4)),
+            Icon(
+              Icons.arrow_upward,
+              size: ResponsiveHelper.iconSize(16),
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<TaskModel> _searchTasks(List<TaskModel> tasks, String query) {
     if (query.isEmpty) return tasks;
     
