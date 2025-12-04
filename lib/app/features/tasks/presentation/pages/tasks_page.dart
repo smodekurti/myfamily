@@ -1781,8 +1781,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: tasks.length,
       separatorBuilder: (context, index) => Divider(
-        height: ResponsiveHelper.h(1),
-        thickness: ResponsiveHelper.h(1),
+        height: ResponsiveHelper.h(0.5),
+        thickness: ResponsiveHelper.h(0.5),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       itemBuilder: (context, index) {
@@ -1812,15 +1812,18 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final isCompleted = task.status == 'completed';
 
     return Padding(
-      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           // Checkbox
           GestureDetector(
             onTap: () {}, // Prevent tap from propagating
-            child: Checkbox(
-              value: isCompleted,
-              onChanged: (value) async {
+            child: SizedBox(
+              width: ResponsiveHelper.w(36),
+              height: ResponsiveHelper.h(36),
+              child: Checkbox(
+                value: isCompleted,
+                onChanged: (value) async {
                 if (value == true) {
                   final canComplete = await _checkGroceryTaskComplete(context, task);
                   if (!canComplete) {
@@ -1870,11 +1873,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ref.invalidate(tasksDueTodayProvider(familyId));
                 ref.invalidate(familyMembersProvider(familyId));
               },
-              activeColor: Theme.of(context).colorScheme.primary,
-              shape: const CircleBorder(),
+                activeColor: Theme.of(context).colorScheme.primary,
+                shape: const CircleBorder(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
             ),
           ),
-          SizedBox(width: ResponsiveHelper.w(12)),
+          SizedBox(width: ResponsiveHelper.w(8)),
           // Task title - tappable to navigate
           Expanded(
             child: InkWell(
@@ -1894,22 +1900,23 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               },
               child: Text(
                 task.title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
                   color: isCompleted
                       ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
                       : Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
+                  fontSize: ResponsiveHelper.sp(14),
                 ),
               ),
             ),
           ),
-          SizedBox(width: ResponsiveHelper.w(8)),
+          SizedBox(width: ResponsiveHelper.w(4)),
           // Edit option
           IconButton(
             icon: Icon(
               Icons.edit,
-              size: ResponsiveHelper.iconSize(20),
+              size: ResponsiveHelper.iconSize(18),
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             onPressed: () {
@@ -1927,8 +1934,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               }
             },
             tooltip: 'Edit task',
-            padding: ResponsiveHelper.padding(all: 8),
+            padding: ResponsiveHelper.padding(all: 4),
             constraints: const BoxConstraints(),
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
