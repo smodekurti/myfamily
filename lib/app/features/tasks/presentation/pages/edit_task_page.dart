@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
-import '../../../../core/extensions/user_extensions.dart';
+
 import '../../../../core/models/task_category.dart';
 import '../../../../data/models/family_model.dart';
 import '../../../../data/models/task_model.dart';
@@ -13,10 +13,7 @@ import 'package:intl/intl.dart';
 class EditTaskPage extends ConsumerStatefulWidget {
   final TaskModel task;
 
-  const EditTaskPage({
-    super.key,
-    required this.task,
-  });
+  const EditTaskPage({super.key, required this.task});
 
   @override
   ConsumerState<EditTaskPage> createState() => _EditTaskPageState();
@@ -26,7 +23,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
-  
+
   String? _selectedAssignee;
   String _selectedCategory = 'chore';
   String _selectedPriority = 'medium';
@@ -40,15 +37,21 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.task.title);
-    _notesController = TextEditingController(text: widget.task.description ?? '');
+    _notesController = TextEditingController(
+      text: widget.task.description ?? '',
+    );
     _selectedAssignee = widget.task.assignedTo;
     _selectedCategory = widget.task.category;
     _selectedPriority = widget.task.priority;
     _selectedDueDate = widget.task.dueDate;
-    _selectedGroceryListId = widget.task.categoryData?['groceryListId'] as String?;
-    _recurrenceType = widget.task.categoryData?['recurrenceType'] as String? ?? 'none';
+    _selectedGroceryListId =
+        widget.task.categoryData?['groceryListId'] as String?;
+    _recurrenceType =
+        widget.task.categoryData?['recurrenceType'] as String? ?? 'none';
     if (widget.task.categoryData?['recurrenceEndDate'] != null) {
-      _recurrenceEndDate = DateTime.parse(widget.task.categoryData!['recurrenceEndDate'] as String);
+      _recurrenceEndDate = DateTime.parse(
+        widget.task.categoryData!['recurrenceEndDate'] as String,
+      );
     }
   }
 
@@ -61,7 +64,9 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
         if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Cannot edit completed tasks. Please unmark the task as complete first.'),
+              content: const Text(
+                'Cannot edit completed tasks. Please unmark the task as complete first.',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -79,13 +84,23 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   }
 
   Future<void> _selectDueDate(BuildContext context) async {
+    final now = DateTime.now();
+    // Allow dates from 2 years ago to 5 years in the future
+    final firstDate = DateTime(now.year - 2);
+    final lastDate = DateTime(now.year + 5);
+
+    // Ensure initial date is within range
+    DateTime initialDate = _selectedDueDate ?? now;
+    if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+    if (initialDate.isAfter(lastDate)) initialDate = lastDate;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
-    
+
     if (picked != null) {
       setState(() {
         _selectedDueDate = picked;
@@ -105,7 +120,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
 
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
       if (mounted) {
@@ -118,7 +133,7 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
       }
       return;
     }
-    
+
     // Auto-assign to current user if no assignee selected
     final assignee = _selectedAssignee ?? currentUser.id;
 
@@ -126,21 +141,24 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
 
     try {
       final currentFamily = ref.read(currentFamilyProvider);
-      
+
       if (currentFamily == null) {
         throw Exception('No family selected');
       }
 
       final taskActions = ref.read(taskActionsProvider);
-      
+
       // Build categoryData with recurrence and grocery list info
       Map<String, dynamic>? categoryData;
       if (_recurrenceType != 'none' || _selectedGroceryListId != null) {
-        categoryData = Map<String, dynamic>.from(widget.task.categoryData ?? {});
+        categoryData = Map<String, dynamic>.from(
+          widget.task.categoryData ?? {},
+        );
         if (_recurrenceType != 'none') {
           categoryData['recurrenceType'] = _recurrenceType;
           if (_recurrenceEndDate != null) {
-            categoryData['recurrenceEndDate'] = _recurrenceEndDate!.toIso8601String();
+            categoryData['recurrenceEndDate'] = _recurrenceEndDate!
+                .toIso8601String();
           } else {
             categoryData.remove('recurrenceEndDate');
           }
@@ -162,13 +180,13 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
         // Pass empty map to explicitly clear it in database
         categoryData = {};
       }
-      
+
       // Update task
       await taskActions.updateTask(
         taskId: widget.task.id,
         title: _titleController.text.trim(),
-        description: _notesController.text.trim().isEmpty 
-            ? null 
+        description: _notesController.text.trim().isEmpty
+            ? null
             : _notesController.text.trim(),
         assignedTo: assignee,
         category: _selectedCategory,
@@ -176,11 +194,11 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
         categoryData: categoryData,
         dueDate: _selectedDueDate,
       );
-      
+
       // Refresh the tasks list to show the updated task immediately
       ref.invalidate(familyTasksProvider(currentFamily.id));
       ref.invalidate(tasksDueTodayProvider(currentFamily.id));
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -190,7 +208,9 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
         );
         // Small delay to ensure the stream picks up the change
         await Future.delayed(const Duration(milliseconds: 300));
-        context.pop();
+        if (mounted && context.mounted) {
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -211,570 +231,223 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
-    final familyMembers = currentFamily != null 
+    final familyMembers = currentFamily != null
         ? ref.watch(familyMembersProvider(currentFamily.id))
         : const AsyncValue.data(<FamilyMemberModel>[]);
 
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.5), // Blurred background
-      body: Center(
-        child: Container(
-          margin: ResponsiveHelper.padding(horizontal: 16),
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveHelper.w(400),
-            maxHeight: MediaQuery.of(context).size.height * 0.9,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: ResponsiveHelper.borderRadius(20),
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                _buildHeader(context),
-                
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: ResponsiveHelper.padding(all: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Chore Name
-                        _buildChoreNameField(),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Category selector
-                        _buildCategorySelector(),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Assign To
-                        _buildAssignToSection(context, familyMembers),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Priority
-                        _buildPrioritySelector(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Due Date
-                        _buildDueDateField(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Recurrence
-                        _buildRecurrenceSelector(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Shopping List (only if grocery category)
-                        if (_selectedCategory == 'grocery') ...[
-                          _buildShoppingListSection(context),
-                          SizedBox(height: ResponsiveHelper.h(24)),
-                        ],
-                        
-                        // Notes
-                        _buildNotesField(),
-                      ],
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SizedBox(height: ResponsiveHelper.h(24)), // Top spacing
+            Expanded(
+              child: SingleChildScrollView(
+                padding: ResponsiveHelper.padding(horizontal: 24, vertical: 16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleField(),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+
+                      _buildCategorySelector(),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+
+                      _buildPropertiesGrid(context, familyMembers),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+
+                      _buildSettingsSection(context),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+
+                      _buildNotesField(),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: ResponsiveHelper.padding(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => context.pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: ResponsiveHelper.padding(vertical: 16),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: ResponsiveHelper.borderRadius(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.sp(16),
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              SizedBox(width: ResponsiveHelper.w(16)),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _isLoading ? null : _saveTask,
+                  style: FilledButton.styleFrom(
+                    padding: ResponsiveHelper.padding(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: ResponsiveHelper.borderRadius(16),
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: ResponsiveHelper.w(24),
+                          height: ResponsiveHelper.h(24),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Save',
+                          style: TextStyle(
+                            fontSize: ResponsiveHelper.sp(16),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-            width: ResponsiveHelper.w(1),
-          ),
+  Widget _buildTitleField() {
+    return TextFormField(
+      controller: _titleController,
+      style: Theme.of(
+        context,
+      ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+      decoration: InputDecoration(
+        hintText: 'What needs to be done?',
+        hintStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+          fontWeight: FontWeight.bold,
         ),
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
-          ),
-          Expanded(
-            child: Text(
-              'Edit Chore',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          TextButton(
-            onPressed: _isLoading ? null : _saveTask,
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChoreNameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Chore Name',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        TextFormField(
-          controller: _titleController,
-          decoration: InputDecoration(
-            hintText: 'e.g., Weekly Groceries',
-            border: OutlineInputBorder(
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a chore name';
-            }
-            return null;
-          },
-        ),
-      ],
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a task name';
+        }
+        return null;
+      },
     );
   }
 
   Widget _buildCategorySelector() {
-    // Get priority categories (most commonly used)
-    final priorityCategories = [
-      TaskCategories.chore,
-      TaskCategories.grocery,
-      TaskCategories.cleaning,
-      TaskCategories.laundry,
-      TaskCategories.personalCare,
-      TaskCategories.homework,
-    ];
-
-    // Get all other categories
-    final otherCategories = TaskCategories.all
-        .where((cat) => !priorityCategories.contains(cat))
-        .toList();
+    // Combine all categories
+    final allCategories = [...TaskCategories.all];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Category',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+          'CATEGORY',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
-        SizedBox(height: ResponsiveHelper.h(12)),
-        
-        // Priority categories (most common)
-        Wrap(
-          spacing: ResponsiveHelper.w(8),
-          runSpacing: ResponsiveHelper.h(8),
-          children: priorityCategories.map((category) {
-            final isSelected = _selectedCategory == category.id;
-            return ChoiceChip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    category.icon,
-                    size: ResponsiveHelper.iconSize(16),
-                    color: isSelected
-                        ? Colors.white
-                        : category.color,
-                  ),
-                  SizedBox(width: ResponsiveHelper.w(6)),
-                  Text(category.name),
-                ],
-              ),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _selectedCategory = category.id;
-                    // Clear grocery list selection if not grocery category
-                    if (category.id != 'grocery') {
-                      _selectedGroceryListId = null;
-                    }
-                  });
-                }
-              },
-              selectedColor: category.color,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : category.color,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-              side: BorderSide(
-                color: isSelected ? category.color : category.color.withOpacity(0.3),
-                width: isSelected ? 2 : 1,
-              ),
-            );
-          }).toList(),
-        ),
-        
-        // Show "More Categories" expandable section if there are other categories
-        if (otherCategories.isNotEmpty) ...[
-          SizedBox(height: ResponsiveHelper.h(12)),
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text(
-              'More Categories',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            children: [
-              Wrap(
-                spacing: ResponsiveHelper.w(8),
-                runSpacing: ResponsiveHelper.h(8),
-                children: otherCategories.map((category) {
-                  final isSelected = _selectedCategory == category.id;
-                  return ChoiceChip(
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          category.icon,
-                          size: ResponsiveHelper.iconSize(16),
-                          color: isSelected
-                              ? Colors.white
-                              : category.color,
-                        ),
-                        SizedBox(width: ResponsiveHelper.w(6)),
-                        Text(category.name),
-                      ],
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedCategory = category.id;
-                          // Clear grocery list selection if not grocery category
-                          if (category.id != 'grocery') {
-                            _selectedGroceryListId = null;
-                          }
-                        });
-                      }
-                    },
-                    selectedColor: category.color,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : category.color,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                    side: BorderSide(
-                      color: isSelected ? category.color : category.color.withOpacity(0.3),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  );
-                }).toList(),
-              ),
-              SizedBox(height: ResponsiveHelper.h(8)),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildAssignToSection(
-    BuildContext context,
-    AsyncValue<List<FamilyMemberModel>> familyMembers,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Assign To',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: ResponsiveHelper.h(12)),
-        familyMembers.when(
-          data: (members) {
-            // If no members, show current user as the only option
-            if (members.isEmpty) {
-              return Consumer(
-                builder: (context, ref, child) {
-                  final currentUser = ref.watch(currentUserProvider);
-                  if (currentUser == null) {
-                    return const Text('No user available');
-                  }
-                  
-                  final avatarUrl = currentUser.avatarUrl;
-                  final displayName = currentUser.displayNameOrEmail;
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedAssignee = currentUser.id;
-                      });
-                    },
-                    child: Column(
-                      children: [
-                        Container(
-                          width: ResponsiveHelper.w(60),
-                          height: ResponsiveHelper.h(60),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: ResponsiveHelper.w(3),
-                            ),
-                          ),
-                          child: AvatarWidget(
-                            avatarPath: avatarUrl,
-                            radius: ResponsiveHelper.r(28),
-                            displayName: displayName,
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            textColor: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(4)),
-                        Text(
-                          displayName ?? 'You',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            }
-            
-            // Show all members for selection
-            return Wrap(
-              spacing: ResponsiveHelper.w(16),
-              runSpacing: ResponsiveHelper.h(12),
-              children: members.map((member) {
-                final isSelected = _selectedAssignee == member.uid;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedAssignee = member.uid;
-                    });
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: ResponsiveHelper.w(60),
-                        height: ResponsiveHelper.h(60),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                            width: ResponsiveHelper.w(isSelected ? 3 : 2),
-                          ),
-                        ),
-                        child: AvatarWidget(
-                          avatarPath: member.photoURL,
-                          radius: ResponsiveHelper.r(28),
-                          displayName: member.displayName,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          textColor: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.h(4)),
-                      Text(
-                        member.displayName,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            );
-          },
-          loading: () => const CircularProgressIndicator(),
-          error: (error, stackTrace) {
-            // On error, show current user as fallback
-            return Consumer(
-              builder: (context, ref, child) {
-                final currentUser = ref.watch(currentUserProvider);
-                if (currentUser == null) {
-                  return Text(
-                    'Error loading members',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-                
-                final avatarUrl = currentUser.avatarUrl;
-                final displayName = currentUser.displayNameOrEmail;
-                
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedAssignee = currentUser.id;
-                    });
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: ResponsiveHelper.w(60),
-                        height: ResponsiveHelper.h(60),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: ResponsiveHelper.w(3),
-                          ),
-                        ),
-                        child: AvatarWidget(
-                          avatarPath: avatarUrl,
-                          radius: ResponsiveHelper.r(28),
-                          displayName: displayName,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          textColor: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.h(4)),
-                      Text(
-                        displayName ?? 'You',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrioritySelector(BuildContext context) {
-    Color getPriorityColor(String priority) {
-      switch (priority) {
-        case 'high':
-          return Colors.red;
-        case 'medium':
-          return Colors.orange;
-        case 'low':
-          return Colors.green;
-        default:
-          return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
-      }
-    }
-    
-    IconData getPriorityIcon(String priority) {
-      switch (priority) {
-        case 'high':
-          return Icons.priority_high;
-        case 'medium':
-          return Icons.remove;
-        case 'low':
-          return Icons.arrow_downward;
-        default:
-          return Icons.circle;
-      }
-    }
-    
-    String getPriorityLabel(String priority) {
-      switch (priority) {
-        case 'high':
-          return 'High';
-        case 'medium':
-          return 'Med';
-        case 'low':
-          return 'Low';
-        default:
-          return 'Med';
-      }
-    }
-    
-    return Row(
-      children: [
-        Text(
-          'Priority:',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(width: ResponsiveHelper.w(12)),
-        Expanded(
+        SizedBox(height: ResponsiveHelper.h(16)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
           child: Row(
-            children: ['low', 'medium', 'high'].map((priority) {
-              final isSelected = _selectedPriority == priority;
-              final priorityColor = getPriorityColor(priority);
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: priority != 'high' ? ResponsiveHelper.w(6) : 0,
-                  ),
-                  child: Material(
-                    color: isSelected
-                        ? priorityColor.withOpacity(0.1)
-                        : Theme.of(context).cardColor,
-                    borderRadius: ResponsiveHelper.borderRadius(8),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedPriority = priority;
-                        });
-                      },
-                      borderRadius: ResponsiveHelper.borderRadius(8),
-                      child: Container(
-                        padding: ResponsiveHelper.padding(vertical: 8, horizontal: 4),
+            children: allCategories.map((category) {
+              final isSelected = _selectedCategory == category.id;
+              return Padding(
+                padding: EdgeInsets.only(right: ResponsiveHelper.w(16)),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedCategory = category.id;
+                      if (category.id != 'grocery') {
+                        _selectedGroceryListId = null;
+                      }
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Container(
+                        width: ResponsiveHelper.w(64),
+                        height: ResponsiveHelper.h(64),
                         decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isSelected
-                                ? priorityColor
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                            width: ResponsiveHelper.w(isSelected ? 2 : 1),
-                          ),
-                          borderRadius: ResponsiveHelper.borderRadius(8),
+                          color: isSelected
+                              ? category.color
+                              : category.color.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: category.color.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              getPriorityIcon(priority),
-                              size: ResponsiveHelper.iconSize(16),
-                              color: isSelected
-                                  ? priorityColor
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                            SizedBox(width: ResponsiveHelper.w(4)),
-                            Text(
-                              getPriorityLabel(priority),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isSelected
-                                    ? priorityColor
-                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                fontSize: ResponsiveHelper.sp(11),
-                              ),
-                            ),
-                          ],
+                        child: Icon(
+                          category.icon,
+                          color: isSelected ? Colors.white : category.color,
+                          size: ResponsiveHelper.iconSize(28),
                         ),
                       ),
-                    ),
+                      SizedBox(height: ResponsiveHelper.h(8)),
+                      Text(
+                        category.name,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -785,258 +458,255 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
     );
   }
 
-  Widget _buildDueDateField(BuildContext context) {
+  Widget _buildPropertiesGrid(
+    BuildContext context,
+    AsyncValue<List<FamilyMemberModel>> familyMembers,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Due Date',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+          'DETAILS',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        InkWell(
-          onTap: () => _selectDueDate(context),
-          child: Container(
-            padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-              ),
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedDueDate == null
-                        ? 'Select date'
-                        : DateFormat('MM/dd/yyyy').format(_selectedDueDate!),
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShoppingListSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Shopping List',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        InkWell(
-          onTap: () => _attachShoppingList(context),
-          child: Container(
-            padding: ResponsiveHelper.padding(all: 16),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary,
-                style: BorderStyle.solid,
-                width: ResponsiveHelper.w(2),
-              ),
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.shopping_cart,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: ResponsiveHelper.iconSize(24),
-                ),
-                SizedBox(width: ResponsiveHelper.w(12)),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Attach Shopping List',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.h(4)),
-                      Text(
-                        'Add items from an existing list',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecurrenceSelector(BuildContext context) {
-    final isRecurring = _recurrenceType != 'none';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        SizedBox(height: ResponsiveHelper.h(16)),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Repeat',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
+            // Due Date Tile
+            Expanded(
+              child: _buildPropertyTile(
+                icon: Icons.calendar_today,
+                color: Colors.blue,
+                label: 'Due Date',
+                value: _selectedDueDate == null
+                    ? 'Set Date'
+                    : DateFormat('MMM d').format(_selectedDueDate!),
+                onTap: () => _selectDueDate(context),
+                isActive: _selectedDueDate != null,
               ),
             ),
-            if (isRecurring) ...[
-              SizedBox(width: ResponsiveHelper.w(8)),
-              Icon(
-                Icons.repeat,
-                size: ResponsiveHelper.iconSize(16),
-                color: Theme.of(context).colorScheme.primary,
+            SizedBox(width: ResponsiveHelper.w(12)),
+
+            // Priority Tile
+            Expanded(
+              child: _buildPropertyTile(
+                icon: _getPriorityIcon(_selectedPriority),
+                color: _getPriorityColor(_selectedPriority),
+                label: 'Priority',
+                value: _selectedPriority.toUpperCase(),
+                onTap: () {
+                  // Cycle priority
+                  setState(() {
+                    if (_selectedPriority == 'low') {
+                      _selectedPriority = 'medium';
+                    } else if (_selectedPriority == 'medium') {
+                      _selectedPriority = 'high';
+                    } else {
+                      _selectedPriority = 'low';
+                    }
+                  });
+                },
+                isActive: true,
               ),
-            ],
-          ],
-        ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        Wrap(
-          spacing: ResponsiveHelper.w(8),
-          runSpacing: ResponsiveHelper.h(8),
-          children: [
-            _buildRecurrenceChip(context, 'none', 'None'),
-            _buildRecurrenceChip(context, 'daily', 'Daily'),
-            _buildRecurrenceChip(context, 'weekly', 'Weekly'),
-            _buildRecurrenceChip(context, 'monthly', 'Monthly'),
-          ],
-        ),
-        if (_recurrenceType == 'none' && widget.task.categoryData?['recurrenceType'] != null && 
-            widget.task.categoryData!['recurrenceType'] != 'none') ...[
-          SizedBox(height: ResponsiveHelper.h(8)),
-          Container(
-            padding: ResponsiveHelper.padding(all: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: ResponsiveHelper.borderRadius(8),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: ResponsiveHelper.iconSize(16),
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                SizedBox(width: ResponsiveHelper.w(8)),
-                Expanded(
-                  child: Text(
-                    'Setting to "None" will stop this task from creating future occurrences.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            SizedBox(width: ResponsiveHelper.w(12)),
+
+            // Assignee Tile
+            Expanded(
+              child: familyMembers.when(
+                data: (members) {
+                  final assignedMember = members.firstWhere(
+                    (m) => m.uid == _selectedAssignee,
+                    orElse: () => members.firstWhere(
+                      (m) => m.uid == ref.read(currentUserProvider)?.id,
+                      orElse: () => members.first,
                     ),
-                  ),
-                ),
-              ],
+                  );
+
+                  return _buildPropertyTile(
+                    icon: Icons.person_outline,
+                    color: Colors.purple,
+                    label: 'Assignee',
+                    value: assignedMember.displayName.split(' ').first,
+                    onTap: () => _showAssigneePicker(context, members),
+                    isActive: true,
+                    customIcon: AvatarWidget(
+                      avatarPath: assignedMember.photoURL,
+                      radius: ResponsiveHelper.r(12),
+                      displayName: assignedMember.displayName,
+                      backgroundColor: Colors.purple,
+                      textColor: Colors.white,
+                    ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const SizedBox(),
+              ),
             ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPropertyTile({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+    required bool isActive,
+    Widget? customIcon,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: ResponsiveHelper.padding(all: 12),
+        decoration: BoxDecoration(
+          color: isActive
+              ? color.withValues(alpha: 0.1)
+              : Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: ResponsiveHelper.borderRadius(16),
+          border: Border.all(
+            color: isActive ? color.withValues(alpha: 0.3) : Colors.transparent,
+            width: 1.5,
           ),
-        ],
-        // Show end date picker if recurrence is not 'none'
-        if (_recurrenceType != 'none') ...[
-          SizedBox(height: ResponsiveHelper.h(16)),
-          Text(
-            'Repeat Until',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: ResponsiveHelper.h(8)),
-          InkWell(
-            onTap: () async {
-              final DateTime? picked = await showDatePicker(
-                context: context,
-                initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 30)),
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-              );
-              
-              if (picked != null) {
-                setState(() {
-                  _recurrenceEndDate = picked;
-                });
-              }
-            },
-            child: Container(
-              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: ResponsiveHelper.padding(all: 6),
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                ),
-                borderRadius: ResponsiveHelper.borderRadius(12),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _recurrenceEndDate == null
-                          ? 'No end date'
-                          : DateFormat('MM/dd/yyyy').format(_recurrenceEndDate!),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  Icon(
-                    Icons.calendar_today,
-                    size: ResponsiveHelper.iconSize(20),
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
                   ),
                 ],
               ),
+              child:
+                  customIcon ??
+                  Icon(icon, size: ResponsiveHelper.iconSize(16), color: color),
             ),
-          ),
-        ],
-      ],
+            SizedBox(height: ResponsiveHelper.h(12)),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.h(4)),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildRecurrenceChip(BuildContext context, String value, String label) {
-    final isSelected = _recurrenceType == value;
-    return ActionChip(
-      label: Text(label),
-      onPressed: () {
-        setState(() {
-          _recurrenceType = value;
-          if (value == 'none') {
-            _recurrenceEndDate = null;
-          }
-        });
-      },
-      backgroundColor: isSelected
-          ? Theme.of(context).colorScheme.primaryContainer
-          : Theme.of(context).colorScheme.surfaceContainerHighest,
-      labelStyle: TextStyle(
-        color: isSelected
-            ? Theme.of(context).colorScheme.onPrimaryContainer
-            : Theme.of(context).colorScheme.onSurface,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        fontSize: ResponsiveHelper.sp(12),
-      ),
-      padding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget _buildSettingsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'SETTINGS',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+        SizedBox(height: ResponsiveHelper.h(16)),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: ResponsiveHelper.borderRadius(16),
+          ),
+          child: Column(
+            children: [
+              // Recurrence Tile
+              ListTile(
+                leading: Container(
+                  padding: ResponsiveHelper.padding(all: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: ResponsiveHelper.borderRadius(8),
+                  ),
+                  child: Icon(
+                    Icons.repeat,
+                    color: Colors.orange,
+                    size: ResponsiveHelper.iconSize(20),
+                  ),
+                ),
+                title: const Text('Repeat'),
+                subtitle: Text(
+                  _recurrenceType == 'none'
+                      ? 'Does not repeat'
+                      : _recurrenceType.capitalize(),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showRecurrencePicker(context),
+              ),
+
+              if (_selectedCategory == 'grocery') ...[
+                Padding(
+                  padding: ResponsiveHelper.padding(horizontal: 16),
+                  child: Divider(
+                    height: 1,
+                    color: Theme.of(
+                      context,
+                    ).dividerColor.withValues(alpha: 0.1),
+                  ),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: ResponsiveHelper.padding(all: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: ResponsiveHelper.borderRadius(8),
+                    ),
+                    child: Icon(
+                      Icons.shopping_cart,
+                      color: Colors.green,
+                      size: ResponsiveHelper.iconSize(20),
+                    ),
+                  ),
+                  title: const Text('Shopping List'),
+                  subtitle: const Text('Attach items'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _attachShoppingList(context),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1045,25 +715,169 @@ class _EditTaskPageState extends ConsumerState<EditTaskPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Notes',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+          'NOTES',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        TextFormField(
-          controller: _notesController,
-          decoration: InputDecoration(
-            hintText: 'Add any extra details...',
-            border: OutlineInputBorder(
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            contentPadding: ResponsiveHelper.padding(all: 16),
+        SizedBox(height: ResponsiveHelper.h(16)),
+        Container(
+          padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: ResponsiveHelper.borderRadius(16),
           ),
-          maxLines: 4,
+          child: TextFormField(
+            controller: _notesController,
+            decoration: const InputDecoration(
+              hintText: 'Add any extra details...',
+              border: InputBorder.none,
+            ),
+            maxLines: 4,
+            minLines: 2,
+          ),
         ),
       ],
     );
   }
+
+  // Helper methods
+
+  Color _getPriorityColor(String priority) {
+    switch (priority) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getPriorityIcon(String priority) {
+    switch (priority) {
+      case 'high':
+        return Icons.priority_high;
+      case 'medium':
+        return Icons.remove;
+      case 'low':
+        return Icons.arrow_downward;
+      default:
+        return Icons.circle;
+    }
+  }
+
+  Future<void> _showAssigneePicker(
+    BuildContext context,
+    List<FamilyMemberModel> members,
+  ) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: ResponsiveHelper.padding(all: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Assign To',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: ResponsiveHelper.h(16)),
+            Wrap(
+              spacing: ResponsiveHelper.w(16),
+              runSpacing: ResponsiveHelper.h(16),
+              children: members.map((member) {
+                final isSelected = _selectedAssignee == member.uid;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedAssignee = member.uid);
+                    context.pop();
+                  },
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                )
+                              : null,
+                        ),
+                        child: AvatarWidget(
+                          avatarPath: member.photoURL,
+                          radius: ResponsiveHelper.r(30),
+                          displayName: member.displayName,
+                        ),
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(4)),
+                      Text(member.displayName.split(' ').first),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRecurrencePicker(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: ResponsiveHelper.padding(all: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Repeat Task',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: ResponsiveHelper.h(16)),
+            ...['none', 'daily', 'weekly', 'monthly'].map(
+              (type) => ListTile(
+                title: Text(
+                  type == 'none' ? 'Does not repeat' : type.capitalize(),
+                ),
+                trailing: _recurrenceType == type
+                    ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                    : null,
+                onTap: () {
+                  setState(() {
+                    _recurrenceType = type;
+                    if (type == 'none') _recurrenceEndDate = null;
+                  });
+                  context.pop();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+}

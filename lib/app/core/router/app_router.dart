@@ -5,6 +5,7 @@ import '../providers/providers.dart';
 import '../constants/app_constants.dart';
 import '../extensions/user_extensions.dart';
 import '../../common/widgets/avatar_widget.dart';
+import '../../common/responsive/responsive_helper.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/sign_in_page.dart';
@@ -40,7 +41,7 @@ import '../../features/onboarding/presentation/pages/walkthrough_page.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final routerState = ref.watch(routerStateProvider);
   final authRepo = ref.watch(authRepositoryProvider);
-  
+
   return GoRouter(
     initialLocation: AppConstants.routeSplash,
     redirect: (context, state) {
@@ -48,7 +49,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (state.matchedLocation == AppConstants.routeSplash) {
         return null;
       }
-      
+
       switch (routerState) {
         case RouterState.unauthenticated:
           // Redirect to auth pages
@@ -56,7 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             return null;
           }
           return AppConstants.routeAuth;
-          
+
         case RouterState.loading:
           // While loading, stay on splash or allow auth pages
           if (state.matchedLocation == AppConstants.routeSplash ||
@@ -64,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             return null;
           }
           return AppConstants.routeSplash;
-          
+
         case RouterState.authenticatedWithoutFamily:
           // Check if user needs consent (either no consent or version mismatch)
           final consentRepo = ref.watch(consentRepositoryProvider);
@@ -92,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             return null;
           }
           return AppConstants.routeGetStarted;
-          
+
         case RouterState.authenticatedWithFamily:
           // Check if user needs consent (either no consent or version mismatch)
           final currentUser = ref.read(currentUserProvider);
@@ -108,7 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             }
             // If user has a version, we'll check version mismatch in the consent page itself
             // For now, allow through - the consent page will handle version checks
-            
+
             // Check if user has completed walkthrough
             if (!authRepo.hasCompletedWalkthrough()) {
               // User hasn't completed walkthrough, redirect to walkthrough page
@@ -120,7 +121,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
           // User has given consent and completed walkthrough, proceed with normal flow
           // User has one or more families - always show family selection first
-          
+
           // If user is trying to access auth/get-started/consent/walkthrough, redirect to family selection
           if (state.matchedLocation.startsWith(AppConstants.routeAuth) ||
               state.matchedLocation == AppConstants.routeGetStarted ||
@@ -128,13 +129,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation == AppConstants.routeWalkthrough) {
             return AppConstants.routeFamilySelection;
           }
-          
+
           // Allow access to family selection and family setup pages
           if (state.matchedLocation == AppConstants.routeFamilySelection ||
               state.matchedLocation.startsWith(AppConstants.routeFamilySetup)) {
             return null;
           }
-          
+
           // For main app routes, only allow if a family has been selected
           // Check currentFamilyIdProvider directly to avoid race condition with loading family data
           final familyId = ref.read(currentFamilyIdProvider);
@@ -142,7 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             // No family selected yet, redirect to family selection
             return AppConstants.routeFamilySelection;
           }
-          
+
           // Allow access to main app routes (including Tasks, Profile, Family Settings, Settings, Help, Leaderboard)
           if (state.matchedLocation.startsWith(AppConstants.routeHome) ||
               state.matchedLocation.startsWith(AppConstants.routeTasks) ||
@@ -158,7 +159,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation == AppConstants.routePointsHistory) {
             return null;
           }
-          
+
           // Default to family selection if route not matched
           return AppConstants.routeFamilySelection;
       }
@@ -170,7 +171,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'splash',
         builder: (context, state) => const SplashPage(),
       ),
-      
+
       // Auth routes
       GoRoute(
         path: AppConstants.routeWelcome,
@@ -197,7 +198,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'walkthrough',
         builder: (context, state) => const WalkthroughPage(),
       ),
-      
+
       // Get Started / Family setup routes
       GoRoute(
         path: AppConstants.routeGetStarted,
@@ -224,7 +225,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'join-family',
         builder: (context, state) => const JoinFamilyPage(),
       ),
-      
+
       // Main app routes with bottom navigation
       ShellRoute(
         builder: (context, state, child) {
@@ -358,96 +359,190 @@ final routerProvider = Provider<GoRouter>((ref) {
 /// Main shell with bottom navigation
 class MainShell extends ConsumerWidget {
   final Widget child;
-  
-  const MainShell({
-    super.key,
-    required this.child,
-  });
+
+  const MainShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentRoute = GoRouterState.of(context).matchedLocation;
-    
+
     // Calculate current index based on route
     int currentIndex = 0;
     if (currentRoute == AppConstants.routeHome) {
       currentIndex = 0;
-    } else if (currentRoute == AppConstants.routeTasks || 
-               currentRoute == AppConstants.routeCreateTask) {
+    } else if (currentRoute == AppConstants.routeTasks ||
+        currentRoute == AppConstants.routeCreateTask) {
       currentIndex = 1;
     } else if (currentRoute == AppConstants.routeGroceries) {
       currentIndex = 2;
     } else if (currentRoute == AppConstants.routeCalendar) {
       currentIndex = 3;
     }
-    
+
     // Update navigation index provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.read(navigationIndexProvider) != currentIndex) {
         ref.read(navigationIndexProvider.notifier).state = currentIndex;
       }
     });
-    
-    // Define navigation items - always include Tasks
-    final List<BottomNavigationBarItem> items = [
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.home_outlined),
-        activeIcon: Icon(Icons.home),
-        label: 'Home',
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.task_outlined),
-        activeIcon: Icon(Icons.task),
-        label: 'Tasks',
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.shopping_cart_outlined),
-        activeIcon: Icon(Icons.shopping_cart),
-        label: 'Shopping',
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.calendar_today_outlined),
-        activeIcon: Icon(Icons.calendar_today),
-        label: 'Calendar',
-      ),
-    ];
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: child,
-      appBar: _buildAppBar(context, ref),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: currentIndex,
-        onTap: (index) {
-          ref.read(navigationIndexProvider.notifier).state = index;
-          
-          // Navigation: [Home, Tasks, Shopping, Calendar]
-          switch (index) {
-            case 0:
-              context.go(AppConstants.routeHome);
-              break;
-            case 1:
-              context.go(AppConstants.routeTasks);
-              break;
-            case 2:
-              context.go(AppConstants.routeGroceries);
-              break;
-            case 3:
-              context.go(AppConstants.routeCalendar);
-              break;
-          }
-        },
-        items: items,
+      extendBody: true, // Allow body to extend behind bottom nav
+      body: Stack(
+        children: [
+          // Main Content
+          MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: MediaQuery.of(context).padding.copyWith(
+                bottom:
+                    MediaQuery.of(context).padding.bottom +
+                    ResponsiveHelper.h(100),
+              ),
+            ),
+            child: child,
+          ),
+
+          // Custom Floating Bottom Navigation
+          Positioned(
+            left: ResponsiveHelper.w(24),
+            right: ResponsiveHelper.w(24),
+            bottom: ResponsiveHelper.h(24),
+            child: SafeArea(
+              child: Container(
+                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.9),
+                  borderRadius: ResponsiveHelper.borderRadius(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      context,
+                      ref,
+                      0,
+                      Icons.home_rounded,
+                      'Home',
+                      currentIndex == 0,
+                    ),
+                    _buildNavItem(
+                      context,
+                      ref,
+                      1,
+                      Icons.task_alt_rounded,
+                      'Tasks',
+                      currentIndex == 1,
+                    ),
+                    _buildNavItem(
+                      context,
+                      ref,
+                      2,
+                      Icons.shopping_bag_outlined,
+                      'Shop',
+                      currentIndex == 2,
+                    ),
+                    _buildNavItem(
+                      context,
+                      ref,
+                      3,
+                      Icons.calendar_month_rounded,
+                      'Calendar',
+                      currentIndex == 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+      appBar: _buildAppBar(context, ref),
       drawer: _buildDrawer(context, ref),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    IconData icon,
+    String label,
+    bool isSelected,
+  ) {
+    final theme = Theme.of(context);
+    final color = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface.withValues(alpha: 0.4);
+
+    return InkWell(
+      onTap: () {
+        ref.read(navigationIndexProvider.notifier).state = index;
+
+        switch (index) {
+          case 0:
+            context.go(AppConstants.routeHome);
+            break;
+          case 1:
+            context.go(AppConstants.routeTasks);
+            break;
+          case 2:
+            context.go(AppConstants.routeGroceries);
+            break;
+          case 3:
+            context.go(AppConstants.routeCalendar);
+            break;
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: ResponsiveHelper.iconSize(24)),
+            if (isSelected) ...[
+              SizedBox(width: ResponsiveHelper.w(8)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: ResponsiveHelper.sp(14),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final currentRoute = GoRouterState.of(context).matchedLocation;
-    
+
     // Get page title based on route
     String title = 'Family Wall';
     bool showSearch = false;
@@ -464,11 +559,11 @@ class MainShell extends ConsumerWidget {
     } else if (currentRoute == AppConstants.routeCalendar) {
       title = 'Calendar';
       showSearch = true;
-    } else if (currentRoute == AppConstants.routeProfile || 
-               currentRoute == AppConstants.routeEditProfile) {
+    } else if (currentRoute == AppConstants.routeProfile ||
+        currentRoute == AppConstants.routeEditProfile) {
       title = 'Profile';
     }
-    
+
     return AppBar(
       leading: Builder(
         builder: (context) => IconButton(
@@ -521,7 +616,7 @@ class MainShell extends ConsumerWidget {
 
   Widget _buildDrawer(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -530,7 +625,9 @@ class MainShell extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
               ),
               child: Row(
                 children: [
@@ -548,9 +645,8 @@ class MainShell extends ConsumerWidget {
                       children: [
                         Text(
                           currentUser?.displayNameOrEmail ?? 'User',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         if (currentUser?.email != null)
                           Text(

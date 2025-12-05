@@ -12,6 +12,8 @@ import '../../../../data/models/family_model.dart';
 import '../../../../data/repositories/grocery_list_repository.dart';
 import '../../../../data/repositories/grocery_template_repository.dart';
 import 'grocery_list_page.dart'; // For providers
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
 
 class GroceriesPage extends ConsumerStatefulWidget {
   const GroceriesPage({super.key});
@@ -24,19 +26,19 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Set up callback to refresh grocery lists when a notification is received
     // This is a fallback when realtime stream isn't working
     // Register immediately, then update after first frame if family is available
     _registerGroceryListCallback();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _registerGroceryListCallback();
       }
     });
   }
-  
+
   void _registerGroceryListCallback() {
     final currentFamily = ref.read(currentFamilyProvider);
     if (currentFamily != null) {
@@ -52,14 +54,14 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
       });
     }
   }
-  
+
   @override
   void dispose() {
     // Don't clear the callback - let the global callback handle it
     // The global callback in main.dart will ensure it's always registered
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
@@ -73,6 +75,22 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         body: SafeArea(
           child: Column(
             children: [
+              ModernHeader(
+                title: 'Grocery Lists',
+                subtitle: 'Manage your shopping lists',
+                actions: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.inventory_2_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      context.push(AppConstants.routeGroceryTemplatesManage);
+                    },
+                    tooltip: 'Manage Templates',
+                  ),
+                ],
+              ),
               Expanded(
                 child: groceryListsAsync.when(
                   data: (lists) {
@@ -81,10 +99,10 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                     }
                     return _buildListsList(context, lists);
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Text('Error loading lists: $error'),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) =>
+                      Center(child: Text('Error loading lists: $error')),
                 ),
               ),
             ],
@@ -92,69 +110,80 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         ),
         floatingActionButton: PermissionAwareWidget(
           action: 'create_list',
-          child: FloatingActionButton(
-          onPressed: () => _showCreateListDialog(context),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+          child: FloatingActionButton.extended(
+            onPressed: () => _showCreateListDialog(context),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text(
+              'New List',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
-        persistentFooterButtons: [
-          TextButton.icon(
-            onPressed: () {
-              context.push(AppConstants.routeGroceryTemplatesManage);
-            },
-            icon: Icon(
-              Icons.shopping_bag,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            label: const Text('Manage Templates'),
-            style: TextButton.styleFrom(
-              padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
-            child: Padding(
-              padding: ResponsiveHelper.padding(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_cart_outlined,
-                    size: ResponsiveHelper.iconSize(80),
-              color: Theme.of(context).colorScheme.primary,
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(24)),
-                  Text(
-              'No Grocery Lists Yet',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(16)),
-                  Text(
-              'Create a new list or import from a template to get started',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                    textAlign: TextAlign.center,
-            ),
-            SizedBox(height: ResponsiveHelper.h(32)),
-            ElevatedButton.icon(
-              onPressed: () => _showCreateListDialog(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Create Your First List'),
-              style: ElevatedButton.styleFrom(
-                padding: ResponsiveHelper.padding(horizontal: 24, vertical: 12),
+      child: Padding(
+        padding: ResponsiveHelper.padding(horizontal: 24),
+        child: ModernCard(
+          padding: ResponsiveHelper.padding(all: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: ResponsiveHelper.padding(all: 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shopping_basket_outlined,
+                  size: ResponsiveHelper.iconSize(64),
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: ResponsiveHelper.h(24)),
+              Text(
+                'No Grocery Lists',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.h(12)),
+              Text(
+                'Create a new list or import from a template to get started',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: ResponsiveHelper.h(32)),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showCreateListDialog(context),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create New List'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: ResponsiveHelper.padding(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: ResponsiveHelper.borderRadius(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -184,160 +213,171 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   }
 
   Widget _buildListCard(BuildContext context, GroceryListModel list) {
-    return Card(
+    return ModernCard(
+      onTap: () {
+        context.push('/grocery-list/${list.id}');
+      },
       margin: ResponsiveHelper.padding(bottom: 12),
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          context.push('/grocery-list/${list.id}');
-        },
-        borderRadius: ResponsiveHelper.borderRadius(12),
-        child: Padding(
-          padding: ResponsiveHelper.padding(all: 16),
-          child: Row(
-            children: [
-              Container(
-                width: ResponsiveHelper.w(56),
-                height: ResponsiveHelper.h(56),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  borderRadius: ResponsiveHelper.borderRadius(12),
-                ),
-                child: Icon(
-                  Icons.shopping_bag,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: ResponsiveHelper.iconSize(28),
-                ),
+      child: Padding(
+        padding: ResponsiveHelper.padding(all: 16),
+        child: Row(
+          children: [
+            Container(
+              width: ResponsiveHelper.w(56),
+              height: ResponsiveHelper.h(56),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: ResponsiveHelper.borderRadius(16),
               ),
-              SizedBox(width: ResponsiveHelper.w(16)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      list.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: ResponsiveHelper.h(4)),
-                    Text(
-                      list.updatedAt != null
-                          ? 'Updated ${_formatDate(list.updatedAt!)}'
-                          : 'No items yet',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
+              child: Icon(
+                Icons.shopping_bag_outlined,
+                color: Theme.of(context).colorScheme.primary,
+                size: ResponsiveHelper.iconSize(28),
               ),
-              Consumer(
-                builder: (context, ref, child) {
-                  return FutureBuilder<List<bool>>(
-                    future: Future.wait([
-                      checkPermission(ref, 'edit_list'),
-                      checkPermission(ref, 'delete_list'),
-                    ]),
-                    builder: (context, snapshot) {
-                      final canEdit = snapshot.data?[0] ?? false;
-                      final canDelete = snapshot.data?[1] ?? false;
-                      
-                      if (!canEdit && !canDelete) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      return PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                ),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: RoundedRectangleBorder(
-                  borderRadius: ResponsiveHelper.borderRadius(12),
-                ),
-                        onSelected: (value) async {
-                  if (value == 'edit') {
-                            if (canEdit) {
-                    _editListName(context, list);
-                            } else {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('You do not have permission to edit lists'),
-                                    backgroundColor: Theme.of(context).colorScheme.error,
-                                  ),
-                                );
-                              }
-                            }
-                  } else if (value == 'delete') {
-                            if (canDelete) {
-                    _deleteList(context, list);
-                            } else {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('You do not have permission to delete lists'),
-                                    backgroundColor: Theme.of(context).colorScheme.error,
-                                  ),
-                                );
-                              }
-                            }
-                  }
-                },
-                itemBuilder: (context) => [
-                          if (canEdit)
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          size: ResponsiveHelper.iconSize(20),
-                        ),
-                        SizedBox(width: ResponsiveHelper.w(12)),
-                        Text(
-                          'Edit Name',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
+            ),
+            SizedBox(width: ResponsiveHelper.w(16)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    list.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                          if (canDelete)
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                          size: ResponsiveHelper.iconSize(20),
-                        ),
-                        SizedBox(width: ResponsiveHelper.w(12)),
-                        Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ],
+                  SizedBox(height: ResponsiveHelper.h(4)),
+                  Text(
+                    list.updatedAt != null
+                        ? 'Updated ${_formatDate(list.updatedAt!)}'
+                        : 'No items yet',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
-                      );
-                    },
-                  );
-                },
               ),
-            ],
-          ),
+            ),
+            Consumer(
+              builder: (context, ref, child) {
+                return FutureBuilder<List<bool>>(
+                  future: Future.wait([
+                    checkPermission(ref, 'edit_list'),
+                    checkPermission(ref, 'delete_list'),
+                  ]),
+                  builder: (context, snapshot) {
+                    final canEdit = snapshot.data?[0] ?? false;
+                    final canDelete = snapshot.data?[1] ?? false;
+
+                    if (!canEdit && !canDelete) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: ResponsiveHelper.iconSize(20),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: ResponsiveHelper.borderRadius(12),
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          if (canEdit) {
+                            _editListName(context, list);
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'You do not have permission to edit lists',
+                                  ),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        } else if (value == 'delete') {
+                          if (canDelete) {
+                            _deleteList(context, list);
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'You do not have permission to delete lists',
+                                  ),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (canEdit)
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_rounded,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  size: ResponsiveHelper.iconSize(20),
+                                ),
+                                SizedBox(width: ResponsiveHelper.w(12)),
+                                Text(
+                                  'Edit Name',
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (canDelete)
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Theme.of(context).colorScheme.error,
+                                  size: ResponsiveHelper.iconSize(20),
+                                ),
+                                SizedBox(width: ResponsiveHelper.w(12)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -406,7 +446,10 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
     );
   }
 
-  Future<void> _editListName(BuildContext context, GroceryListModel list) async {
+  Future<void> _editListName(
+    BuildContext context,
+    GroceryListModel list,
+  ) async {
     // Read providers outside the dialog and capture values
     final listRepo = ref.read(groceryListRepositoryProvider);
     final currentFamily = ref.read(currentFamilyProvider);
@@ -420,10 +463,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         initialName: list.name,
         onSave: (String newName) async {
           try {
-            await listRepo.updateListName(
-              listId: listId,
-              name: newName,
-            );
+            await listRepo.updateListName(listId: listId, name: newName);
             return true;
           } catch (e) {
             if (dialogContext.mounted) {
@@ -462,14 +502,17 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
     // Read providers outside the dialog and capture values
     final listRepo = ref.read(groceryListRepositoryProvider);
     final currentFamily = ref.read(currentFamilyProvider);
-    final familyId = currentFamily?.id; // Capture ID to avoid ref usage in callback
+    final familyId =
+        currentFamily?.id; // Capture ID to avoid ref usage in callback
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Delete List'),
-        content: Text('Are you sure you want to delete "${list.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${list.name}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -577,9 +620,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
       ),
       title: Text(
         'Create New List',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
       content: SizedBox(
         width: ResponsiveHelper.w(400),
@@ -593,9 +636,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                 // List Name
                 Text(
                   'List Name',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 TextFormField(
@@ -605,7 +648,10 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -668,21 +714,29 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                     );
 
                     // If template selected, import items (do NOT copy notes, skip duplicates)
-                    if (_selectedTemplateId != null && _selectedTemplateId!.isNotEmpty) {
-                      final templateItems = await widget.templateRepo.getTemplateItems(_selectedTemplateId!);
-                      
+                    if (_selectedTemplateId != null &&
+                        _selectedTemplateId!.isNotEmpty) {
+                      final templateItems = await widget.templateRepo
+                          .getTemplateItems(_selectedTemplateId!);
+
                       // Get existing items to check for duplicates
-                      final existingItems = await widget.listRepo.getListItems(newList.id);
+                      final existingItems = await widget.listRepo.getListItems(
+                        newList.id,
+                      );
                       final existingItemKeys = existingItems
-                          .map((item) => '${item.name.toLowerCase()}_${item.category.toLowerCase()}')
+                          .map(
+                            (item) =>
+                                '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+                          )
                           .toSet();
-                      
+
                       // Filter out duplicates
                       final itemsToImport = templateItems.where((templateItem) {
-                        final key = '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
+                        final key =
+                            '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
                         return !existingItemKeys.contains(key);
                       }).toList();
-                      
+
                       // Add each new item to the list
                       for (final templateItem in itemsToImport) {
                         await widget.listRepo.addItem(
@@ -705,7 +759,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Failed to create list: ${e.toString()}'),
+                          content: Text(
+                            'Failed to create list: ${e.toString()}',
+                          ),
                           backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
@@ -743,7 +799,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
           return Container(
             padding: ResponsiveHelper.padding(all: 16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: ResponsiveHelper.borderRadius(12),
               border: Border.all(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
@@ -754,14 +812,18 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                 Icon(
                   Icons.info_outline,
                   size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 SizedBox(width: ResponsiveHelper.w(12)),
                 Expanded(
                   child: Text(
                     'No templates available. Create a blank list or add a template first.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ),
@@ -784,7 +846,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
             itemBuilder: (context, index) {
               final template = templates[index];
               final isSelected = _selectedTemplateId == template.id;
-              
+
               return InkWell(
                 onTap: () {
                   setState(() {
@@ -799,7 +861,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                         : Colors.transparent,
                     border: Border(
                       bottom: BorderSide(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.1),
                         width: index < templates.length - 1 ? 1 : 0,
                       ),
                     ),
@@ -814,7 +878,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                           border: Border.all(
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.3),
                             width: 2,
                           ),
                           color: isSelected
@@ -834,7 +900,9 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                         child: Text(
                           template.name,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.onSurface,
@@ -863,9 +931,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
         ),
         child: Text(
           'Error loading templates: $error',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-          ),
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
       ),
     );
@@ -877,10 +943,7 @@ class _EditListNameDialog extends StatefulWidget {
   final String initialName;
   final Future<bool> Function(String) onSave;
 
-  const _EditListNameDialog({
-    required this.initialName,
-    required this.onSave,
-  });
+  const _EditListNameDialog({required this.initialName, required this.onSave});
 
   @override
   State<_EditListNameDialog> createState() => _EditListNameDialogState();
@@ -922,7 +985,10 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
               border: OutlineInputBorder(
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
-              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              contentPadding: ResponsiveHelper.padding(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -953,7 +1019,9 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
                   setState(() => _isLoading = true);
 
                   try {
-                    final success = await widget.onSave(_nameController.text.trim());
+                    final success = await widget.onSave(
+                      _nameController.text.trim(),
+                    );
                     if (mounted) {
                       Navigator.of(context).pop(success);
                     }
