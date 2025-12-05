@@ -8,19 +8,18 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/utils/grocery_category_mapper.dart';
 import '../../../../data/models/grocery_template_model.dart';
-import '../../../../data/models/family_model.dart';
+
 import '../../../../data/models/task_model.dart';
 import '../../../../data/repositories/grocery_template_repository.dart';
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
 
 class GroceryListPage extends ConsumerStatefulWidget {
   final String listId;
-  final String? from; // 'task' if navigated from task, null if from Shopping tab
-  
-  const GroceryListPage({
-    super.key,
-    required this.listId,
-    this.from,
-  });
+  final String?
+  from; // 'task' if navigated from task, null if from Shopping tab
+
+  const GroceryListPage({super.key, required this.listId, this.from});
 
   @override
   ConsumerState<GroceryListPage> createState() => _GroceryListPageState();
@@ -38,7 +37,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Always refresh from server when detail page opens (header-detail relationship)
     // This ensures we have the latest data, especially if items were modified by other users
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,19 +46,19 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ref.invalidate(groceryListItemsProvider(widget.listId));
       }
     });
-    
+
     // Set up callback to refresh grocery list items when a notification is received
     // This is a fallback when realtime stream isn't working
     // Register immediately, then update after first frame
     _registerGroceryListCallback();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _registerGroceryListCallback();
       }
     });
   }
-  
+
   void _registerGroceryListCallback() {
     final listId = widget.listId;
     PushNotificationService().setGroceryListNotificationCallback(() {
@@ -67,7 +66,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         // Refresh the current list's items
         ref.invalidate(groceryListItemsProvider(listId));
         ref.invalidate(groceryListProvider(listId));
-        
+
         // Also refresh all lists if we have family context
         final currentFamily = ref.read(currentFamilyProvider);
         if (currentFamily != null) {
@@ -77,7 +76,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       }
     });
   }
-  
+
   @override
   void dispose() {
     _itemController.dispose();
@@ -100,8 +99,144 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           child: Column(
             children: [
               // Custom App Bar
-              _buildCustomAppBar(context, groceryList, currentFamily),
-              
+              // Custom App Bar
+              groceryList.when(
+                data: (list) => ModernHeader(
+                  title: list?.name ?? 'Shopping List',
+                  subtitle: currentFamily?.name,
+                  showBackButton: true,
+                  onBack: () => context.pop(),
+                  actions: [
+                    // Search Button
+                    IconButton(
+                      icon: Icon(
+                        _isSearchMode ? Icons.close : Icons.search,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isSearchMode = !_isSearchMode;
+                          if (!_isSearchMode) {
+                            _searchController.clear();
+                          }
+                        });
+                      },
+                      tooltip: _isSearchMode ? 'Close Search' : 'Search',
+                    ),
+                    // View Toggle Button (hide when searching)
+                    if (!_isSearchMode)
+                      IconButton(
+                        icon: Icon(
+                          _isListView ? Icons.view_module : Icons.view_list,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isListView = !_isListView;
+                          });
+                        },
+                        tooltip: _isListView ? 'Category View' : 'List View',
+                      ),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: ResponsiveHelper.borderRadius(12),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'save_as_template') {
+                          _saveListAsTemplate(context);
+                        } else if (value == 'edit_name') {
+                          _editListName(context);
+                        } else if (value == 'delete_list') {
+                          _deleteList(context);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'edit_name',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: ResponsiveHelper.iconSize(20),
+                              ),
+                              SizedBox(width: ResponsiveHelper.w(12)),
+                              Text(
+                                'Edit List Name',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'save_as_template',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.bookmark_add,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: ResponsiveHelper.iconSize(20),
+                              ),
+                              SizedBox(width: ResponsiveHelper.w(12)),
+                              Text(
+                                'Save as Template',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete_list',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                color: Theme.of(context).colorScheme.error,
+                                size: ResponsiveHelper.iconSize(20),
+                              ),
+                              SizedBox(width: ResponsiveHelper.w(12)),
+                              Text(
+                                'Delete List',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                loading: () => ModernHeader(
+                  title: 'Shopping List',
+                  subtitle: currentFamily?.name,
+                  showBackButton: true,
+                  onBack: () => context.pop(),
+                ),
+                error: (_, __) => ModernHeader(
+                  title: 'Shopping List',
+                  subtitle: currentFamily?.name,
+                  showBackButton: true,
+                  onBack: () => context.pop(),
+                ),
+              ),
+
               // Search bar (shown when search mode is active)
               if (_isSearchMode)
                 Container(
@@ -128,7 +263,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           onChanged: (value) {
                             setState(() {});
@@ -148,7 +286,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     ],
                   ),
                 ),
-              
+
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
@@ -159,152 +297,203 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: SingleChildScrollView(
-                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                    padding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Template Section: Show only when viewing from Shopping tab, hide when from task (hide when searching)
-                      if (!_isSearchMode)
-                        groceryList.when(
-                          data: (list) {
-                            if (list == null) return const SizedBox.shrink();
-                            // Hide template section if navigated from task
-                            if (widget.from == 'task') return const SizedBox.shrink();
-                            // Show template section when viewing from Shopping tab
-                            return _buildTemplateSection(context, currentFamily?.id);
-                          },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                      
-                      // Category Filters (only in category view, hide when searching)
-                      if (!_isSearchMode)
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Template Section: Show only when viewing from Shopping tab, hide when from task (hide when searching)
+                        if (!_isSearchMode)
+                          groceryList.when(
+                            data: (list) {
+                              if (list == null) return const SizedBox.shrink();
+                              // Hide template section if navigated from task
+                              if (widget.from == 'task')
+                                return const SizedBox.shrink();
+                              // Show template section when viewing from Shopping tab
+                              return _buildTemplateSection(
+                                context,
+                                currentFamily?.id,
+                              );
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+
+                        // Category Filters (only in category view, hide when searching)
+                        if (!_isSearchMode)
+                          listItems.when(
+                            data: (items) {
+                              // Don't show category filters or empty state here - let main items section handle empty state
+                              if (items.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+
+                              if (!_isListView) {
+                                // Show category filters
+                                final allCategories =
+                                    items
+                                        .map((item) => item.category)
+                                        .toSet()
+                                        .toList()
+                                      ..sort();
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildCategoryFilters(
+                                      context,
+                                      allCategories,
+                                    ),
+                                    SizedBox(height: ResponsiveHelper.h(16)),
+                                  ],
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+
+                        // Section title
+                        if (_isSearchMode)
+                          Padding(
+                            padding: ResponsiveHelper.padding(bottom: 16),
+                            child: Text(
+                              'Search Results',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+
+                        // Grocery Items - Category View or List View
                         listItems.when(
                           data: (items) {
-                            // Don't show category filters or empty state here - let main items section handle empty state
-                            if (items.isEmpty) {
-                              return const SizedBox.shrink();
+                            if (items.isEmpty && !_isSearchMode) {
+                              return _buildEmptyState(context);
                             }
-                            
-                            if (!_isListView) {
-                              // Show category filters
-                              final allCategories = items.map((item) => item.category).toSet().toList()..sort();
+
+                            var filteredItems = items;
+
+                            // Apply search filter if in search mode
+                            if (_isSearchMode &&
+                                _searchController.text.isNotEmpty) {
+                              filteredItems = _searchGroceryItems(
+                                filteredItems,
+                                _searchController.text,
+                              );
+                            } else if (!_isSearchMode) {
+                              // Apply category filter (only when not searching)
+                              if (_selectedCategories.isNotEmpty) {
+                                filteredItems = filteredItems
+                                    .where(
+                                      (item) => _selectedCategories.contains(
+                                        item.category,
+                                      ),
+                                    )
+                                    .toList();
+                              }
+                            }
+
+                            if (filteredItems.isEmpty) {
+                              return Padding(
+                                padding: ResponsiveHelper.padding(vertical: 32),
+                                child: Center(
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.search_off,
+                                        size: ResponsiveHelper.iconSize(48),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+                                      Text(
+                                        _isSearchMode
+                                            ? 'No items found'
+                                            : 'No items',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.7),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            if (_isListView) {
+                              // List View - all items in one list
+                              return _buildListView(context, filteredItems);
+                            } else {
+                              // Category View - compact, grouped by category
+                              final groupedItems = _groupItemsByCategory(
+                                filteredItems,
+                              );
+                              final uncompletedItems = groupedItems.entries
+                                  .where(
+                                    (entry) => entry.value.any(
+                                      (item) => !item.checked,
+                                    ),
+                                  )
+                                  .toList();
+                              final completedItems = groupedItems.entries
+                                  .where(
+                                    (entry) =>
+                                        entry.value.any((item) => item.checked),
+                                  )
+                                  .toList();
+
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildCategoryFilters(context, allCategories),
-                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                  // Uncompleted items by category - compact view
+                                  ...uncompletedItems.map((entry) {
+                                    return _buildCompactCategorySection(
+                                      context,
+                                      entry.key,
+                                      entry.value
+                                          .where((item) => !item.checked)
+                                          .toList(),
+                                    );
+                                  }),
+
+                                  // Completed section
+                                  if (completedItems.isNotEmpty) ...[
+                                    SizedBox(height: ResponsiveHelper.h(16)),
+                                    _buildCompletedSection(
+                                      context,
+                                      completedItems,
+                                    ),
+                                  ],
                                 ],
                               );
                             }
-                            return const SizedBox.shrink();
                           },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, _) =>
+                              Center(child: Text('Error: $error')),
                         ),
-                      
-                      // Section title
-                      if (_isSearchMode)
-                        Padding(
-                          padding: ResponsiveHelper.padding(bottom: 16),
-                          child: Text(
-                            'Search Results',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      
-                      // Grocery Items - Category View or List View
-                      listItems.when(
-                        data: (items) {
-                          if (items.isEmpty && !_isSearchMode) {
-                            return _buildEmptyState(context);
-                          }
-                          
-                          var filteredItems = items;
-                          
-                          // Apply search filter if in search mode
-                          if (_isSearchMode && _searchController.text.isNotEmpty) {
-                            filteredItems = _searchGroceryItems(filteredItems, _searchController.text);
-                          } else if (!_isSearchMode) {
-                            // Apply category filter (only when not searching)
-                            if (_selectedCategories.isNotEmpty) {
-                              filteredItems = filteredItems.where((item) => _selectedCategories.contains(item.category)).toList();
-                            }
-                          }
-                          
-                          if (filteredItems.isEmpty) {
-                            return Padding(
-                              padding: ResponsiveHelper.padding(vertical: 32),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.search_off,
-                                      size: ResponsiveHelper.iconSize(48),
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                    ),
-                                    SizedBox(height: ResponsiveHelper.h(16)),
-                                    Text(
-                                      _isSearchMode ? 'No items found' : 'No items',
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-                          
-                          if (_isListView) {
-                            // List View - all items in one list
-                            return _buildListView(context, filteredItems);
-                          } else {
-                            // Category View - compact, grouped by category
-                            final groupedItems = _groupItemsByCategory(filteredItems);
-                            final uncompletedItems = groupedItems.entries
-                                .where((entry) => entry.value.any((item) => !item.checked))
-                                .toList();
-                            final completedItems = groupedItems.entries
-                                .where((entry) => entry.value.any((item) => item.checked))
-                                .toList();
-                            
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Uncompleted items by category - compact view
-                                ...uncompletedItems.map((entry) {
-                                  return _buildCompactCategorySection(
-                                    context,
-                                    entry.key,
-                                    entry.value.where((item) => !item.checked).toList(),
-                                  );
-                                }),
-                                
-                                // Completed section
-                                if (completedItems.isNotEmpty) ...[
-                                  SizedBox(height: ResponsiveHelper.h(16)),
-                                  _buildCompletedSection(context, completedItems),
-                                ],
-                              ],
-                            );
-                          }
-                        },
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, _) => Center(
-                          child: Text('Error: $error'),
-                        ),
-                      ),
-                      
-                      SizedBox(height: ResponsiveHelper.h(80)), // Space for bottom input
-                    ],
+
+                        SizedBox(
+                          height: ResponsiveHelper.h(80),
+                        ), // Space for bottom input
+                      ],
+                    ),
                   ),
                 ),
-                ),
               ),
-              
+
               // Bottom input and add button
               _buildBottomInput(context),
             ],
@@ -314,177 +503,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     );
   }
 
-  Widget _buildCustomAppBar(
-    BuildContext context,
-    AsyncValue<GroceryListModel?> groceryList,
-    FamilyModel? currentFamily,
-  ) {
-    return Container(
-      padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                groceryList.when(
-                  data: (list) => Text(
-                    list?.name ?? 'Shopping List',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  loading: () => Text(
-                    'Shopping List',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  error: (_, __) => Text(
-                    'Shopping List',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                if (currentFamily != null)
-                  Text(
-                    currentFamily.name,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Search Button
-          IconButton(
-            icon: Icon(
-              _isSearchMode ? Icons.close : Icons.search,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            onPressed: () {
-              setState(() {
-                _isSearchMode = !_isSearchMode;
-                if (!_isSearchMode) {
-                  _searchController.clear();
-                }
-              });
-            },
-            tooltip: _isSearchMode ? 'Close Search' : 'Search',
-          ),
-          // View Toggle Button (hide when searching)
-          if (!_isSearchMode)
-            IconButton(
-              icon: Icon(
-                _isListView ? Icons.view_module : Icons.view_list,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              onPressed: () {
-                setState(() {
-                  _isListView = !_isListView;
-                });
-              },
-              tooltip: _isListView ? 'Category View' : 'List View',
-            ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            iconColor: Theme.of(context).colorScheme.onSurface,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            onSelected: (value) {
-              if (value == 'save_as_template') {
-                _saveListAsTemplate(context);
-              } else if (value == 'edit_name') {
-                _editListName(context);
-              } else if (value == 'delete_list') {
-                _deleteList(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'edit_name',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.edit,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: ResponsiveHelper.iconSize(20),
-                    ),
-                    SizedBox(width: ResponsiveHelper.w(12)),
-                    Text(
-                      'Edit List Name',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'save_as_template',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.bookmark_add,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: ResponsiveHelper.iconSize(20),
-                    ),
-                    SizedBox(width: ResponsiveHelper.w(12)),
-                    Text(
-                      'Save as Template',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'delete_list',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                      size: ResponsiveHelper.iconSize(20),
-                    ),
-                    SizedBox(width: ResponsiveHelper.w(12)),
-                    Text(
-                      'Delete List',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTemplateSection(BuildContext context, String? familyId) {
     if (familyId == null) return const SizedBox.shrink();
-    
+
     final templates = ref.watch(groceryTemplatesProvider(familyId));
-    
+
     return templates.when(
       data: (templateList) {
         if (templateList.isEmpty) return const SizedBox.shrink();
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -502,7 +529,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: templateList.length,
-                separatorBuilder: (context, index) => SizedBox(width: ResponsiveHelper.w(12)),
+                separatorBuilder: (context, index) =>
+                    SizedBox(width: ResponsiveHelper.w(12)),
                 itemBuilder: (context, index) {
                   return SizedBox(
                     width: ResponsiveHelper.w(140),
@@ -520,14 +548,17 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     );
   }
 
-  Widget _buildTemplateCard(BuildContext context, GroceryTemplateModel template) {
+  Widget _buildTemplateCard(
+    BuildContext context,
+    GroceryTemplateModel template,
+  ) {
     final isSelected = _selectedTemplateId == template.id;
-    
+
     // Map template name to icon and color
     IconData icon;
     Color iconColor;
-    
-    if (template.name.toLowerCase().contains('weekly') || 
+
+    if (template.name.toLowerCase().contains('weekly') ||
         template.name.toLowerCase().contains('grocery')) {
       // Weekly Groceries - teal milk carton icon
       icon = Icons.shopping_bag;
@@ -540,7 +571,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       icon = Icons.shopping_cart;
       iconColor = Theme.of(context).colorScheme.primary;
     }
-    
+
     return GestureDetector(
       onTap: () async {
         setState(() {
@@ -548,50 +579,35 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         });
         await _importFromTemplate(context, template.id);
       },
-      child: Card(
-        color: isSelected 
+      child: ModernCard(
+        backgroundColor: isSelected
             ? Theme.of(context).cardColor.withOpacity(0.8)
             : Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: ResponsiveHelper.borderRadius(12),
-          side: isSelected
-              ? BorderSide(
-                  color: iconColor,
-                  width: ResponsiveHelper.w(2),
-                )
-              : BorderSide.none,
-        ),
-        child: Padding(
-          padding: ResponsiveHelper.padding(
-            horizontal: 12,
-            vertical: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: iconColor,
-                size: ResponsiveHelper.iconSize(32),
-              ),
-              SizedBox(height: ResponsiveHelper.h(8)),
-              Flexible(
-                child: Text(
-                  template.name,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: ResponsiveHelper.sp(12),
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        border: isSelected
+            ? Border.all(color: iconColor, width: ResponsiveHelper.w(2))
+            : null,
+        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: ResponsiveHelper.iconSize(32)),
+            SizedBox(height: ResponsiveHelper.h(8)),
+            Flexible(
+              child: Text(
+                template.name,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: ResponsiveHelper.sp(12),
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -611,13 +627,17 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 _selectedCategories.clear();
               });
             },
-            selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            selectedColor: Theme.of(
+              context,
+            ).colorScheme.primary.withOpacity(0.2),
             checkmarkColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
               color: _selectedCategories.isEmpty
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.onSurface,
-              fontWeight: _selectedCategories.isEmpty ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: _selectedCategories.isEmpty
+                  ? FontWeight.w600
+                  : FontWeight.normal,
             ),
           ),
           SizedBox(width: ResponsiveHelper.w(8)),
@@ -638,7 +658,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     }
                   });
                 },
-                selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                selectedColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(0.2),
                 checkmarkColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
                   color: isSelected
@@ -660,7 +682,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     List<GroceryListItemModel> items,
   ) {
     if (items.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -705,13 +727,11 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
-        Card(
-          color: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: ResponsiveHelper.borderRadius(12),
-          ),
+        ModernCard(
           child: Column(
-            children: items.map((item) => _buildGroceryItem(context, item)).toList(),
+            children: items
+                .map((item) => _buildGroceryItem(context, item))
+                .toList(),
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(16)),
@@ -725,7 +745,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     List<GroceryListItemModel> items,
   ) {
     if (items.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -737,13 +757,11 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(12)),
-        Card(
-          color: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: ResponsiveHelper.borderRadius(12),
-          ),
+        ModernCard(
           child: Column(
-            children: items.map((item) => _buildGroceryItem(context, item)).toList(),
+            children: items
+                .map((item) => _buildGroceryItem(context, item))
+                .toList(),
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(24)),
@@ -758,10 +776,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       data: (list) => list?.taskId != null,
       orElse: () => false,
     );
-    
+
     final hasQuantity = item.unit != null && item.qty > 0;
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
-    
+
     return ListTile(
       contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
       // Always show checkbox for all grocery list items
@@ -807,21 +825,31 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       '${item.qty} ${item.unit}',
                       style: TextStyle(
                         color: item.checked
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.4)
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
                         fontSize: ResponsiveHelper.sp(12),
                       ),
                     ),
                   if (hasNotes)
                     Padding(
-                      padding: EdgeInsets.only(top: hasQuantity ? ResponsiveHelper.h(4) : 0),
+                      padding: EdgeInsets.only(
+                        top: hasQuantity ? ResponsiveHelper.h(4) : 0,
+                      ),
                       child: Container(
                         padding: ResponsiveHelper.padding(all: 8),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
                           borderRadius: ResponsiveHelper.borderRadius(8),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
@@ -839,7 +867,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                 item.notes!,
                                 style: TextStyle(
                                   color: item.checked
-                                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
+                                      ? Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.withOpacity(0.4)
                                       : Theme.of(context).colorScheme.primary,
                                   fontSize: ResponsiveHelper.sp(12),
                                   fontStyle: FontStyle.italic,
@@ -860,15 +890,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           PermissionAwareWidget(
             action: 'edit_list',
             child: IconButton(
-            icon: Icon(
-              Icons.edit_outlined,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              size: ResponsiveHelper.iconSize(20),
-            ),
-            onPressed: () => _showAddItemDialog(context, item: item),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            tooltip: 'Edit item',
+              icon: Icon(
+                Icons.edit_outlined,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                size: ResponsiveHelper.iconSize(20),
+              ),
+              onPressed: () => _showAddItemDialog(context, item: item),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Edit item',
             ),
           ),
           // Only show delete button if NOT linked to a task (viewing from shopping list, not task view)
@@ -878,15 +908,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               child: Padding(
                 padding: EdgeInsets.only(left: ResponsiveHelper.w(4)),
                 child: IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error.withOpacity(0.7),
-                size: ResponsiveHelper.iconSize(20),
-              ),
-              onPressed: () => _deleteItem(context, item),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'Delete item',
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                    size: ResponsiveHelper.iconSize(20),
+                  ),
+                  onPressed: () => _deleteItem(context, item),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Delete item',
                 ),
               ),
             ),
@@ -902,7 +932,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final allCompleted = completedItems
         .expand((entry) => entry.value.where((item) => item.checked))
         .toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -918,7 +948,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 'Completed (${allCompleted.length})',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               SizedBox(width: ResponsiveHelper.w(8)),
@@ -949,7 +981,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final suggestions = currentFamily != null
         ? ref.watch(grocerySuggestionsProvider(currentFamily.id))
         : const AsyncValue.data(<Map<String, dynamic>>[]);
-    
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -957,29 +989,40 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         suggestions.when(
           data: (suggestionsList) {
             if (suggestionsList.isEmpty) return const SizedBox.shrink();
-            
+
             // Get current list items to filter out already added items
-            final currentItems = ref.watch(groceryListItemsProvider(widget.listId));
+            final currentItems = ref.watch(
+              groceryListItemsProvider(widget.listId),
+            );
             final existingItemKeys = currentItems.when(
-              data: (items) => items.map((item) => 
-                '${item.name.toLowerCase()}_${item.category.toLowerCase()}'
-              ).toSet(),
+              data: (items) => items
+                  .map(
+                    (item) =>
+                        '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+                  )
+                  .toSet(),
               loading: () => <String>{},
               error: (_, __) => <String>{},
             );
-            
+
             // Filter suggestions to only show items not already in the list
-            final filteredSuggestions = suggestionsList.where((suggestion) {
-              final key = '${(suggestion['name'] as String).toLowerCase()}_${(suggestion['category'] as String).toLowerCase()}';
-              return !existingItemKeys.contains(key);
-            }).take(8).toList();
-            
+            final filteredSuggestions = suggestionsList
+                .where((suggestion) {
+                  final key =
+                      '${(suggestion['name'] as String).toLowerCase()}_${(suggestion['category'] as String).toLowerCase()}';
+                  return !existingItemKeys.contains(key);
+                })
+                .take(8)
+                .toList();
+
             if (filteredSuggestions.isEmpty) return const SizedBox.shrink();
-            
+
             return Container(
               height: ResponsiveHelper.h(60),
               padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -987,7 +1030,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   Text(
                     'Suggestions',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -997,11 +1042,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       scrollDirection: Axis.horizontal,
                       children: filteredSuggestions.map((suggestion) {
                         return Padding(
-                          padding: EdgeInsets.only(right: ResponsiveHelper.w(8)),
+                          padding: EdgeInsets.only(
+                            right: ResponsiveHelper.w(8),
+                          ),
                           child: ActionChip(
                             label: Text(
                               suggestion['name'] as String,
-                              style: TextStyle(fontSize: ResponsiveHelper.sp(12)),
+                              style: TextStyle(
+                                fontSize: ResponsiveHelper.sp(12),
+                              ),
                             ),
                             onPressed: () {
                               _addItem(
@@ -1012,9 +1061,13 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                 unit: suggestion['unit'] as String?,
                               );
                             },
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             labelStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                             ),
                           ),
                         );
@@ -1054,10 +1107,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     decoration: InputDecoration(
                       hintText: 'Add an item...',
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       border: InputBorder.none,
-                      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                      contentPadding: ResponsiveHelper.padding(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1092,48 +1150,66 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     return Padding(
       padding: ResponsiveHelper.padding(vertical: 32),
       child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.shopping_cart_outlined,
-              size: ResponsiveHelper.iconSize(60),
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-            SizedBox(height: ResponsiveHelper.h(16)),
-            Text(
-              'No items yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        child: ModernCard(
+          padding: ResponsiveHelper.padding(all: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: ResponsiveHelper.padding(all: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shopping_basket_outlined,
+                  size: ResponsiveHelper.iconSize(48),
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-            ),
-            SizedBox(height: ResponsiveHelper.h(8)),
-            Text(
-              'Add items or select a template to get started',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              Text(
+                'No items yet',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              SizedBox(height: ResponsiveHelper.h(8)),
+              Text(
+                'Add items or select a template to get started',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  List<GroceryListItemModel> _searchGroceryItems(List<GroceryListItemModel> items, String query) {
+  List<GroceryListItemModel> _searchGroceryItems(
+    List<GroceryListItemModel> items,
+    String query,
+  ) {
     if (query.isEmpty) return items;
-    
+
     final lowerQuery = query.toLowerCase();
     return items.where((item) {
       // Search in name
       if (item.name.toLowerCase().contains(lowerQuery)) return true;
-      
+
       // Search in category
       if (item.category.toLowerCase().contains(lowerQuery)) return true;
-      
+
       // Search in notes
-      if (item.notes != null && item.notes!.toLowerCase().contains(lowerQuery)) return true;
-      
+      if (item.notes != null && item.notes!.toLowerCase().contains(lowerQuery))
+        return true;
+
       return false;
     }).toList();
   }
@@ -1148,25 +1224,28 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     return grouped;
   }
 
-  Widget _buildListView(BuildContext context, List<GroceryListItemModel> items) {
+  Widget _buildListView(
+    BuildContext context,
+    List<GroceryListItemModel> items,
+  ) {
     // Separate checked and unchecked items
     final uncheckedItems = items.where((item) => !item.checked).toList();
     final checkedItems = items.where((item) => item.checked).toList();
-    
+
     // Sort unchecked items by category, then by name
     uncheckedItems.sort((a, b) {
       final categoryCompare = a.category.compareTo(b.category);
       if (categoryCompare != 0) return categoryCompare;
       return a.name.compareTo(b.name);
     });
-    
+
     // Sort checked items by category, then by name
     checkedItems.sort((a, b) {
       final categoryCompare = a.category.compareTo(b.category);
       if (categoryCompare != 0) return categoryCompare;
       return a.name.compareTo(b.name);
     });
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1189,7 +1268,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             ),
           ),
         ],
-        
+
         // Checked items (collapsible)
         if (checkedItems.isNotEmpty) ...[
           SizedBox(height: ResponsiveHelper.h(16)),
@@ -1210,20 +1289,22 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       data: (list) => list?.taskId != null,
       orElse: () => false,
     );
-    
+
     final hasQuantity = item.unit != null && item.qty > 0;
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
-    
+
     return InkWell(
-        onTap: () => _showAddItemDialog(context, item: item),
-        child: Container(
+      onTap: () => _showAddItemDialog(context, item: item),
+      child: Container(
         padding: ResponsiveHelper.padding(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           border: isLast
               ? null
               : Border(
                   bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.1),
                     width: 0.5,
                   ),
                 ),
@@ -1272,9 +1353,13 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                         child: Text(
                           item.name,
                           style: TextStyle(
-                            decoration: item.checked ? TextDecoration.lineThrough : null,
+                            decoration: item.checked
+                                ? TextDecoration.lineThrough
+                                : null,
                             color: item.checked
-                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.5)
                                 : Theme.of(context).colorScheme.onSurface,
                             fontSize: ResponsiveHelper.sp(14),
                             fontWeight: FontWeight.w500,
@@ -1288,8 +1373,12 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                             '${item.qty} ${item.unit}',
                             style: TextStyle(
                               color: item.checked
-                                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.4)
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.6),
                               fontSize: ResponsiveHelper.sp(11),
                             ),
                           ),
@@ -1304,7 +1393,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                           Icon(
                             Icons.note_outlined,
                             size: ResponsiveHelper.iconSize(12),
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.7),
                           ),
                           SizedBox(width: ResponsiveHelper.w(4)),
                           Expanded(
@@ -1312,8 +1403,12 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                               item.notes!,
                               style: TextStyle(
                                 color: item.checked
-                                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
-                                    : Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                    ? Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.4)
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.8),
                                 fontSize: ResponsiveHelper.sp(11),
                                 fontStyle: FontStyle.italic,
                               ),
@@ -1342,8 +1437,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 constraints: const BoxConstraints(),
                 tooltip: 'Delete item',
               ),
+            ],
           ],
-        ],
         ),
       ),
     );
@@ -1370,14 +1465,18 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   _showCompleted
                       ? Icons.keyboard_arrow_down
                       : Icons.keyboard_arrow_right,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                   size: ResponsiveHelper.iconSize(20),
                 ),
                 SizedBox(width: ResponsiveHelper.w(8)),
                 Text(
                   'Completed (${checkedItems.length})',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: ResponsiveHelper.sp(13),
                   ),
@@ -1466,44 +1565,53 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       builder: (dialogContext) => _AddItemDialog(
         item: item,
         initialName: initialName,
-        onSave: (String name, String category, int qty, String? unit, String? notes) async {
-          try {
-            if (item == null) {
-              // Add new item
-              await listRepo.addItem(
-                listId: listId,
-                name: name,
-                category: category,
-                qty: qty,
-                unit: unit,
-                notes: notes,
-                source: 'manual',
-              );
-              _itemController.clear();
-            } else {
-              // Update existing item
-              await listRepo.updateItem(
-                itemId: item.id,
-                name: name,
-                category: category,
-                qty: qty,
-                unit: unit,
-                notes: notes,
-              );
-            }
-            return true;
-          } catch (e) {
-            if (dialogContext.mounted) {
-              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-              );
-            }
-            return false;
-          }
-        },
+        onSave:
+            (
+              String name,
+              String category,
+              int qty,
+              String? unit,
+              String? notes,
+            ) async {
+              try {
+                if (item == null) {
+                  // Add new item
+                  await listRepo.addItem(
+                    listId: listId,
+                    name: name,
+                    category: category,
+                    qty: qty,
+                    unit: unit,
+                    notes: notes,
+                    source: 'manual',
+                  );
+                  _itemController.clear();
+                } else {
+                  // Update existing item
+                  await listRepo.updateItem(
+                    itemId: item.id,
+                    name: name,
+                    category: category,
+                    qty: qty,
+                    unit: unit,
+                    notes: notes,
+                  );
+                }
+                return true;
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Theme.of(
+                        dialogContext,
+                      ).colorScheme.error,
+                    ),
+                  );
+                }
+                return false;
+              }
+            },
       ),
     );
 
@@ -1528,56 +1636,56 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         loading: () => null,
         error: (_, __) => null,
       );
-      
+
       if (list == null || list.taskId == null) {
         // Not linked to a task, nothing to do
         return;
       }
-      
+
       // Fetch items directly from repository to get fresh state (not from provider)
       final listRepo = ref.read(groceryListRepositoryProvider);
       final items = await listRepo.getListItems(widget.listId);
-      
+
       if (items.isEmpty) {
         // No items, nothing to check
         return;
       }
-      
+
       // Check if all items are checked
       final allChecked = items.every((item) => item.checked);
-      
+
       // Get the task to check its current status
       final currentFamily = ref.read(currentFamilyProvider);
       if (currentFamily == null) return;
-      
+
       final familyTasksAsync = ref.read(familyTasksProvider(currentFamily.id));
       final tasks = await familyTasksAsync.when(
         data: (t) => t,
         loading: () => <TaskModel>[],
         error: (_, __) => <TaskModel>[],
       );
-      
+
       if (tasks.isEmpty) return;
-      
+
       final task = tasks.firstWhere(
         (t) => t.id == list.taskId,
         orElse: () => throw Exception('Task not found'),
       );
-      
+
       final taskActions = ref.read(taskActionsProvider);
-      
+
       if (allChecked) {
         // All items are checked - mark task as complete if not already
         if (task.status != 'completed') {
           final completedTask = await taskActions.completeTask(task.id);
-          
+
           // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
             ref.invalidate(familyTasksProvider(currentFamily.id));
             ref.invalidate(tasksDueTodayProvider(currentFamily.id));
             ref.invalidate(familyMembersProvider(currentFamily.id));
           }
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1612,18 +1720,15 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       } else {
         // Not all items are checked - mark task as pending if it was completed
         if (task.status == 'completed') {
-          await taskActions.updateTask(
-            taskId: task.id,
-            status: 'pending',
-          );
-          
+          await taskActions.updateTask(taskId: task.id, status: 'pending');
+
           // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
             ref.invalidate(familyTasksProvider(currentFamily.id));
             ref.invalidate(tasksDueTodayProvider(currentFamily.id));
             ref.invalidate(familyMembersProvider(currentFamily.id));
           }
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1640,7 +1745,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     }
   }
 
-  Future<void> _deleteItem(BuildContext context, GroceryListItemModel item) async {
+  Future<void> _deleteItem(
+    BuildContext context,
+    GroceryListItemModel item,
+  ) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1710,20 +1818,26 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     }
   }
 
-  Future<void> _importFromTemplate(BuildContext context, String templateId) async {
+  Future<void> _importFromTemplate(
+    BuildContext context,
+    String templateId,
+  ) async {
     try {
       final templateRepo = ref.read(groceryTemplateRepositoryProvider);
       final listRepo = ref.read(groceryListRepositoryProvider);
-      
+
       // Get existing list items to check for duplicates
       final existingItems = await listRepo.getListItems(widget.listId);
       final existingItemKeys = existingItems
-          .map((item) => '${item.name.toLowerCase()}_${item.category.toLowerCase()}')
+          .map(
+            (item) =>
+                '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+          )
           .toSet();
-      
+
       // Get template items
       final templateItems = await templateRepo.getTemplateItems(templateId);
-      
+
       if (templateItems.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1735,44 +1849,54 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         }
         return;
       }
-      
+
       // Check if ALL items from this template already exist (template already fully imported)
       final templateItemKeys = templateItems
-          .map((item) => '${item.name.toLowerCase()}_${item.category.toLowerCase()}')
+          .map(
+            (item) =>
+                '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+          )
           .toSet();
-      
-      final allItemsExist = templateItemKeys.every((key) => existingItemKeys.contains(key));
-      
+
+      final allItemsExist = templateItemKeys.every(
+        (key) => existingItemKeys.contains(key),
+      );
+
       if (allItemsExist) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('This template has already been imported to this list'),
+              content: const Text(
+                'This template has already been imported to this list',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
         return;
       }
-      
+
       // Filter out items that already exist in the list (by name and category)
       final itemsToImport = templateItems.where((templateItem) {
-        final key = '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
+        final key =
+            '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
         return !existingItemKeys.contains(key);
       }).toList();
-      
+
       if (itemsToImport.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('All items from this template are already in the list'),
+              content: const Text(
+                'All items from this template are already in the list',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
         return;
       }
-      
+
       // Add each new item to the list (do NOT copy notes from template)
       for (final templateItem in itemsToImport) {
         await listRepo.addItem(
@@ -1785,7 +1909,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           source: 'template',
         );
       }
-      
+
       // Invalidate provider to force refresh
       if (mounted && context.mounted) {
         // Small delay to ensure all database writes complete
@@ -1795,13 +1919,13 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           }
         });
       }
-      
+
       if (mounted) {
         final skippedCount = templateItems.length - itemsToImport.length;
         final message = skippedCount > 0
             ? 'Imported ${itemsToImport.length} items (${skippedCount} duplicates skipped)'
             : 'Imported ${itemsToImport.length} items from template';
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -1828,10 +1952,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final currentUser = ref.read(currentUserProvider);
     final currentFamily = ref.read(currentFamilyProvider);
     final templateRepo = ref.read(groceryTemplateRepositoryProvider);
-    
+
     final list = groceryList.value;
     final items = listItems.value;
-    
+
     if (list == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1860,13 +1984,17 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         templateRepo: templateRepo,
         familyId: currentFamily.id,
         userId: currentUser.id,
-        templateItems: (items ?? []).map((item) => {
-          'name': item.name,
-          'category': item.category,
-          'qty': item.qty,
-          'notes': item.notes,
-          'unit': item.unit,
-        }).toList(),
+        templateItems: (items ?? [])
+            .map(
+              (item) => {
+                'name': item.name,
+                'category': item.category,
+                'qty': item.qty,
+                'notes': item.notes,
+                'unit': item.unit,
+              },
+            )
+            .toList(),
         onSuccess: () {
           if (context.mounted) {
             // Invalidate provider after dialog closes to avoid disposal issues
@@ -1892,8 +2020,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final groceryList = ref.read(groceryListProvider(widget.listId));
     final listRepo = ref.read(groceryListRepositoryProvider);
     final list = groceryList.value;
-    final listId = widget.listId; // Capture listId to avoid using widget.listId in dialog
-    
+    final listId =
+        widget.listId; // Capture listId to avoid using widget.listId in dialog
+
     if (list == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1913,10 +2042,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         initialName: list.name,
         onSave: (String newName) async {
           try {
-            await listRepo.updateListName(
-              listId: listId,
-              name: newName,
-            );
+            await listRepo.updateListName(listId: listId, name: newName);
             return true;
           } catch (e) {
             if (dialogContext.mounted) {
@@ -1952,8 +2078,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final familyId = currentFamily?.id; // Capture ID
     final list = groceryList.value;
     final listId = widget.listId; // Capture listId
-    final listName = list?.name ?? 'this list'; // Capture name for confirmation dialog
-    
+    final listName =
+        list?.name ?? 'this list'; // Capture name for confirmation dialog
+
     if (list == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1971,7 +2098,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Delete List'),
-        content: Text('Are you sure you want to delete "$listName"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "$listName"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -2052,10 +2181,12 @@ class _SaveAsTemplateDialogInline extends StatefulWidget {
   });
 
   @override
-  State<_SaveAsTemplateDialogInline> createState() => _SaveAsTemplateDialogInlineState();
+  State<_SaveAsTemplateDialogInline> createState() =>
+      _SaveAsTemplateDialogInlineState();
 }
 
-class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline> {
+class _SaveAsTemplateDialogInlineState
+    extends State<_SaveAsTemplateDialogInline> {
   late TextEditingController _nameController;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
@@ -2090,9 +2221,9 @@ class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline
             children: [
               Text(
                 'Template Name',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               SizedBox(height: ResponsiveHelper.h(8)),
               TextFormField(
@@ -2102,7 +2233,10 @@ class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline
                   border: OutlineInputBorder(
                     borderRadius: ResponsiveHelper.borderRadius(12),
                   ),
-                  contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                  contentPadding: ResponsiveHelper.padding(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -2115,7 +2249,9 @@ class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline
               Text(
                 'This will create a template with ${widget.itemCount} items.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -2156,7 +2292,9 @@ class _SaveAsTemplateDialogInlineState extends State<_SaveAsTemplateDialogInline
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Failed to save template: ${e.toString()}'),
+                          content: Text(
+                            'Failed to save template: ${e.toString()}',
+                          ),
                           backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
@@ -2247,9 +2385,9 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
               children: [
                 Text(
                   'Template Name',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 TextFormField(
@@ -2259,7 +2397,10 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -2273,7 +2414,9 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
                 Text(
                   'This will create a template with ${widget.itemCount} items.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -2315,7 +2458,9 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(e.toString().replaceAll('Exception: ', '')),
+                          content: Text(
+                            e.toString().replaceAll('Exception: ', ''),
+                          ),
                           backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
@@ -2351,13 +2496,16 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
 class _AddItemDialog extends StatefulWidget {
   final GroceryListItemModel? item;
   final String? initialName;
-  final Future<bool> Function(String name, String category, int qty, String? unit, String? notes) onSave;
+  final Future<bool> Function(
+    String name,
+    String category,
+    int qty,
+    String? unit,
+    String? notes,
+  )
+  onSave;
 
-  const _AddItemDialog({
-    this.item,
-    this.initialName,
-    required this.onSave,
-  });
+  const _AddItemDialog({this.item, this.initialName, required this.onSave});
 
   @override
   State<_AddItemDialog> createState() => _AddItemDialogState();
@@ -2378,9 +2526,11 @@ class _AddItemDialogState extends State<_AddItemDialog> {
     final initialName = widget.item?.name ?? widget.initialName ?? '';
     _nameController = TextEditingController(text: initialName);
     _notesController = TextEditingController(text: widget.item?.notes ?? '');
-    _qtyController = TextEditingController(text: widget.item?.qty.toString() ?? '1');
+    _qtyController = TextEditingController(
+      text: widget.item?.qty.toString() ?? '1',
+    );
     _unitController = TextEditingController(text: widget.item?.unit ?? '');
-    
+
     // Auto-categorize if editing existing item or if initial name is provided
     if (widget.item != null) {
       _selectedCategory = widget.item!.category;
@@ -2389,13 +2539,13 @@ class _AddItemDialogState extends State<_AddItemDialog> {
     } else {
       _selectedCategory = 'other';
     }
-    
+
     // Listen to name changes and auto-categorize (only when adding new items)
     if (widget.item == null) {
       _nameController.addListener(_onNameChanged);
     }
   }
-  
+
   void _onNameChanged() {
     final name = _nameController.text.trim();
     if (name.isNotEmpty) {
@@ -2444,7 +2594,10 @@ class _AddItemDialogState extends State<_AddItemDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -2466,14 +2619,18 @@ class _AddItemDialogState extends State<_AddItemDialog> {
                           border: OutlineInputBorder(
                             borderRadius: ResponsiveHelper.borderRadius(12),
                           ),
-                          contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                          contentPadding: ResponsiveHelper.padding(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Required';
                           }
-                          if (int.tryParse(value) == null || int.parse(value) < 1) {
+                          if (int.tryParse(value) == null ||
+                              int.parse(value) < 1) {
                             return 'Must be > 0';
                           }
                           return null;
@@ -2490,7 +2647,10 @@ class _AddItemDialogState extends State<_AddItemDialog> {
                           border: OutlineInputBorder(
                             borderRadius: ResponsiveHelper.borderRadius(12),
                           ),
-                          contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                          contentPadding: ResponsiveHelper.padding(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -2504,25 +2664,29 @@ class _AddItemDialogState extends State<_AddItemDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
-                  items: const [
-                    'produce',
-                    'dairy',
-                    'meat',
-                    'bakery',
-                    'frozen',
-                    'pantry',
-                    'beverages',
-                    'household',
-                    'health',
-                    'other',
-                  ].map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category.displayName),
-                    );
-                  }).toList(),
+                  items:
+                      const [
+                        'produce',
+                        'dairy',
+                        'meat',
+                        'bakery',
+                        'frozen',
+                        'pantry',
+                        'beverages',
+                        'household',
+                        'health',
+                        'other',
+                      ].map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category.displayName),
+                        );
+                      }).toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {
@@ -2540,7 +2704,10 @@ class _AddItemDialogState extends State<_AddItemDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   maxLines: 3,
                   maxLength: 200,
@@ -2619,10 +2786,7 @@ class _EditListNameDialog extends StatefulWidget {
   final String initialName;
   final Future<bool> Function(String) onSave;
 
-  const _EditListNameDialog({
-    required this.initialName,
-    required this.onSave,
-  });
+  const _EditListNameDialog({required this.initialName, required this.onSave});
 
   @override
   State<_EditListNameDialog> createState() => _EditListNameDialogState();
@@ -2664,7 +2828,10 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
               border: OutlineInputBorder(
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
-              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              contentPadding: ResponsiveHelper.padding(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -2695,7 +2862,9 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
                   setState(() => _isLoading = true);
 
                   try {
-                    final success = await widget.onSave(_nameController.text.trim());
+                    final success = await widget.onSave(
+                      _nameController.text.trim(),
+                    );
                     if (mounted) {
                       Navigator.of(context).pop(success);
                     }
@@ -2731,34 +2900,41 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
 }
 
 // Providers
-final groceryListProvider = StreamProvider.family<GroceryListModel?, String>((ref, listId) {
+final groceryListProvider = StreamProvider.family<GroceryListModel?, String>((
+  ref,
+  listId,
+) {
   final listRepo = ref.watch(groceryListRepositoryProvider);
   return listRepo.streamListById(listId);
 });
 
-final groceryListItemsProvider = StreamProvider.family<List<GroceryListItemModel>, String>((ref, listId) {
-  final listRepo = ref.watch(groceryListRepositoryProvider);
-  return listRepo.streamListItems(listId);
-});
+final groceryListItemsProvider =
+    StreamProvider.family<List<GroceryListItemModel>, String>((ref, listId) {
+      final listRepo = ref.watch(groceryListRepositoryProvider);
+      return listRepo.streamListItems(listId);
+    });
 
-final groceryTemplatesProvider = StreamProvider.family<List<GroceryTemplateModel>, String>((ref, familyId) {
-  final templateRepo = ref.watch(groceryTemplateRepositoryProvider);
-  return templateRepo.streamTemplatesForFamily(familyId);
-});
+final groceryTemplatesProvider =
+    StreamProvider.family<List<GroceryTemplateModel>, String>((ref, familyId) {
+      final templateRepo = ref.watch(groceryTemplateRepositoryProvider);
+      return templateRepo.streamTemplatesForFamily(familyId);
+    });
 
-final standaloneGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
-  final listRepo = ref.watch(groceryListRepositoryProvider);
-  // Get current user for role-based filtering
-  final currentUser = ref.watch(currentUserProvider);
-  final userId = currentUser?.id;
-  return listRepo.streamStandaloneListsForFamily(familyId, userId: userId);
-});
+final standaloneGroceryListsProvider =
+    StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
+      final listRepo = ref.watch(groceryListRepositoryProvider);
+      // Get current user for role-based filtering
+      final currentUser = ref.watch(currentUserProvider);
+      final userId = currentUser?.id;
+      return listRepo.streamStandaloneListsForFamily(familyId, userId: userId);
+    });
 
 /// Provider for all grocery lists (both standalone and task-linked)
-final allGroceryListsProvider = StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
-  final listRepo = ref.watch(groceryListRepositoryProvider);
-  // Get current user for role-based filtering
-  final currentUser = ref.watch(currentUserProvider);
-  final userId = currentUser?.id;
-  return listRepo.streamAllListsForFamily(familyId, userId: userId);
-});
+final allGroceryListsProvider =
+    StreamProvider.family<List<GroceryListModel>, String>((ref, familyId) {
+      final listRepo = ref.watch(groceryListRepositoryProvider);
+      // Get current user for role-based filtering
+      final currentUser = ref.watch(currentUserProvider);
+      final userId = currentUser?.id;
+      return listRepo.streamAllListsForFamily(familyId, userId: userId);
+    });
