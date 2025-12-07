@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,10 @@ import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/user_model.dart';
+
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -43,12 +48,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final themeMode = ref.watch(themeModeProvider);
-    
+
     // Get user profile for preferences
     final userProfileAsync = currentUser != null
         ? ref.watch(userProfileProvider(currentUser.id))
         : const AsyncValue<UserModel?>.data(null);
-    
+
     final userProfile = userProfileAsync.when(
       data: (profile) => profile,
       loading: () => null,
@@ -56,45 +61,74 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     return BackgroundWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Settings'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: ResponsiveHelper.padding(all: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Theme Settings
-                _buildSectionHeader(context, 'Appearance'),
-                _buildThemeCard(context, themeMode),
-                
-                SizedBox(height: ResponsiveHelper.h(24)),
-                
-                // Notification Settings
-                _buildSectionHeader(context, 'Notifications'),
-                _buildNotificationCard(context, userProfile),
-                
-                SizedBox(height: ResponsiveHelper.h(24)),
-                
-                // Account Settings
-                _buildSectionHeader(context, 'Account'),
-                _buildAccountCard(context),
-                
-                SizedBox(height: ResponsiveHelper.h(24)),
-                
-                // About
-                _buildSectionHeader(context, 'About'),
-                _buildAboutCard(context),
-                
-                SizedBox(height: ResponsiveHelper.h(32)),
+      child: SafeArea(
+        child: Column(
+          children: [
+            ModernHeader(
+              title: 'Settings',
+              leading: IconButton(
+                icon: Icon(
+                  Icons.menu_rounded,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              actions: [
+                Padding(
+                  padding: ResponsiveHelper.padding(right: 8),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppConstants.routeProfile),
+                    child: AvatarWidget(
+                      avatarPath: currentUser?.avatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName:
+                          currentUser?.userMetadata?['full_name'] as String? ??
+                          'User',
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      textColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: ResponsiveHelper.padding(all: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Theme Settings
+                    _buildSectionHeader(context, 'Appearance'),
+                    _buildThemeCard(context, themeMode),
+
+                    SizedBox(height: ResponsiveHelper.h(24)),
+
+                    // Notification Settings
+                    _buildSectionHeader(context, 'Notifications'),
+                    _buildNotificationCard(context, userProfile),
+
+                    SizedBox(height: ResponsiveHelper.h(24)),
+
+                    // Account Settings
+                    _buildSectionHeader(context, 'Account'),
+                    _buildAccountCard(context),
+
+                    SizedBox(height: ResponsiveHelper.h(24)),
+
+                    // About
+                    _buildSectionHeader(context, 'About'),
+                    _buildAboutCard(context),
+
+                    SizedBox(height: ResponsiveHelper.h(32)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -114,11 +148,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildThemeCard(BuildContext context, ThemeMode currentTheme) {
-    return Card(
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
+    return ModernCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           ListTile(
@@ -132,7 +163,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Icons.chevron_right,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
-            onTap: () => _showThemeSelector(context),
+            onTap: () => _showThemeSelector(),
           ),
         ],
       ),
@@ -142,11 +173,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildNotificationCard(BuildContext context, UserModel? user) {
     final notificationsEnabled = user?.notificationsEnabled ?? true;
 
-    return Card(
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
+    return ModernCard(
+      padding: EdgeInsets.zero,
       child: SwitchListTile(
         secondary: Icon(
           Icons.notifications,
@@ -155,17 +183,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: const Text('Push Notifications'),
         subtitle: const Text('Receive notifications for tasks and events'),
         value: notificationsEnabled,
-        onChanged: (value) => _updateNotificationPreference(context, value),
+        onChanged: (value) => _updateNotificationPreference(value),
       ),
     );
   }
 
   Widget _buildAccountCard(BuildContext context) {
-    return Card(
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
+    return ModernCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           ListTile(
@@ -203,11 +228,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildAboutCard(BuildContext context) {
-    return Card(
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
+    return ModernCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           ListTile(
@@ -232,7 +254,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               title: const Text('App Version'),
-              subtitle: Text('Version $_appVersion${_appBuildNumber != null ? ' (Build $_appBuildNumber)' : ''}'),
+              subtitle: Text(
+                'Version $_appVersion${_appBuildNumber != null ? ' (Build $_appBuildNumber)' : ''}',
+              ),
             ),
           ],
         ],
@@ -251,9 +275,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  Future<void> _showThemeSelector(BuildContext context) async {
+  Future<void> _showThemeSelector() async {
     final currentTheme = ref.read(themeModeProvider);
-    
+
     final selectedTheme = await showDialog<ThemeMode>(
       context: context,
       builder: (context) => AlertDialog(
@@ -288,7 +312,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (selectedTheme != null && selectedTheme != currentTheme) {
       // Update theme immediately
       ref.read(themeModeProvider.notifier).state = selectedTheme;
-      
+
       // Save to user preferences
       final currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
@@ -296,9 +320,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         final themePreference = selectedTheme == ThemeMode.light
             ? 'light'
             : selectedTheme == ThemeMode.dark
-                ? 'dark'
-                : 'system';
-        
+            ? 'dark'
+            : 'system';
+
         try {
           await authRepo.updateUserPreferences(
             themePreference: themePreference,
@@ -308,7 +332,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to save theme preference: ${e.toString()}'),
+                content: Text(
+                  'Failed to save theme preference: ${e.toString()}',
+                ),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -318,18 +344,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  Future<void> _updateNotificationPreference(BuildContext context, bool enabled) async {
+  Future<void> _updateNotificationPreference(bool enabled) async {
     final authRepo = ref.read(authRepositoryProvider);
-    
+
     try {
       // If enabling notifications, request permission first
       if (enabled) {
         final pushService = PushNotificationService();
         final hasPermission = await pushService.hasPermission();
-        
+
         if (!hasPermission) {
           final permissionGranted = await pushService.requestPermission();
-          
+
           if (!permissionGranted) {
             // Permission was denied - check if it's permanently denied
             final status = await Permission.notification.status;
@@ -355,7 +381,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ],
                   ),
                 );
-                
+
                 if (shouldOpenSettings == true) {
                   await pushService.openNotificationSettings();
                 }
@@ -365,7 +391,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Notification permission is required to receive notifications'),
+                    content: const Text(
+                      'Notification permission is required to receive notifications',
+                    ),
                     backgroundColor: Theme.of(context).colorScheme.error,
                     duration: AppConstants.snackBarDuration,
                   ),
@@ -377,16 +405,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           }
         }
       }
-      
+
       // Save preference
-      await authRepo.updateUserPreferences(
-        notificationsEnabled: enabled,
-      );
-      
+      await authRepo.updateUserPreferences(notificationsEnabled: enabled);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(enabled ? 'Notifications enabled' : 'Notifications disabled'),
+            content: Text(
+              enabled ? 'Notifications enabled' : 'Notifications disabled',
+            ),
             backgroundColor: Theme.of(context).colorScheme.primary,
             duration: AppConstants.snackBarDuration,
           ),
@@ -396,7 +424,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update notification preference: ${e.toString()}'),
+            content: Text(
+              'Failed to update notification preference: ${e.toString()}',
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -404,4 +434,3 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 }
-

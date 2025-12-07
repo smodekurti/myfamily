@@ -14,6 +14,8 @@ import '../../../../data/repositories/grocery_template_repository.dart';
 import 'grocery_list_page.dart'; // For providers
 import '../../../../common/widgets/modern_header.dart';
 import '../../../../common/widgets/modern_card.dart';
+import '../../../../common/widgets/avatar_widget.dart';
+import '../../../../core/extensions/user_extensions.dart';
 
 class GroceriesPage extends ConsumerStatefulWidget {
   const GroceriesPage({super.key});
@@ -23,6 +25,8 @@ class GroceriesPage extends ConsumerStatefulWidget {
 }
 
 class _GroceriesPageState extends ConsumerState<GroceriesPage> {
+  bool _showAllLists = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final groceryListsAsync = currentFamily != null
         ? ref.watch(allGroceryListsProvider(currentFamily.id))
         : const AsyncValue.data(<GroceryListModel>[]);
@@ -77,17 +82,39 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
             children: [
               ModernHeader(
                 title: 'Grocery Lists',
-                subtitle: 'Manage your shopping lists',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
                 actions: [
                   IconButton(
-                    icon: Icon(
-                      Icons.inventory_2_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    onPressed: () {
-                      context.push(AppConstants.routeGroceryTemplatesManage);
-                    },
+                    icon: Icon(Icons.inventory_2_outlined),
+                    onPressed: () =>
+                        context.push(AppConstants.routeGroceryTemplatesManage),
                     tooltip: 'Manage Templates',
+                  ),
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: currentUser?.avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            currentUser?.userMetadata?['full_name']
+                                as String? ??
+                            'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -110,13 +137,16 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         ),
         floatingActionButton: PermissionAwareWidget(
           action: 'create_list',
-          child: FloatingActionButton.extended(
-            onPressed: () => _showCreateListDialog(context),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text(
-              'New List',
-              style: TextStyle(color: Colors.white),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: ResponsiveHelper.h(80)),
+            child: FloatingActionButton.extended(
+              onPressed: () => _showCreateListDialog(context),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text(
+                'New List',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ),
@@ -190,6 +220,9 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   }
 
   Widget _buildListsList(BuildContext context, List<GroceryListModel> lists) {
+    final listsToShow = _showAllLists ? lists : lists.take(5).toList();
+    final hasMore = lists.length > 5;
+
     return RefreshIndicator(
       onRefresh: () async {
         // Refresh from server when user pulls to refresh
@@ -201,13 +234,37 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         // Wait a moment for the stream to fetch new data
         await Future.delayed(const Duration(milliseconds: 500));
       },
-      child: ListView.builder(
+      child: ListView(
         padding: ResponsiveHelper.padding(all: 16),
-        itemCount: lists.length,
-        itemBuilder: (context, index) {
-          final list = lists[index];
-          return _buildListCard(context, list);
-        },
+        children: [
+          ...listsToShow.map((list) => _buildListCard(context, list)),
+          if (hasMore)
+            Padding(
+              padding: ResponsiveHelper.padding(top: 8),
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _showAllLists = !_showAllLists;
+                  });
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_showAllLists ? 'Show Less' : 'View All'),
+                    SizedBox(width: ResponsiveHelper.w(4)),
+                    Icon(
+                      _showAllLists
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: ResponsiveHelper.iconSize(20),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // Add extra padding at bottom for FAB
+          SizedBox(height: ResponsiveHelper.h(80)),
+        ],
       ),
     );
   }
@@ -217,22 +274,23 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
       onTap: () {
         context.push('/grocery-list/${list.id}');
       },
-      margin: ResponsiveHelper.padding(bottom: 12),
+      margin: ResponsiveHelper.padding(bottom: 8),
+      padding: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveHelper.padding(all: 16),
+        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 12),
         child: Row(
           children: [
             Container(
-              width: ResponsiveHelper.w(56),
-              height: ResponsiveHelper.h(56),
+              width: ResponsiveHelper.w(40),
+              height: ResponsiveHelper.h(40),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: ResponsiveHelper.borderRadius(16),
+                borderRadius: ResponsiveHelper.borderRadius(12),
               ),
               child: Icon(
                 Icons.shopping_bag_outlined,
                 color: Theme.of(context).colorScheme.primary,
-                size: ResponsiveHelper.iconSize(28),
+                size: ResponsiveHelper.iconSize(20),
               ),
             ),
             SizedBox(width: ResponsiveHelper.w(16)),

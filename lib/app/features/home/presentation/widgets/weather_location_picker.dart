@@ -8,7 +8,8 @@ class WeatherLocationPicker extends ConsumerStatefulWidget {
   const WeatherLocationPicker({super.key});
 
   @override
-  ConsumerState<WeatherLocationPicker> createState() => _WeatherLocationPickerState();
+  ConsumerState<WeatherLocationPicker> createState() =>
+      _WeatherLocationPickerState();
 }
 
 class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
@@ -46,17 +47,20 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
 
     // Check if input is a zipcode
     final isZipcode = _isZipcode(location);
-    
+
     // For US zipcode format (5+4), use only the 5-digit part
-    final zipcodeToSearch = isZipcode 
-        ? location.trim().split('-').first // Use only the 5-digit part for US zipcodes
+    final zipcodeToSearch = isZipcode
+        ? location
+              .trim()
+              .split('-')
+              .first // Use only the 5-digit part for US zipcodes
         : location.trim();
-    
+
     // Validate the location by trying to get weather for it
     final weather = isZipcode
         ? await _weatherRepo.getWeather(zipcode: zipcodeToSearch)
         : await _weatherRepo.getWeather(cityName: zipcodeToSearch);
-    
+
     if (weather != null && mounted) {
       // Save the selected location (use the resolved city name from weather)
       final locationName = weather.city;
@@ -67,7 +71,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
         // Clear the invalid location selection so widget doesn't keep trying to use it
         // This will cause the provider to fall back to default location
         ref.read(selectedWeatherLocationProvider.notifier).state = null;
-        
+
         final errorMessage = isZipcode
             ? 'Could not find weather for zipcode "$location". Please verify the zipcode or try searching by city name.'
             : 'Could not find weather for "$location". Please try another location or zipcode.';
@@ -93,9 +97,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
     final selectedLocation = ref.watch(selectedWeatherLocationProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Weather Location'),
-      ),
+      appBar: AppBar(title: const Text('Weather Location')),
       body: SafeArea(
         child: Column(
           children: [
@@ -115,11 +117,13 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                   : null,
               onTap: () {
                 ref.read(selectedWeatherLocationProvider.notifier).state = null;
+                // Force refresh of current location
+                ref.invalidate(currentLocationProvider);
                 Navigator.pop(context);
               },
             ),
             const Divider(),
-            
+
             // Search section
             Padding(
               padding: ResponsiveHelper.padding(all: 16),
@@ -136,9 +140,11 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                   TextField(
                     controller: _searchController,
                     enabled: !_isValidating,
-                    keyboardType: _isZipcodeInput ? TextInputType.number : TextInputType.text,
+                    keyboardType: _isZipcodeInput
+                        ? TextInputType.number
+                        : TextInputType.text,
                     decoration: InputDecoration(
-                      hintText: _isZipcodeInput 
+                      hintText: _isZipcodeInput
                           ? 'Enter zipcode (e.g., 10001, 60060)'
                           : 'Enter city name or zipcode (e.g., New York, 10001)',
                       helperText: _isZipcodeInput
@@ -187,9 +193,12 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                         SizedBox(width: ResponsiveHelper.w(8)),
                         Text(
                           'Validating location...',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
                         ),
                       ],
                     ),
@@ -220,7 +229,10 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
     );
   }
 
-  List<Widget> _buildPopularCities(BuildContext context, String? selectedLocation) {
+  List<Widget> _buildPopularCities(
+    BuildContext context,
+    String? selectedLocation,
+  ) {
     final popularCities = [
       {'name': 'New York', 'country': 'US'},
       {'name': 'London', 'country': 'GB'},
@@ -246,10 +258,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
         title: Text(cityName),
         subtitle: Text(city['country'] as String),
         trailing: isSelected
-            ? Icon(
-                Icons.check,
-                color: Theme.of(context).colorScheme.primary,
-              )
+            ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
             : null,
         onTap: _isValidating ? null : () => _selectLocation(cityName),
       );

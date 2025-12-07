@@ -10,6 +10,9 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../common/widgets/avatar_widget.dart';
 
+import '../../../../common/widgets/modern_card.dart';
+import '../../../../common/widgets/modern_header.dart';
+
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
@@ -21,7 +24,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _displayNameController = TextEditingController();
   final _imagePicker = ImagePicker();
-  
+
   File? _selectedImage;
   String? _currentImageUrl;
   bool _isLoading = false;
@@ -36,10 +39,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   void _initializeData() {
     final user = ref.read(currentUserProvider);
     if (user != null) {
-      _displayNameController.text = user.userMetadata?['display_name'] as String? ?? 
-                                     user.userMetadata?['name'] as String? ?? '';
-      _currentImageUrl = user.userMetadata?['avatar_url'] as String? ?? 
-                        user.userMetadata?['picture'] as String?;
+      _displayNameController.text =
+          user.userMetadata?['display_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          '';
+      _currentImageUrl =
+          user.userMetadata?['avatar_url'] as String? ??
+          user.userMetadata?['picture'] as String?;
     }
   }
 
@@ -99,7 +105,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
             if (_currentImageUrl != null || _selectedImage != null)
               ListTile(
-                leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                leading: Icon(
+                  Icons.delete,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 title: Text(
                   'Remove Photo',
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -133,19 +142,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       // Upload to Supabase Storage
       final storage = Supabase.instance.client.storage.from('user-content');
-      
+
       // Check if bucket exists, if not show helpful error
       try {
-        await storage.upload(filePath, imageFile, fileOptions: const FileOptions(upsert: true));
+        await storage.upload(
+          filePath,
+          imageFile,
+          fileOptions: const FileOptions(upsert: true),
+        );
       } catch (e) {
         final errorString = e.toString();
         if (errorString.contains('Bucket not found')) {
           throw Exception(
-            'Storage bucket not found. Please run the setup_storage_buckets_private.sql migration in your Supabase SQL Editor.'
+            'Storage bucket not found. Please run the setup_storage_buckets_private.sql migration in your Supabase SQL Editor.',
           );
-        } else if (errorString.contains('row-level security') || errorString.contains('RLS') || errorString.contains('403')) {
+        } else if (errorString.contains('row-level security') ||
+            errorString.contains('RLS') ||
+            errorString.contains('403')) {
           throw Exception(
-            'Permission denied. Please ensure the storage bucket RLS policies are set up correctly. Run setup_storage_buckets_private.sql in your Supabase SQL Editor.'
+            'Permission denied. Please ensure the storage bucket RLS policies are set up correctly. Run setup_storage_buckets_private.sql in your Supabase SQL Editor.',
           );
         }
         rethrow;
@@ -214,7 +229,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final currentFamily = ref.read(currentFamilyProvider);
       if (currentFamily != null) {
         ref.invalidate(familyMembersProvider(currentFamily.id));
-        
+
         // Invalidate user profile provider for current user to refresh avatar everywhere
         final currentUser = ref.read(currentUserProvider);
         if (currentUser != null) {
@@ -229,7 +244,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
-        context.pop();
+        if (context.canPop()) {
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -252,164 +269,224 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return BackgroundWidget(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        // App bar is provided by MainShell
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: ResponsiveHelper.padding(horizontal: 16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  SizedBox(height: ResponsiveHelper.h(32)),
-
-                  // Profile Picture Section
-                  Center(
-                    child: Stack(
+          child: Column(
+            children: [
+              ModernHeader(
+                title: 'Edit Profile',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+                actions: [
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: _currentImageUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            _displayNameController.text.trim().isNotEmpty
+                            ? _displayNameController.text.trim()
+                            : 'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: ResponsiveHelper.padding(horizontal: 16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
                       children: [
-                        GestureDetector(
-                          onTap: _showImageSourceDialog,
-                          child: _selectedImage != null
-                              ? CircleAvatar(
-                                  radius: ResponsiveHelper.r(60),
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  backgroundImage: FileImage(_selectedImage!),
-                                  child: null,
-                                )
-                              : AvatarWidget(
-                                  avatarPath: _currentImageUrl,
-                                  radius: ResponsiveHelper.r(60),
-                                  displayName: _displayNameController.text.trim().isNotEmpty
-                                      ? _displayNameController.text.trim()
-                                      : null,
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  textColor: Theme.of(context).colorScheme.onPrimary,
-                                ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: GestureDetector(
-                            onTap: _showImageSourceDialog,
-                            child: Container(
-                              padding: ResponsiveHelper.padding(all: 8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Theme.of(context).scaffoldBackgroundColor,
-                                  width: ResponsiveHelper.w(2),
-                                ),
+                        SizedBox(height: ResponsiveHelper.h(16)),
+
+                        // Profile Picture Section
+                        Center(
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: _showImageSourceDialog,
+                                child: _selectedImage != null
+                                    ? CircleAvatar(
+                                        radius: ResponsiveHelper.r(60),
+                                        backgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        backgroundImage: FileImage(
+                                          _selectedImage!,
+                                        ),
+                                        child: null,
+                                      )
+                                    : AvatarWidget(
+                                        avatarPath: _currentImageUrl,
+                                        radius: ResponsiveHelper.r(60),
+                                        displayName:
+                                            _displayNameController.text
+                                                .trim()
+                                                .isNotEmpty
+                                            ? _displayNameController.text.trim()
+                                            : null,
+                                        backgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        textColor: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimary,
+                                      ),
                               ),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: ResponsiveHelper.iconSize(20),
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_isUploadingImage)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Theme.of(context).colorScheme.onPrimary,
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: GestureDetector(
+                                  onTap: _showImageSourceDialog,
+                                  child: Container(
+                                    padding: ResponsiveHelper.padding(all: 8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(
+                                          context,
+                                        ).scaffoldBackgroundColor,
+                                        width: ResponsiveHelper.w(2),
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.camera_alt,
+                                      size: ResponsiveHelper.iconSize(20),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              if (_isUploadingImage)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.54),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimary,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.h(8)),
+
+                        Text(
+                          'Tap to change profile picture',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.h(32)),
+
+                        // Display Name Field
+                        ModernCard(
+                          padding: ResponsiveHelper.padding(all: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Display Name',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              SizedBox(height: ResponsiveHelper.h(8)),
+                              TextFormField(
+                                controller: _displayNameController,
+                                decoration: InputDecoration(
+                                  hintText: 'Enter your display name',
+                                  border: OutlineInputBorder(
+                                    borderRadius: ResponsiveHelper.borderRadius(
+                                      8,
+                                    ),
+                                  ),
+                                  prefixIcon: const Icon(Icons.person),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter a display name';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.h(32)),
+
+                        // Save Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _saveProfile,
+                            style: ElevatedButton.styleFrom(
+                              padding: ResponsiveHelper.padding(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: ResponsiveHelper.borderRadius(12),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    height: ResponsiveHelper.h(20),
+                                    width: ResponsiveHelper.w(20),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Theme.of(context).colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  )
+                                : const Text('Save Changes'),
+                          ),
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.h(40)),
                       ],
                     ),
                   ),
-
-                  SizedBox(height: ResponsiveHelper.h(8)),
-
-                  Text(
-                    'Tap to change profile picture',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.h(32)),
-
-                  // Display Name Field
-                  Card(
-                    child: Padding(
-                      padding: ResponsiveHelper.padding(all: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Display Name',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          SizedBox(height: ResponsiveHelper.h(8)),
-                          TextFormField(
-                            controller: _displayNameController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter your display name',
-                              border: OutlineInputBorder(
-                                borderRadius: ResponsiveHelper.borderRadius(8),
-                              ),
-                              prefixIcon: const Icon(Icons.person),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter a display name';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.h(32)),
-
-                  // Save Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        padding: ResponsiveHelper.padding(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: ResponsiveHelper.borderRadius(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              height: ResponsiveHelper.h(20),
-                              width: ResponsiveHelper.w(20),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              ),
-                            )
-                          : const Text('Save Changes'),
-                    ),
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.h(40)),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 }
-
