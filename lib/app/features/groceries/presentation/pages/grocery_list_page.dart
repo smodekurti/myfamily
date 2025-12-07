@@ -688,7 +688,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       children: [
         // Compact category header with badge
         Container(
-          padding: ResponsiveHelper.padding(horizontal: 12, vertical: 6),
+          padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: ResponsiveHelper.borderRadius(8),
@@ -728,10 +728,26 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
         ModernCard(
+          padding: EdgeInsets.zero,
           child: Column(
-            children: items
-                .map((item) => _buildGroceryItem(context, item))
-                .toList(),
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isLast = index == items.length - 1;
+              return Column(
+                children: [
+                  _buildGroceryItem(context, item),
+                  if (!isLast)
+                    Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.1),
+                    ),
+                ],
+              );
+            }).toList(),
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(16)),
@@ -758,10 +774,26 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ),
         SizedBox(height: ResponsiveHelper.h(12)),
         ModernCard(
+          padding: EdgeInsets.zero,
           child: Column(
-            children: items
-                .map((item) => _buildGroceryItem(context, item))
-                .toList(),
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isLast = index == items.length - 1;
+              return Column(
+                children: [
+                  _buildGroceryItem(context, item),
+                  if (!isLast)
+                    Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.1),
+                    ),
+                ],
+              );
+            }).toList(),
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(24)),
@@ -781,7 +813,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
 
     return ListTile(
-      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+      contentPadding: ResponsiveHelper.padding(horizontal: 12, vertical: 0),
+      visualDensity: VisualDensity.compact,
       // Always show checkbox for all grocery list items
       leading: Checkbox(
         value: item.checked,
@@ -803,7 +836,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           }
         },
         activeColor: Theme.of(context).colorScheme.primary,
-        shape: const CircleBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: ResponsiveHelper.borderRadius(4),
+        ),
       ),
       title: Text(
         item.name,
@@ -816,7 +851,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       ),
       subtitle: (hasQuantity || hasNotes)
           ? Padding(
-              padding: EdgeInsets.only(top: ResponsiveHelper.h(4)),
+              padding: EdgeInsets.only(top: ResponsiveHelper.h(2)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1296,7 +1331,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     return InkWell(
       onTap: () => _showAddItemDialog(context, item: item),
       child: Container(
-        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 6),
+        padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           border: isLast
               ? null
@@ -1313,8 +1348,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           children: [
             // Always show checkbox for all grocery list items
             SizedBox(
-              width: ResponsiveHelper.w(32),
-              height: ResponsiveHelper.h(32),
+              width: ResponsiveHelper.w(24),
+              height: ResponsiveHelper.h(24),
               child: Checkbox(
                 value: item.checked,
                 onChanged: (value) async {

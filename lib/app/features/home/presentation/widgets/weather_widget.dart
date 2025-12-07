@@ -92,18 +92,21 @@ class WeatherWidget extends ConsumerWidget {
                               height: 1.0,
                             ),
                       ),
-                      Padding(
-                        padding: ResponsiveHelper.padding(bottom: 6, left: 4),
-                        child: Text(
-                          weather.description.toUpperCase(),
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.7),
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
+                      Flexible(
+                        child: Padding(
+                          padding: ResponsiveHelper.padding(bottom: 6, left: 4),
+                          child: Text(
+                            weather.description.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ),
                     ],
@@ -119,13 +122,18 @@ class WeatherWidget extends ConsumerWidget {
                         ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       SizedBox(width: ResponsiveHelper.w(4)),
-                      Text(
-                        '${weather.city}, ${weather.country}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          '${weather.city}, ${weather.country}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],

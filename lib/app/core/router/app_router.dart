@@ -156,7 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation == AppConstants.routeSettings ||
               state.matchedLocation == AppConstants.routeHelp ||
               state.matchedLocation == AppConstants.routeLeaderboard ||
-              state.matchedLocation == AppConstants.routePointsHistory) {
+              state.matchedLocation == AppConstants.routePointsHistory ||
+              state.matchedLocation == AppConstants.routeAchievements ||
+              state.matchedLocation ==
+                  AppConstants.routeGroceryTemplatesManage) {
             return null;
           }
 
@@ -539,7 +542,7 @@ class MainShell extends ConsumerWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
+  PreferredSizeWidget? _buildAppBar(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final currentRoute = GoRouterState.of(context).matchedLocation;
 
@@ -562,6 +565,22 @@ class MainShell extends ConsumerWidget {
     } else if (currentRoute == AppConstants.routeProfile ||
         currentRoute == AppConstants.routeEditProfile) {
       title = 'Profile';
+    }
+
+    // Hide AppBar for pages with custom headers (Home, Tasks, Groceries)
+    if (currentRoute == AppConstants.routeHome ||
+        currentRoute == AppConstants.routeTasks ||
+        currentRoute == AppConstants.routeGroceries ||
+        currentRoute == AppConstants.routeCalendar ||
+        currentRoute == AppConstants.routeFamilySettings ||
+        currentRoute == AppConstants.routeSettings ||
+        currentRoute == AppConstants.routeHelp ||
+        currentRoute == AppConstants.routeLeaderboard ||
+        currentRoute == AppConstants.routeAchievements ||
+        currentRoute == AppConstants.routeGroceryTemplatesManage ||
+        currentRoute == AppConstants.routeEditProfile ||
+        currentRoute == AppConstants.routePointsHistory) {
+      return null;
     }
 
     return AppBar(
@@ -616,6 +635,9 @@ class MainShell extends ConsumerWidget {
 
   Widget _buildDrawer(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
+    final userFamiliesAsync = ref.watch(
+      userFamiliesProvider(currentUser?.id ?? ''),
+    );
 
     return Drawer(
       child: SafeArea(
@@ -664,6 +686,33 @@ class MainShell extends ConsumerWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  // Switch Family Option (only if user has > 1 family)
+                  userFamiliesAsync.when(
+                    data: (families) {
+                      if (families.length > 1) {
+                        return Column(
+                          children: [
+                            ListTile(
+                              leading: Icon(
+                                Icons.swap_horiz_rounded,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              title: const Text('Switch Family'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showFamilySwitchDialog(context, ref, families);
+                              },
+                            ),
+                            const Divider(),
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+
                   ListTile(
                     leading: Icon(
                       Icons.emoji_events,
@@ -769,6 +818,87 @@ class MainShell extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showFamilySwitchDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<dynamic>
+    families, // Using dynamic since we don't have FamilyModel imported here, but it's fine for basic access
+  ) {
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch Family'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: families.length,
+            itemBuilder: (context, index) {
+              final family = families[index];
+              final isSelected = family.id == currentFamilyId;
+
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Text(
+                    family.name.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+                title: Text(family.name),
+                trailing: isSelected
+                    ? Icon(
+                        Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
+                onTap: () {
+                  if (!isSelected) {
+                    // Update current family provider
+                    ref.read(currentFamilyIdProvider.notifier).state =
+                        family.id;
+
+                    // Explicitly invalidate all family-dependent providers to ensure fresh data
+                    // This forces a refresh of all data for the selected family
+                    ref.invalidate(familyProvider(family.id));
+                    ref.invalidate(familyTasksProvider(family.id));
+                    ref.invalidate(tasksDueTodayProvider(family.id));
+                    ref.invalidate(familyEventsProvider(family.id));
+                    ref.invalidate(familyMembersProvider(family.id));
+                    ref.invalidate(allGroceryListsProvider(family.id));
+                    ref.invalidate(standaloneGroceryListsProvider(family.id));
+                    ref.invalidate(groceryTemplatesProvider(family.id));
+                    ref.invalidate(familyAnnouncementsProvider(family.id));
+                    ref.invalidate(taskStatsProvider(family.id));
+                    ref.invalidate(weeklyPointsProvider(family.id));
+
+                    // Also invalidate the current family provider itself
+                    ref.invalidate(currentFamilyProvider);
+
+                    // Reset navigation to home
+                    ref.read(navigationIndexProvider.notifier).state = 0;
+                    context.go(AppConstants.routeHome);
+                  }
+                  Navigator.pop(context);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
   }

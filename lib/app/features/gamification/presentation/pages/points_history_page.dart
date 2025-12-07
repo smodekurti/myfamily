@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/avatar_widget.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
@@ -15,12 +20,27 @@ class PointsHistoryPage extends ConsumerWidget {
     final currentFamily = ref.watch(currentFamilyProvider);
 
     if (currentUser == null || currentFamily == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Points History'),
-        ),
-        body: const Center(
-          child: Text('Please select a family to view points history'),
+      return BackgroundWidget(
+        child: SafeArea(
+          child: Column(
+            children: [
+              ModernHeader(
+                title: 'Points History',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => context.pop(),
+                ),
+              ),
+              const Expanded(
+                child: Center(
+                  child: Text('Please select a family to view points history'),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -30,121 +50,168 @@ class PointsHistoryPage extends ConsumerWidget {
     );
 
     return BackgroundWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Points History'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-        body: SafeArea(
-          child: pointsHistoryAsync.when(
-            data: (history) {
-              if (history.isEmpty) {
-                return Center(
+      child: SafeArea(
+        child: Column(
+          children: [
+            ModernHeader(
+              title: 'Points History',
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => context.pop(),
+              ),
+              actions: [
+                Padding(
+                  padding: ResponsiveHelper.padding(right: 8),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppConstants.routeProfile),
+                    child: AvatarWidget(
+                      avatarPath: currentUser.avatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName:
+                          currentUser.userMetadata?['full_name'] as String? ??
+                          'User',
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      textColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: pointsHistoryAsync.when(
+                data: (history) {
+                  if (history.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.history,
+                            size: ResponsiveHelper.iconSize(64),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3),
+                          ),
+                          SizedBox(height: ResponsiveHelper.h(16)),
+                          Text(
+                            'No points history yet',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                          ),
+                          SizedBox(height: ResponsiveHelper.h(8)),
+                          Text(
+                            'Complete tasks to earn points!',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Group by date
+                  final groupedHistory = <DateTime, List<PointsHistoryModel>>{};
+                  for (final entry in history) {
+                    if (entry.createdAt == null) continue;
+                    final date = DateTime(
+                      entry.createdAt!.year,
+                      entry.createdAt!.month,
+                      entry.createdAt!.day,
+                    );
+                    groupedHistory.putIfAbsent(date, () => []).add(entry);
+                  }
+
+                  final sortedDates = groupedHistory.keys.toList()
+                    ..sort((a, b) => b.compareTo(a));
+
+                  return ListView.builder(
+                    padding: ResponsiveHelper.padding(all: 16),
+                    itemCount: sortedDates.length,
+                    itemBuilder: (context, index) {
+                      final date = sortedDates[index];
+                      final entries = groupedHistory[date]!;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date header
+                          Padding(
+                            padding: ResponsiveHelper.padding(
+                              horizontal: 8,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              _formatDateHeader(date),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                            ),
+                          ),
+                          // Entries for this date
+                          ...entries.map(
+                            (entry) => _buildHistoryItem(context, entry),
+                          ),
+                          SizedBox(height: ResponsiveHelper.h(8)),
+                        ],
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.history,
+                        Icons.error_outline,
                         size: ResponsiveHelper.iconSize(64),
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.error,
                       ),
                       SizedBox(height: ResponsiveHelper.h(16)),
                       Text(
-                        'No points history yet',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
+                        'Error loading points history',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
                       ),
                       SizedBox(height: ResponsiveHelper.h(8)),
-                      Text(
-                        'Complete tasks to earn points!',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                        ),
+                      TextButton(
+                        onPressed: () {
+                          ref.invalidate(
+                            userPointsHistoryProvider((
+                              currentUser.id,
+                              currentFamily.id,
+                            )),
+                          );
+                        },
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
-                );
-              }
-
-              // Group by date
-              final groupedHistory = <DateTime, List<PointsHistoryModel>>{};
-              for (final entry in history) {
-                if (entry.createdAt == null) continue;
-                final date = DateTime(
-                  entry.createdAt!.year,
-                  entry.createdAt!.month,
-                  entry.createdAt!.day,
-                );
-                groupedHistory.putIfAbsent(date, () => []).add(entry);
-              }
-
-              final sortedDates = groupedHistory.keys.toList()
-                ..sort((a, b) => b.compareTo(a));
-
-              return ListView.builder(
-                padding: ResponsiveHelper.padding(all: 16),
-                itemCount: sortedDates.length,
-                itemBuilder: (context, index) {
-                  final date = sortedDates[index];
-                  final entries = groupedHistory[date]!;
-                  
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Date header
-                      Padding(
-                        padding: ResponsiveHelper.padding(horizontal: 8, vertical: 12),
-                        child: Text(
-                          _formatDateHeader(date),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      // Entries for this date
-                      ...entries.map((entry) => _buildHistoryItem(context, entry)),
-                      SizedBox(height: ResponsiveHelper.h(8)),
-                    ],
-                  );
-                },
-              );
-            },
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            error: (error, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: ResponsiveHelper.iconSize(64),
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(16)),
-                  Text(
-                    'Error loading points history',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(8)),
-                  TextButton(
-                    onPressed: () {
-                      ref.invalidate(
-                        userPointsHistoryProvider((currentUser.id, currentFamily.id)),
-                      );
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -176,15 +243,17 @@ class PointsHistoryPage extends ConsumerWidget {
         ),
         title: Text(
           reasonText,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: entry.createdAt != null
             ? Text(
                 DateFormat('h:mm a').format(entry.createdAt!),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               )
             : null,
@@ -221,7 +290,9 @@ class PointsHistoryPage extends ConsumerWidget {
       case 'task_completed':
         return taskTitle != null ? 'Completed: $taskTitle' : 'Task completed';
       case 'task_uncompleted':
-        return taskTitle != null ? 'Uncompleted: $taskTitle' : 'Task uncompleted';
+        return taskTitle != null
+            ? 'Uncompleted: $taskTitle'
+            : 'Task uncompleted';
       case 'bonus':
         return 'Bonus points';
       case 'streak_bonus':
@@ -233,4 +304,3 @@ class PointsHistoryPage extends ConsumerWidget {
     }
   }
 }
-

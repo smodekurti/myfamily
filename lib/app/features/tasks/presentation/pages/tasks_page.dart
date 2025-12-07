@@ -14,6 +14,7 @@ import '../../../../core/models/task_category.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../../data/models/family_model.dart';
+import '../../../../core/extensions/user_extensions.dart';
 
 // Filter state provider - default to 'all' for "All Chores"
 final taskFilterProvider = StateProvider<String>((ref) => 'all');
@@ -104,6 +105,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               ModernHeader(
                 title: 'Tasks',
                 subtitle: 'Manage your family chores',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
                 actions: [
                   IconButton(
                     icon: Icon(
@@ -119,6 +127,26 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         ref.read(searchModeProvider.notifier).state = true;
                       }
                     },
+                  ),
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: currentUser?.avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            currentUser?.userMetadata?['full_name']
+                                as String? ??
+                            'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -175,8 +203,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   },
                   child: SingleChildScrollView(
                     padding: ResponsiveHelper.padding(
-                      horizontal: 24,
-                      vertical: 16,
+                      horizontal: 16,
+                      vertical: 8,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +216,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               return Column(
                                 children: [
                                   _buildThisWeekStatus(context, tasks),
-                                  SizedBox(height: ResponsiveHelper.h(24)),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
                                 ],
                               );
                             },
@@ -198,7 +226,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
                         // Upcoming Chores Section Header
                         _buildUpcomingChoresHeader(context, ref),
-                        SizedBox(height: ResponsiveHelper.h(16)),
+                        SizedBox(height: ResponsiveHelper.h(8)),
 
                         // Tasks List
                         familyTasks.when(
@@ -345,6 +373,24 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             }
             return PermissionAwareWidget(
               action: 'create_task',
+              child: Padding(
+                padding: ResponsiveHelper.padding(bottom: 80),
+                child: FloatingActionButton(
+                  onPressed: () => context.push(AppConstants.routeCreateTask),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: ResponsiveHelper.borderRadius(16),
+                  ),
+                  child: const Icon(Icons.add),
+                ),
+              ),
+            );
+          },
+          loading: () => null,
+          error: (_, __) => PermissionAwareWidget(
+            action: 'create_task',
+            child: Padding(
+              padding: ResponsiveHelper.padding(bottom: 80),
               child: FloatingActionButton(
                 onPressed: () => context.push(AppConstants.routeCreateTask),
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -353,18 +399,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ),
                 child: const Icon(Icons.add),
               ),
-            );
-          },
-          loading: () => null,
-          error: (_, __) => PermissionAwareWidget(
-            action: 'create_task',
-            child: FloatingActionButton(
-              onPressed: () => context.push(AppConstants.routeCreateTask),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: ResponsiveHelper.borderRadius(16),
-              ),
-              child: const Icon(Icons.add),
             ),
           ),
         ),
@@ -392,7 +426,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }).length;
 
     return ModernCard(
-      padding: ResponsiveHelper.padding(all: 16),
+      padding: ResponsiveHelper.padding(all: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -412,12 +446,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               ),
             ],
           ),
-          SizedBox(height: ResponsiveHelper.h(16)),
+          SizedBox(height: ResponsiveHelper.h(8)),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: ResponsiveHelper.padding(all: 12),
+                  padding: ResponsiveHelper.padding(all: 8),
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
@@ -885,7 +919,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         : '?';
 
     return ModernCard(
-      margin: ResponsiveHelper.padding(bottom: 12),
+      margin: ResponsiveHelper.padding(bottom: 4),
+      padding: EdgeInsets.zero,
       onTap: () {
         // Navigate to grocery list if grocery task, else task detail/edit page
         if (task.category == 'grocery' &&
@@ -899,9 +934,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         }
       },
       child: ListTile(
-        contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 4),
+        visualDensity: VisualDensity.compact,
+        contentPadding: ResponsiveHelper.padding(horizontal: 12, vertical: 0),
         leading: Transform.scale(
-          scale: 1.2,
+          scale: 1.0,
           child: Checkbox(
             value: task.status == 'completed',
             shape: RoundedRectangleBorder(
@@ -987,6 +1023,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
                 : Theme.of(context).colorScheme.onSurface,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Padding(
           padding: EdgeInsets.only(top: ResponsiveHelper.h(4)),
@@ -998,11 +1036,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 color: statusColor,
               ),
               SizedBox(width: ResponsiveHelper.w(4)),
-              Text(
-                statusText,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  statusText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (task.points > 0) ...[
@@ -1765,6 +1806,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   fontWeight: FontWeight.w500,
                   fontSize: ResponsiveHelper.sp(14),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

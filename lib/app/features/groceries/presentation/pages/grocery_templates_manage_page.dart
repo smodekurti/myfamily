@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/avatar_widget.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
@@ -12,102 +16,156 @@ class GroceryTemplatesManagePage extends ConsumerStatefulWidget {
   const GroceryTemplatesManagePage({super.key});
 
   @override
-  ConsumerState<GroceryTemplatesManagePage> createState() => _GroceryTemplatesManagePageState();
+  ConsumerState<GroceryTemplatesManagePage> createState() =>
+      _GroceryTemplatesManagePageState();
 }
 
-class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesManagePage> {
+class _GroceryTemplatesManagePageState
+    extends ConsumerState<GroceryTemplatesManagePage> {
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
-    
+    final currentUser = ref.watch(currentUserProvider);
+
     if (currentFamily == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Shopping Templates'),
-        ),
-        body: const Center(
-          child: Text('No family selected'),
+      return BackgroundWidget(
+        child: SafeArea(
+          child: Column(
+            children: [
+              ModernHeader(
+                title: 'Shopping Templates',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+                actions: [
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: currentUser?.avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            currentUser?.userMetadata?['full_name']
+                                as String? ??
+                            'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Expanded(child: Center(child: Text('No family selected'))),
+            ],
+          ),
         ),
       );
     }
 
-    final templatesAsync = ref.watch(groceryTemplatesProvider(currentFamily.id));
+    final templatesAsync = ref.watch(
+      groceryTemplatesProvider(currentFamily.id),
+    );
 
     return BackgroundWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            onPressed: () => context.pop(),
-          ),
-          title: Text(
-            'Shopping Templates',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                Icons.add,
-                color: Theme.of(context).colorScheme.primary,
+      child: SafeArea(
+        child: Column(
+          children: [
+            ModernHeader(
+              title: 'Shopping Templates',
+              leading: IconButton(
+                icon: Icon(
+                  Icons.menu_rounded,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
-              onPressed: () {
-                context.push('/grocery-template/create');
-              },
-              tooltip: 'Create Template',
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    Icons.add,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: () {
+                    context.push('/grocery-template/create');
+                  },
+                  tooltip: 'Create Template',
+                ),
+                Padding(
+                  padding: ResponsiveHelper.padding(right: 8),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppConstants.routeProfile),
+                    child: AvatarWidget(
+                      avatarPath: currentUser?.avatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName:
+                          currentUser?.userMetadata?['full_name'] as String? ??
+                          'User',
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      textColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        body: SafeArea(
-          child: templatesAsync.when(
-            data: (templates) {
-              if (templates.isEmpty) {
-                return _buildEmptyState(context);
-              }
-              return _buildTemplatesList(context, templates);
-            },
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: ResponsiveHelper.padding(all: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: ResponsiveHelper.iconSize(64),
-                      color: Theme.of(context).colorScheme.error,
+            Expanded(
+              child: templatesAsync.when(
+                data: (templates) {
+                  if (templates.isEmpty) {
+                    return _buildEmptyState(context);
+                  }
+                  return _buildTemplatesList(context, templates);
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: ResponsiveHelper.padding(all: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: ResponsiveHelper.iconSize(64),
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        SizedBox(height: ResponsiveHelper.h(16)),
+                        Text(
+                          'Error loading templates',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                        ),
+                        SizedBox(height: ResponsiveHelper.h(8)),
+                        Text(
+                          error.toString(),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    SizedBox(height: ResponsiveHelper.h(16)),
-                    Text(
-                      'Error loading templates',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    SizedBox(height: ResponsiveHelper.h(8)),
-                    Text(
-                      error.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -158,7 +216,10 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
     );
   }
 
-  Widget _buildTemplatesList(BuildContext context, List<GroceryTemplateModel> templates) {
+  Widget _buildTemplatesList(
+    BuildContext context,
+    List<GroceryTemplateModel> templates,
+  ) {
     return ListView.builder(
       padding: ResponsiveHelper.padding(all: 16),
       itemCount: templates.length,
@@ -169,12 +230,15 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
     );
   }
 
-  Widget _buildTemplateCard(BuildContext context, GroceryTemplateModel template) {
+  Widget _buildTemplateCard(
+    BuildContext context,
+    GroceryTemplateModel template,
+  ) {
     // Map template name to icon and color
     IconData icon;
     Color iconColor;
-    
-    if (template.name.toLowerCase().contains('weekly') || 
+
+    if (template.name.toLowerCase().contains('weekly') ||
         template.name.toLowerCase().contains('grocery')) {
       icon = Icons.shopping_bag;
       iconColor = Theme.of(context).colorScheme.primary;
@@ -234,21 +298,28 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
                         return templateItemsAsync.when(
                           data: (items) => Text(
                             '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
                           ),
                           loading: () => Text(
                             'Loading...',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
                           ),
                           error: (_, __) => Text(
                             'Error loading items',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
                           ),
                         );
                       },
@@ -260,7 +331,9 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
                 icon: Icon(
                   Icons.more_vert,
                   size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
                 ),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
@@ -332,7 +405,10 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
     );
   }
 
-  Future<void> _editTemplateName(BuildContext context, GroceryTemplateModel template) async {
+  Future<void> _editTemplateName(
+    BuildContext context,
+    GroceryTemplateModel template,
+  ) async {
     // Read providers outside the dialog
     final currentFamily = ref.read(currentFamilyProvider);
     final templateRepo = ref.read(groceryTemplateRepositoryProvider);
@@ -365,7 +441,9 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
             if (dialogContext.mounted) {
               ScaffoldMessenger.of(dialogContext).showSnackBar(
                 SnackBar(
-                  content: Text('Failed to update name: ${e.toString().replaceAll('Exception: ', '')}'),
+                  content: Text(
+                    'Failed to update name: ${e.toString().replaceAll('Exception: ', '')}',
+                  ),
                   backgroundColor: Theme.of(dialogContext).colorScheme.error,
                 ),
               );
@@ -394,7 +472,10 @@ class _GroceryTemplatesManagePageState extends ConsumerState<GroceryTemplatesMan
     }
   }
 
-  Future<void> _deleteTemplate(BuildContext context, GroceryTemplateModel template) async {
+  Future<void> _deleteTemplate(
+    BuildContext context,
+    GroceryTemplateModel template,
+  ) async {
     // Read providers outside the dialog
     final currentFamily = ref.read(currentFamilyProvider);
     final templateRepo = ref.read(groceryTemplateRepositoryProvider);
@@ -476,7 +557,8 @@ class _EditTemplateNameDialog extends StatefulWidget {
   });
 
   @override
-  State<_EditTemplateNameDialog> createState() => _EditTemplateNameDialogState();
+  State<_EditTemplateNameDialog> createState() =>
+      _EditTemplateNameDialogState();
 }
 
 class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
@@ -515,7 +597,10 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
               border: OutlineInputBorder(
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
-              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              contentPadding: ResponsiveHelper.padding(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -546,7 +631,9 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
                   setState(() => _isLoading = true);
 
                   try {
-                    final success = await widget.onSave(_nameController.text.trim());
+                    final success = await widget.onSave(
+                      _nameController.text.trim(),
+                    );
                     if (mounted) {
                       Navigator.of(context).pop(success);
                     }
@@ -580,4 +667,3 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
     );
   }
 }
-

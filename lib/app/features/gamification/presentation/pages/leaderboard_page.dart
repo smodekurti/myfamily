@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/models/family_model.dart';
+
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
 
 class LeaderboardPage extends ConsumerStatefulWidget {
   const LeaderboardPage({super.key});
@@ -17,21 +23,50 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
   bool _showWeekly = false; // false = all-time, true = weekly
 
   @override
+  @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
     final currentUser = ref.watch(currentUserProvider);
-    
+
     if (currentFamily == null) {
       return BackgroundWidget(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text('Leaderboard'),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
-          body: const Center(
-            child: Text('No family selected'),
+        child: SafeArea(
+          child: Column(
+            children: [
+              ModernHeader(
+                title: 'Leaderboard',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+                actions: [
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: currentUser?.avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            currentUser?.userMetadata?['full_name']
+                                as String? ??
+                            'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Expanded(child: Center(child: Text('No family selected'))),
+            ],
           ),
         ),
       );
@@ -41,120 +76,178 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     final weeklyPoints = ref.watch(weeklyPointsProvider(currentFamily.id));
 
     return BackgroundWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Leaderboard'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            Padding(
-              padding: ResponsiveHelper.padding(horizontal: 16),
-              child: Center(
-                child: ToggleButtons(
-                  isSelected: [!_showWeekly, _showWeekly],
-                  onPressed: (index) {
-                    setState(() {
-                      _showWeekly = index == 1;
-                    });
-                  },
-                  borderRadius: ResponsiveHelper.borderRadius(8),
-                  constraints: BoxConstraints(
-                    minWidth: ResponsiveHelper.w(80),
-                    minHeight: ResponsiveHelper.h(36),
-                  ),
-                  children: const [
-                    Text('All-Time'),
-                    Text('Weekly'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: familyMembers.when(
-            data: (members) {
-              if (members.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.emoji_events_outlined,
-                        size: ResponsiveHelper.iconSize(80),
-                        color: Theme.of(context).colorScheme.primary,
+      child: SafeArea(
+        child: familyMembers.when(
+          data: (members) {
+            if (members.isEmpty) {
+              return Column(
+                children: [
+                  ModernHeader(
+                    title: 'Leaderboard',
+                    leading: IconButton(
+                      icon: Icon(
+                        Icons.menu_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      SizedBox(height: ResponsiveHelper.h(24)),
-                      Text(
-                        'No members yet',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                    actions: [
+                      Padding(
+                        padding: ResponsiveHelper.padding(right: 8),
+                        child: GestureDetector(
+                          onTap: () => context.push(AppConstants.routeProfile),
+                          child: AvatarWidget(
+                            avatarPath: currentUser?.avatarUrl,
+                            radius: ResponsiveHelper.r(16),
+                            displayName:
+                                currentUser?.userMetadata?['full_name']
+                                    as String? ??
+                                'User',
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            textColor: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                );
-              }
-
-              // Get weekly points data
-              final weeklyPointsData = weeklyPoints.valueOrNull ?? <String, int>{};
-              
-              // Create member list with weekly or all-time points
-              final membersWithPoints = members.map((member) {
-                final points = _showWeekly 
-                    ? weeklyPointsData[member.uid] ?? 0
-                    : member.points;
-                return (member: member, points: points);
-              }).toList();
-              
-              // Sort by points (descending)
-              membersWithPoints.sort((a, b) => b.points.compareTo(a.points));
-
-              return SingleChildScrollView(
-                padding: ResponsiveHelper.padding(all: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Text(
-                      _showWeekly ? 'Weekly Leaderboard' : 'All-Time Leaderboard',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                  SizedBox(height: ResponsiveHelper.h(16)),
+                  _buildToggleButtons(),
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.emoji_events_outlined,
+                            size: ResponsiveHelper.iconSize(80),
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          SizedBox(height: ResponsiveHelper.h(24)),
+                          Text(
+                            'No members yet',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: ResponsiveHelper.h(8)),
-                    Text(
-                      'Family members ranked by points',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ],
+              );
+            }
+
+            // Get weekly points data
+            final weeklyPointsData =
+                weeklyPoints.valueOrNull ?? <String, int>{};
+
+            // Create member list with weekly or all-time points
+            final membersWithPoints = members.map((member) {
+              final points = _showWeekly
+                  ? weeklyPointsData[member.uid] ?? 0
+                  : member.points;
+              return (member: member, points: points);
+            }).toList();
+
+            // Sort by points (descending)
+            membersWithPoints.sort((a, b) => b.points.compareTo(a.points));
+
+            return Column(
+              children: [
+                ModernHeader(
+                  title: 'Leaderboard',
+                  leading: IconButton(
+                    icon: Icon(
+                      Icons.menu_rounded,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                  actions: [
+                    Padding(
+                      padding: ResponsiveHelper.padding(right: 8),
+                      child: GestureDetector(
+                        onTap: () => context.push(AppConstants.routeProfile),
+                        child: AvatarWidget(
+                          avatarPath: currentUser?.avatarUrl,
+                          radius: ResponsiveHelper.r(16),
+                          displayName:
+                              currentUser?.userMetadata?['full_name']
+                                  as String? ??
+                              'User',
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
+                          textColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
-                    SizedBox(height: ResponsiveHelper.h(24)),
-                    
-                    // Leaderboard list
-                    ...membersWithPoints.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final memberData = entry.value;
-                      final isCurrentUser = currentUser?.id == memberData.member.uid;
-                      
-                      return _buildLeaderboardItem(
-                        context,
-                        rank: index + 1,
-                        member: memberData.member,
-                        points: memberData.points,
-                        isCurrentUser: isCurrentUser,
-                      );
-                    }),
                   ],
                 ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Text('Error loading leaderboard: $error'),
-            ),
+                SizedBox(height: ResponsiveHelper.h(16)),
+                _buildToggleButtons(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: ResponsiveHelper.padding(all: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Leaderboard list
+                        ...membersWithPoints.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final memberData = entry.value;
+                          final isCurrentUser =
+                              currentUser?.id == memberData.member.uid;
+
+                          return _buildLeaderboardItem(
+                            context,
+                            rank: index + 1,
+                            member: memberData.member,
+                            points: memberData.points,
+                            isCurrentUser: isCurrentUser,
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Error loading leaderboard: $error')),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButtons() {
+    return Padding(
+      padding: ResponsiveHelper.padding(horizontal: 16),
+      child: Center(
+        child: ToggleButtons(
+          isSelected: [!_showWeekly, _showWeekly],
+          onPressed: (index) {
+            setState(() {
+              _showWeekly = index == 1;
+            });
+          },
+          borderRadius: ResponsiveHelper.borderRadius(8),
+          constraints: BoxConstraints(
+            minWidth: ResponsiveHelper.w(80),
+            minHeight: ResponsiveHelper.h(36),
           ),
+          children: const [Text('All-Time'), Text('Weekly')],
         ),
       ),
     );
@@ -181,100 +274,108 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
       medalColor = Colors.brown.shade300;
     }
 
-    return Card(
+    return ModernCard(
       margin: ResponsiveHelper.padding(bottom: 12),
-      color: isCurrentUser
+      backgroundColor: isCurrentUser
           ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
           : Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: ResponsiveHelper.borderRadius(12),
-        side: isCurrentUser
-            ? BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
-              )
-            : BorderSide.none,
-      ),
-      child: ListTile(
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(width: ResponsiveHelper.w(8)),
-            if (medalIcon != null)
-              Icon(
-                medalIcon,
-                color: medalColor,
-                size: ResponsiveHelper.iconSize(28),
-              )
-            else
-              Container(
-                width: ResponsiveHelper.w(32),
-                height: ResponsiveHelper.h(32),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                ),
-                child: Center(
-                  child: Text(
-                    '$rank',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+      padding: EdgeInsets.zero,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: ResponsiveHelper.borderRadius(12),
+          border: isCurrentUser
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                )
+              : null,
+        ),
+        child: ListTile(
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(width: ResponsiveHelper.w(8)),
+              if (medalIcon != null)
+                Icon(
+                  medalIcon,
+                  color: medalColor,
+                  size: ResponsiveHelper.iconSize(28),
+                )
+              else
+                Container(
+                  width: ResponsiveHelper.w(32),
+                  height: ResponsiveHelper.h(32),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                   ),
                 ),
+              SizedBox(width: ResponsiveHelper.w(12)),
+              AvatarWidget(
+                avatarPath: member.photoURL,
+                radius: ResponsiveHelper.w(24),
+                displayName: member.displayName,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(0.1),
+                textColor: Theme.of(context).colorScheme.primary,
               ),
-            SizedBox(width: ResponsiveHelper.w(12)),
-            AvatarWidget(
-              avatarPath: member.photoURL,
-              radius: ResponsiveHelper.w(24),
-              displayName: member.displayName,
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              textColor: Theme.of(context).colorScheme.primary,
-            ),
-          ],
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                member.displayName,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: isCurrentUser ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ),
-            if (isCurrentUser)
-              Container(
-                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: ResponsiveHelper.borderRadius(8),
-                ),
+            ],
+          ),
+          title: Row(
+            children: [
+              Expanded(
                 child: Text(
-                  'You',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontWeight: FontWeight.w600,
+                  member.displayName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: isCurrentUser
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                 ),
               ),
-          ],
-        ),
-        subtitle: Text(
-          '$points points',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w600,
+              if (isCurrentUser)
+                Container(
+                  padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: ResponsiveHelper.borderRadius(8),
+                  ),
+                  child: Text(
+                    'You',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ),
-        trailing: Icon(
-          Icons.star,
-          color: Theme.of(context).colorScheme.primary,
-          size: ResponsiveHelper.iconSize(24),
+          subtitle: Text(
+            '$points points',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          trailing: Icon(
+            Icons.star,
+            color: Theme.of(context).colorScheme.primary,
+            size: ResponsiveHelper.iconSize(24),
+          ),
         ),
       ),
     );
   }
 }
-

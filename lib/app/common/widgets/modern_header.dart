@@ -5,6 +5,7 @@ class ModernHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final List<Widget>? actions;
+  final Widget? leading;
   final bool showBackButton;
   final VoidCallback? onBack;
 
@@ -13,6 +14,7 @@ class ModernHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.actions,
+    this.leading,
     this.showBackButton = false,
     this.onBack,
   });
@@ -29,7 +31,10 @@ class ModernHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (showBackButton) ...[
+              if (leading != null) ...[
+                leading!,
+                SizedBox(width: ResponsiveHelper.w(16)),
+              ] else if (showBackButton) ...[
                 IconButton(
                   onPressed: onBack ?? () => Navigator.of(context).pop(),
                   icon: Icon(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../../../common/widgets/background_widget.dart';
@@ -7,6 +8,10 @@ import '../../../../common/widgets/permission_aware_widget.dart';
 import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import '../../../../data/models/event_model.dart';
 
 class CalendarPage extends ConsumerStatefulWidget {
@@ -24,7 +29,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   String _viewMode = 'Month'; // 'Month', 'Week', 'Day', 'List'
   String? _selectedMemberId; // null means "All Members"
   bool _isSearchMode = false;
-  
+  bool _showAllEvents = false;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -52,23 +58,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final hash = event.id.hashCode;
     return _eventColors[hash.abs() % _eventColors.length];
   }
-  
+
   List<EventModel> _searchEvents(List<EventModel> events, String query) {
     if (query.isEmpty) return events;
-    
+
     final lowerQuery = query.toLowerCase();
     return events.where((event) {
       // Search in title
       if (event.title.toLowerCase().contains(lowerQuery)) return true;
-      
+
       // Search in description
-      if (event.description != null && 
-          event.description!.toLowerCase().contains(lowerQuery)) return true;
-      
+      if (event.description != null &&
+          event.description!.toLowerCase().contains(lowerQuery))
+        return true;
+
       // Search in location
-      if (event.location != null && 
-          event.location!.toLowerCase().contains(lowerQuery)) return true;
-      
+      if (event.location != null &&
+          event.location!.toLowerCase().contains(lowerQuery))
+        return true;
+
       return false;
     }).toList();
   }
@@ -76,6 +84,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final eventsAsync = currentFamily != null
         ? ref.watch(familyEventsProvider(currentFamily.id))
         : const AsyncValue<List<EventModel>>.data(<EventModel>[]);
@@ -86,60 +95,105 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         body: SafeArea(
           child: Column(
             children: [
+              // Modern Header
+              ModernHeader(
+                title: 'Calendar',
+                subtitle: 'Manage family events',
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+                actions: [
+                  IconButton(
+                    icon: Icon(
+                      _isSearchMode
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: () {
+                      if (_isSearchMode) {
+                        setState(() {
+                          _isSearchMode = false;
+                          _searchController.clear();
+                        });
+                      } else {
+                        setState(() {
+                          _isSearchMode = true;
+                        });
+                      }
+                    },
+                  ),
+                  Padding(
+                    padding: ResponsiveHelper.padding(right: 8),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeProfile),
+                      child: AvatarWidget(
+                        avatarPath: currentUser?.avatarUrl,
+                        radius: ResponsiveHelper.r(16),
+                        displayName:
+                            currentUser?.userMetadata?['full_name']
+                                as String? ??
+                            'User',
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        textColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
               // View Selector (Month/Week/Day/List)
               _buildViewSelector(context),
-              
+
               // Search bar (shown when search mode is active)
               if (_isSearchMode)
-                Container(
-                  padding: ResponsiveHelper.padding(all: 16),
-                  color: Theme.of(context).colorScheme.surface,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            hintText: 'Search events...',
-                            prefixIcon: const Icon(Icons.search),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
-                            border: OutlineInputBorder(
-                              borderRadius: ResponsiveHelper.borderRadius(12),
-                            ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-                          ),
-                          onChanged: (value) {
-                            setState(() {});
-                          },
+                Padding(
+                  padding: ResponsiveHelper.padding(horizontal: 16, bottom: 16),
+                  child: ModernCard(
+                    padding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search events...',
+                        border: InputBorder.none,
+                        icon: Icon(
+                          Icons.search_rounded,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
                         ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
                       ),
-                      SizedBox(width: ResponsiveHelper.w(8)),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isSearchMode = false;
-                            _searchController.clear();
-                          });
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                    ],
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                    ),
                   ),
                 ),
-              
+
               // Member Filter (hide when searching)
-              if (!_isSearchMode)
-                _buildMemberFilter(context),
-              
+              if (!_isSearchMode) _buildMemberFilter(context),
+
               // Calendar Widget or List View
               Expanded(
                 child: RefreshIndicator(
@@ -159,7 +213,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                             children: [
                               // Calendar
                               _buildCalendar(context, eventsAsync),
-                              
+
                               // Today's Events Section
                               _buildTodaysEvents(context, eventsAsync),
                             ],
@@ -170,12 +224,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ],
           ),
         ),
-        floatingActionButton: PermissionAwareWidget(
-          action: 'create_event',
-          child: FloatingActionButton(
-          onPressed: () => _showCreateEventDialog(context, _selectedDay),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: Padding(
+          padding: EdgeInsets.only(bottom: ResponsiveHelper.h(80)),
+          child: PermissionAwareWidget(
+            action: 'create_event',
+            child: FloatingActionButton(
+              onPressed: () => _showCreateEventDialog(context, _selectedDay),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
           ),
         ),
       ),
@@ -197,9 +254,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           Expanded(
             child: _buildViewButton(context, 'Week', _viewMode == 'Week'),
           ),
-          Expanded(
-            child: _buildViewButton(context, 'Day', _viewMode == 'Day'),
-          ),
+          Expanded(child: _buildViewButton(context, 'Day', _viewMode == 'Day')),
           Expanded(
             child: _buildViewButton(context, 'List', _viewMode == 'List'),
           ),
@@ -253,13 +308,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget _buildMemberFilter(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
     if (currentFamily == null) return const SizedBox.shrink();
-    
-    final familyMembersAsync = ref.watch(familyMembersProvider(currentFamily.id));
-    
+
+    final familyMembersAsync = ref.watch(
+      familyMembersProvider(currentFamily.id),
+    );
+
     return familyMembersAsync.when(
       data: (members) {
         if (members.isEmpty) return const SizedBox.shrink();
-        
+
         return Container(
           margin: ResponsiveHelper.padding(horizontal: 16, vertical: 4),
           child: Row(
@@ -277,19 +334,28 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     labelText: 'Filter by member',
                     labelStyle: TextStyle(
                       fontSize: ResponsiveHelper.sp(14),
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(8),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.2),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(8),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.2),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -300,7 +366,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       ),
                     ),
                     filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                   ),
                   items: [
                     DropdownMenuItem<String?>(
@@ -333,8 +401,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                               avatarPath: member.photoURL,
                               radius: ResponsiveHelper.r(12),
                               displayName: member.displayName,
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              textColor: Theme.of(context).colorScheme.onPrimary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             ),
                             SizedBox(width: ResponsiveHelper.w(8)),
                             ConstrainedBox(
@@ -347,7 +419,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                                     : 'Unknown',
                                 style: TextStyle(
                                   fontSize: ResponsiveHelper.sp(14),
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -374,7 +448,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
   }
 
-  Widget _buildCalendar(BuildContext context, AsyncValue<List<EventModel>> eventsAsync) {
+  Widget _buildCalendar(
+    BuildContext context,
+    AsyncValue<List<EventModel>> eventsAsync,
+  ) {
     return eventsAsync.when(
       data: (events) {
         // Filter events by selected member (show events created by the selected member)
@@ -384,7 +461,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 // Show event if it was created by the selected member
                 return event.createdBy == _selectedMemberId;
               }).toList();
-        
+
         // Group events by date
         final eventsByDate = <DateTime, List<EventModel>>{};
         for (final event in filteredEvents) {
@@ -406,10 +483,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
+            rowHeight: 42,
+            daysOfWeekHeight: 20,
             selectedDayPredicate: (day) {
               // Only highlight as selected if it's not today
               // Today will be highlighted separately with todayDecoration
-              return isSameDay(_selectedDay, day) && !isSameDay(day, DateTime.now());
+              return isSameDay(_selectedDay, day) &&
+                  !isSameDay(day, DateTime.now());
             },
             calendarFormat: _calendarFormat,
             startingDayOfWeek: StartingDayOfWeek.sunday,
@@ -421,6 +501,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
+                // Reset show all events when changing day
+                _showAllEvents = false;
               });
             },
             onPageChanged: (focusedDay) {
@@ -432,21 +514,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               outsideDaysVisible: true,
               outsideTextStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                fontSize: ResponsiveHelper.sp(12),
               ),
               weekendTextStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                fontSize: ResponsiveHelper.sp(12),
               ),
               defaultTextStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
+                fontSize: ResponsiveHelper.sp(12),
               ),
               // Selected day styling - using orange for high contrast
               selectedDecoration: BoxDecoration(
                 color: Colors.orange,
                 shape: BoxShape.circle,
               ),
-              selectedTextStyle: const TextStyle(
+              selectedTextStyle: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+                fontSize: ResponsiveHelper.sp(12),
               ),
               // Today styling - using teal/primary for high contrast
               todayDecoration: BoxDecoration(
@@ -456,43 +542,47 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               todayTextStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.bold,
+                fontSize: ResponsiveHelper.sp(12),
               ),
-              markerDecoration: const BoxDecoration(
-                shape: BoxShape.circle,
-              ),
+              markerDecoration: const BoxDecoration(shape: BoxShape.circle),
               markersMaxCount: 3,
-              markerSize: 6,
+              markerSize: 5,
               markerMargin: const EdgeInsets.symmetric(horizontal: 0.5),
             ),
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
-              titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ) ?? TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              headerPadding: EdgeInsets.symmetric(vertical: 4),
+              titleTextStyle:
+                  Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ) ??
+                  TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
               leftChevronIcon: Icon(
                 Icons.chevron_left,
                 color: Theme.of(context).colorScheme.onSurface,
+                size: 20,
               ),
               rightChevronIcon: Icon(
                 Icons.chevron_right,
                 color: Theme.of(context).colorScheme.onSurface,
+                size: 20,
               ),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
               weekdayStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
-                fontSize: ResponsiveHelper.sp(11),
+                fontSize: ResponsiveHelper.sp(10),
               ),
               weekendStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
-                fontSize: ResponsiveHelper.sp(11),
+                fontSize: ResponsiveHelper.sp(10),
               ),
             ),
             calendarBuilders: CalendarBuilders(
@@ -501,16 +591,26 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 // Since calendar starts on Sunday, map: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
                 // DateTime.weekday: Mon=1, Tue=2, ..., Sun=7
                 // We need: Sun=0, Mon=1, ..., Sat=6
-                final weekdayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                final weekdayAbbreviations = [
+                  'S',
+                  'M',
+                  'T',
+                  'W',
+                  'T',
+                  'F',
+                  'S',
+                ];
                 // Convert DateTime.weekday (1-7) to our index (0-6) where Sunday=0
                 final weekdayIndex = day.weekday == 7 ? 0 : day.weekday;
                 return Center(
                   child: Text(
                     weekdayAbbreviations[weekdayIndex],
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                       fontWeight: FontWeight.w500,
-                      fontSize: ResponsiveHelper.sp(11),
+                      fontSize: ResponsiveHelper.sp(10),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.visible,
@@ -519,15 +619,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               },
               markerBuilder: (context, date, events) {
                 if (events.isEmpty) return const SizedBox.shrink();
-                
+
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: events.take(3).map((event) {
                     final color = _getEventColor(event);
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 1),
-                      width: 6,
-                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 0.5),
+                      width: 5,
+                      height: 5,
                       decoration: BoxDecoration(
                         color: color,
                         shape: BoxShape.circle,
@@ -541,13 +641,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(
-        child: Text('Error loading events: $error'),
-      ),
+      error: (error, _) => Center(child: Text('Error loading events: $error')),
     );
   }
 
-  Widget _buildTodaysEvents(BuildContext context, AsyncValue<List<EventModel>> eventsAsync) {
+  Widget _buildTodaysEvents(
+    BuildContext context,
+    AsyncValue<List<EventModel>> eventsAsync,
+  ) {
     return eventsAsync.when(
       data: (events) {
         // Filter events by selected member (show events created by the selected member)
@@ -557,7 +658,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 // Show event if it was created by the selected member
                 return event.createdBy == _selectedMemberId;
               }).toList();
-        
+
         // Get events for the selected day (or today if no day is selected)
         final selectedDate = _selectedDay;
         final selectedDateEvents = filteredEvents.where((event) {
@@ -572,8 +673,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             selectedDate.day,
           );
           return eventDate == targetDate;
-        }).toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
+        }).toList()..sort((a, b) => a.startTime.compareTo(b.startTime));
 
         if (selectedDateEvents.isEmpty) {
           return const SizedBox.shrink();
@@ -581,26 +681,66 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
         // Determine if the selected date is today
         final today = DateTime.now();
-        final isToday = selectedDate.year == today.year &&
+        final isToday =
+            selectedDate.year == today.year &&
             selectedDate.month == today.month &&
             selectedDate.day == today.day;
+
+        // Limit events if not showing all
+        final showAll = _showAllEvents;
+        final displayedEvents = showAll
+            ? selectedDateEvents
+            : selectedDateEvents.take(5).toList();
+        final hasMoreEvents = selectedDateEvents.length > 5;
 
         return Padding(
           padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isToday
-                    ? 'Today, ${DateFormat('MMMM d').format(selectedDate)}'
-                    : DateFormat('EEEE, MMMM d').format(selectedDate),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isToday
+                        ? 'Today, ${DateFormat('MMMM d').format(selectedDate)}'
+                        : DateFormat('EEEE, MMMM d').format(selectedDate),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (hasMoreEvents)
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _showAllEvents = !_showAllEvents;
+                        });
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 0,
+                        ),
+                        minimumSize: Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        showAll
+                            ? 'Show Less'
+                            : 'View All (${selectedDateEvents.length})',
+                        style: TextStyle(
+                          fontSize: ResponsiveHelper.sp(12),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              SizedBox(height: ResponsiveHelper.h(12)),
-              ...selectedDateEvents.map((event) => _buildEventCard(context, event)),
+              SizedBox(height: ResponsiveHelper.h(8)),
+              ...displayedEvents.map(
+                (event) => _buildEventCard(context, event),
+              ),
             ],
           ),
         );
@@ -610,16 +750,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
   }
 
-  Widget _buildEventsList(BuildContext context, AsyncValue<List<EventModel>> eventsAsync) {
+  Widget _buildEventsList(
+    BuildContext context,
+    AsyncValue<List<EventModel>> eventsAsync,
+  ) {
     return eventsAsync.when(
       data: (events) {
         var filteredEvents = events;
-        
+
         // Apply search filter if in search mode
         if (_isSearchMode && _searchController.text.isNotEmpty) {
-          filteredEvents = _searchEvents(filteredEvents, _searchController.text);
+          filteredEvents = _searchEvents(
+            filteredEvents,
+            _searchController.text,
+          );
         }
-        
+
         // Filter events by selected member (show events created by the selected member) - only when not searching
         if (!_isSearchMode && _selectedMemberId != null) {
           filteredEvents = filteredEvents.where((event) {
@@ -627,10 +773,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             return event.createdBy == _selectedMemberId;
           }).toList();
         }
-        
+
         // Sort events by start time
         filteredEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
-        
+
         if (filteredEvents.isEmpty) {
           return Center(
             child: Padding(
@@ -641,13 +787,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   Icon(
                     _isSearchMode ? Icons.search_off : Icons.event_busy,
                     size: ResponsiveHelper.iconSize(64),
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.3),
                   ),
                   SizedBox(height: ResponsiveHelper.h(16)),
                   Text(
                     _isSearchMode ? 'No events found' : 'No events',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -655,14 +805,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ),
           );
         }
-        
+
         // Group events by date
         final Map<String, List<EventModel>> eventsByDate = {};
         for (final event in filteredEvents) {
           final dateKey = DateFormat('yyyy-MM-dd').format(event.startTime);
           eventsByDate.putIfAbsent(dateKey, () => []).add(event);
         }
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -672,9 +822,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
                 child: Text(
                   'Search Results',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             Expanded(
@@ -685,31 +835,38 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   final dateKey = eventsByDate.keys.elementAt(index);
                   final dateEvents = eventsByDate[dateKey]!;
                   final date = DateTime.parse(dateKey);
-                  
+
                   // Determine if this date is today
                   final today = DateTime.now();
-                  final isToday = date.year == today.year &&
+                  final isToday =
+                      date.year == today.year &&
                       date.month == today.month &&
                       date.day == today.day;
-                  
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Date header
                       Padding(
-                        padding: ResponsiveHelper.padding(vertical: 12, horizontal: 4),
+                        padding: ResponsiveHelper.padding(
+                          vertical: 12,
+                          horizontal: 4,
+                        ),
                         child: Text(
                           isToday
                               ? 'Today, ${DateFormat('MMMM d, yyyy').format(date)}'
                               : DateFormat('EEEE, MMMM d, yyyy').format(date),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                         ),
                       ),
                       // Events for this date
-                      ...dateEvents.map((event) => _buildEventCard(context, event)),
+                      ...dateEvents.map(
+                        (event) => _buildEventCard(context, event),
+                      ),
                       SizedBox(height: ResponsiveHelper.h(8)),
                     ],
                   );
@@ -730,9 +887,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 Icons.error_outline,
                 size: ResponsiveHelper.iconSize(64),
                 color: Theme.of(context).colorScheme.error,
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(16)),
-                  Text(
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              Text(
                 'Error loading events',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.error,
@@ -742,14 +899,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               Text(
                 error.toString(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+            ],
           ),
+        ),
+      ),
     );
   }
 
@@ -758,7 +917,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final timeFormat = DateFormat('h:mm a');
     final startTime = timeFormat.format(event.startTime);
     final endTime = timeFormat.format(event.endTime);
-    
+
     // Get participants display names
     final participants = ref.watch(familyMembersProvider(event.familyId));
     final participantNames = participants.when(
@@ -781,30 +940,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
 
     return Card(
-      margin: ResponsiveHelper.padding(bottom: 8),
+      margin: ResponsiveHelper.padding(bottom: 4),
       color: Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: ResponsiveHelper.borderRadius(8),
       ),
       child: ListTile(
         dense: true,
-        contentPadding: ResponsiveHelper.padding(
-          horizontal: 12,
-          vertical: 8,
-        ),
+        visualDensity: VisualDensity.compact,
+        contentPadding: ResponsiveHelper.padding(horizontal: 12, vertical: 0),
         leading: Container(
-          width: ResponsiveHelper.w(8),
-          height: ResponsiveHelper.h(8),
-          decoration: BoxDecoration(
-            color: eventColor,
-            shape: BoxShape.circle,
-          ),
+          width: ResponsiveHelper.w(6),
+          height: ResponsiveHelper.h(6),
+          decoration: BoxDecoration(color: eventColor, shape: BoxShape.circle),
         ),
         title: Text(
           event.title,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            fontSize: ResponsiveHelper.sp(14),
+            fontSize: ResponsiveHelper.sp(13),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -815,21 +969,23 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             children: [
               Icon(
                 Icons.access_time,
-                size: ResponsiveHelper.sp(12),
+                size: ResponsiveHelper.sp(10),
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               SizedBox(width: ResponsiveHelper.w(4)),
               Text(
                 '$startTime - $endTime',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  fontSize: ResponsiveHelper.sp(12),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                  fontSize: ResponsiveHelper.sp(11),
                 ),
               ),
               SizedBox(width: ResponsiveHelper.w(8)),
               Icon(
                 Icons.people,
-                size: ResponsiveHelper.sp(12),
+                size: ResponsiveHelper.sp(10),
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               SizedBox(width: ResponsiveHelper.w(4)),
@@ -837,8 +993,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 child: Text(
                   participantNames,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    fontSize: ResponsiveHelper.sp(12),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: ResponsiveHelper.sp(11),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -848,12 +1006,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               // Creator avatar
               Consumer(
                 builder: (context, ref, child) {
-                  final creatorProfileAsync = ref.watch(userProfileProvider(event.createdBy));
+                  final creatorProfileAsync = ref.watch(
+                    userProfileProvider(event.createdBy),
+                  );
                   return creatorProfileAsync.when(
                     data: (profile) {
                       final displayName = profile?.displayName ?? '?';
                       final avatarUrl = profile?.photoURL;
-                      
+
                       return AvatarWidget(
                         avatarPath: avatarUrl,
                         radius: ResponsiveHelper.r(10),
@@ -864,7 +1024,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     },
                     loading: () => CircleAvatar(
                       radius: ResponsiveHelper.r(10),
-                      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.3),
                       child: SizedBox(
                         width: ResponsiveHelper.w(10),
                         height: ResponsiveHelper.h(10),
@@ -901,63 +1063,68 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               builder: (context, snapshot) {
                 final canEdit = snapshot.data?[0] ?? false;
                 final canDelete = snapshot.data?[1] ?? false;
-                
+
                 if (!canEdit && !canDelete) {
                   return const SizedBox.shrink();
                 }
-                
+
                 return PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            size: ResponsiveHelper.iconSize(18),
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-          ),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: ResponsiveHelper.iconSize(18),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
+                  ),
                   onSelected: (value) async {
-            if (value == 'edit') {
+                    if (value == 'edit') {
                       if (canEdit) {
-              _showEditEventDialog(context, event);
+                        _showEditEventDialog(context, event);
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('You do not have permission to edit events'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              content: const Text(
+                                'You do not have permission to edit events',
+                              ),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
                             ),
                           );
                         }
                       }
-            } else if (value == 'delete') {
+                    } else if (value == 'delete') {
                       if (canDelete) {
-              _deleteEvent(context, event);
+                        _deleteEvent(context, event);
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('You do not have permission to delete events'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              content: const Text(
+                                'You do not have permission to delete events',
+                              ),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
                             ),
                           );
                         }
                       }
-            }
-          },
-          itemBuilder: (context) => [
+                    }
+                  },
+                  itemBuilder: (context) => [
                     if (canEdit)
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit'),
-            ),
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
                     if (canDelete)
-            PopupMenuItem(
-              value: 'delete',
-              child: Text(
-                'Delete',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ],
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                  ],
                 );
               },
             );
@@ -967,14 +1134,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
   }
 
-  Future<void> _showCreateEventDialog(BuildContext context, DateTime? selectedDate) async {
+  Future<void> _showCreateEventDialog(
+    BuildContext context,
+    DateTime? selectedDate,
+  ) async {
     final currentFamily = ref.read(currentFamilyProvider);
     final currentUser = ref.read(currentUserProvider);
-    
+
     if (currentFamily == null || currentUser == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Family or user not found')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Family or user not found')));
       return;
     }
 
@@ -984,33 +1154,44 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         familyId: currentFamily.id,
         createdBy: currentUser.id,
         initialDate: selectedDate,
-        onSave: (title, description, startTime, endTime, location, color, participants) async {
-          try {
-            final calendarRepo = ref.read(calendarRepositoryProvider);
-            await calendarRepo.createEvent(
-              familyId: currentFamily.id,
-              title: title,
-              description: description.isEmpty ? null : description,
-              startTime: startTime,
-              endTime: endTime,
-              location: location.isEmpty ? null : location,
-              createdBy: currentUser.id,
-              color: color,
-              participants: participants,
-            );
-            return true;
-          } catch (e) {
-            if (dialogContext.mounted) {
-              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                SnackBar(
-                  content: Text('Error creating event: ${e.toString()}'),
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-              );
-            }
-            return false;
-          }
-        },
+        onSave:
+            (
+              title,
+              description,
+              startTime,
+              endTime,
+              location,
+              color,
+              participants,
+            ) async {
+              try {
+                final calendarRepo = ref.read(calendarRepositoryProvider);
+                await calendarRepo.createEvent(
+                  familyId: currentFamily.id,
+                  title: title,
+                  description: description.isEmpty ? null : description,
+                  startTime: startTime,
+                  endTime: endTime,
+                  location: location.isEmpty ? null : location,
+                  createdBy: currentUser.id,
+                  color: color,
+                  participants: participants,
+                );
+                return true;
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating event: ${e.toString()}'),
+                      backgroundColor: Theme.of(
+                        dialogContext,
+                      ).colorScheme.error,
+                    ),
+                  );
+                }
+                return false;
+              }
+            },
       ),
     );
 
@@ -1019,10 +1200,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.invalidate(familyEventsProvider(currentFamily.id));
       });
-      
+
       // Small delay to ensure the stream picks up the change
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1034,37 +1215,51 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     }
   }
 
-  Future<void> _showEditEventDialog(BuildContext context, EventModel event) async {
+  Future<void> _showEditEventDialog(
+    BuildContext context,
+    EventModel event,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => _EditEventDialog(
         event: event,
-        onSave: (title, description, startTime, endTime, location, color, participants) async {
-          try {
-            final calendarRepo = ref.read(calendarRepositoryProvider);
-            await calendarRepo.updateEvent(
-              eventId: event.id,
-              title: title,
-              description: description.isEmpty ? null : description,
-              startTime: startTime,
-              endTime: endTime,
-              location: location.isEmpty ? null : location,
-              color: color,
-              participants: participants,
-            );
-            return true;
-          } catch (e) {
-            if (dialogContext.mounted) {
-              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                SnackBar(
-                  content: Text('Error updating event: ${e.toString()}'),
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-              );
-            }
-            return false;
-          }
-        },
+        onSave:
+            (
+              title,
+              description,
+              startTime,
+              endTime,
+              location,
+              color,
+              participants,
+            ) async {
+              try {
+                final calendarRepo = ref.read(calendarRepositoryProvider);
+                await calendarRepo.updateEvent(
+                  eventId: event.id,
+                  title: title,
+                  description: description.isEmpty ? null : description,
+                  startTime: startTime,
+                  endTime: endTime,
+                  location: location.isEmpty ? null : location,
+                  color: color,
+                  participants: participants,
+                );
+                return true;
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating event: ${e.toString()}'),
+                      backgroundColor: Theme.of(
+                        dialogContext,
+                      ).colorScheme.error,
+                    ),
+                  );
+                }
+                return false;
+              }
+            },
       ),
     );
 
@@ -1075,11 +1270,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.invalidate(familyEventsProvider(currentFamily.id));
         });
-        
+
         // Small delay to ensure the stream picks up the change
         await Future.delayed(const Duration(milliseconds: 300));
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1117,18 +1312,18 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       try {
         final calendarRepo = ref.read(calendarRepositoryProvider);
         await calendarRepo.deleteEvent(event.id);
-        
+
         // Invalidate the events provider to refresh the calendar
         final currentFamily = ref.read(currentFamilyProvider);
         if (currentFamily != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref.invalidate(familyEventsProvider(currentFamily.id));
           });
-          
+
           // Small delay to ensure the stream picks up the change
           await Future.delayed(const Duration(milliseconds: 300));
         }
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Event deleted successfully')),
@@ -1136,9 +1331,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting event: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting event: $e')));
         }
       }
     }
@@ -1158,7 +1353,8 @@ class _CreateEventDialog extends StatefulWidget {
     String location,
     String? color,
     List<String> participants,
-  ) onSave;
+  )
+  onSave;
 
   const _CreateEventDialog({
     required this.familyId,
@@ -1197,23 +1393,27 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
     _locationController = TextEditingController();
-    
+
     // Initialize dates based on selected date or today
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final initialDate = widget.initialDate != null
-        ? DateTime(widget.initialDate!.year, widget.initialDate!.month, widget.initialDate!.day)
+        ? DateTime(
+            widget.initialDate!.year,
+            widget.initialDate!.month,
+            widget.initialDate!.day,
+          )
         : today;
-    
+
     // If initial date is in the past, use today instead
     if (initialDate.isBefore(today)) {
       _startDate = today;
     } else {
       _startDate = initialDate;
     }
-    
+
     _endDate = _startDate;
-    
+
     // Set start time - if it's today, use current time, otherwise use 9 AM
     if (isSameDay(_startDate, today)) {
       _startTime = TimeOfDay.fromDateTime(now);
@@ -1237,7 +1437,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? _startDate : _endDate,
@@ -1251,8 +1451,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           // If start date is today, ensure start time is not in the past
           if (isSameDay(picked, today)) {
             final currentTime = TimeOfDay.fromDateTime(now);
-            if (_startTime.hour < currentTime.hour || 
-                (_startTime.hour == currentTime.hour && _startTime.minute < currentTime.minute)) {
+            if (_startTime.hour < currentTime.hour ||
+                (_startTime.hour == currentTime.hour &&
+                    _startTime.minute < currentTime.minute)) {
               _startTime = TimeOfDay(
                 hour: currentTime.hour,
                 minute: currentTime.minute,
@@ -1273,23 +1474,26 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isStartToday = isSameDay(_startDate, today);
-    
+
     TimeOfDay? picked;
     if (isStart && isStartToday) {
       // For start time on today, ensure we can't select past times
       final currentTime = TimeOfDay.fromDateTime(now);
       picked = await showTimePicker(
         context: context,
-        initialTime: _startTime.hour < currentTime.hour || 
-                     (_startTime.hour == currentTime.hour && _startTime.minute < currentTime.minute)
+        initialTime:
+            _startTime.hour < currentTime.hour ||
+                (_startTime.hour == currentTime.hour &&
+                    _startTime.minute < currentTime.minute)
             ? currentTime
             : _startTime,
         initialEntryMode: TimePickerEntryMode.dial,
       );
       // Validate that selected time is not in the past
       if (picked != null) {
-        if (picked.hour < currentTime.hour || 
-            (picked.hour == currentTime.hour && picked.minute < currentTime.minute)) {
+        if (picked.hour < currentTime.hour ||
+            (picked.hour == currentTime.hour &&
+                picked.minute < currentTime.minute)) {
           setState(() {
             _errorMessage = 'Cannot select a time in the past';
           });
@@ -1306,7 +1510,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         initialTime: isStart ? _startTime : _endTime,
       );
     }
-    
+
     if (picked != null) {
       setState(() {
         if (isStart) {
@@ -1341,7 +1545,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1359,7 +1566,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   maxLines: 3,
                 ),
@@ -1375,7 +1585,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(
                             DateFormat('MMM d, yyyy').format(_startDate),
@@ -1393,7 +1606,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(_startTime.format(context)),
                         ),
@@ -1413,7 +1629,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(
                             DateFormat('MMM d, yyyy').format(_endDate),
@@ -1431,7 +1650,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(_endTime.format(context)),
                         ),
@@ -1447,7 +1669,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
@@ -1458,7 +1683,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Default')),
@@ -1485,7 +1713,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                   onChanged: (value) {
                     setState(() {
                       _selectedColor = value;
-                      _errorMessage = null; // Clear error when user makes changes
+                      _errorMessage =
+                          null; // Clear error when user makes changes
                     });
                   },
                 ),
@@ -1497,9 +1726,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: ResponsiveHelper.borderRadius(8),
-                      border: Border.all(
-                        color: Colors.red.withOpacity(0.3),
-                      ),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
@@ -1636,12 +1863,10 @@ class _EditEventDialog extends StatefulWidget {
     String location,
     String? color,
     List<String> participants,
-  ) onSave;
+  )
+  onSave;
 
-  const _EditEventDialog({
-    required this.event,
-    required this.onSave,
-  });
+  const _EditEventDialog({required this.event, required this.onSave});
 
   @override
   State<_EditEventDialog> createState() => _EditEventDialogState();
@@ -1670,8 +1895,12 @@ class _EditEventDialogState extends State<_EditEventDialog> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.event.title);
-    _descriptionController = TextEditingController(text: widget.event.description ?? '');
-    _locationController = TextEditingController(text: widget.event.location ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.event.description ?? '',
+    );
+    _locationController = TextEditingController(
+      text: widget.event.location ?? '',
+    );
     _startDate = widget.event.startTime;
     _startTime = TimeOfDay.fromDateTime(widget.event.startTime);
     _endDate = widget.event.endTime;
@@ -1747,7 +1976,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1764,7 +1996,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   maxLines: 3,
                 ),
@@ -1780,7 +2015,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(
                             DateFormat('MMM d, yyyy').format(_startDate),
@@ -1798,7 +2036,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(_startTime.format(context)),
                         ),
@@ -1818,7 +2059,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(
                             DateFormat('MMM d, yyyy').format(_endDate),
@@ -1836,7 +2080,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                             border: OutlineInputBorder(
                               borderRadius: ResponsiveHelper.borderRadius(12),
                             ),
-                            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                            contentPadding: ResponsiveHelper.padding(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           child: Text(_endTime.format(context)),
                         ),
@@ -1852,7 +2099,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
@@ -1863,7 +2113,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Default')),

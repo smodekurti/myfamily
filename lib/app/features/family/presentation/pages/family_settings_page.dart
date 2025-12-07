@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,8 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/family_model.dart';
 import 'package:intl/intl.dart';
+import '../../../../common/widgets/modern_header.dart';
+import '../../../../common/widgets/modern_card.dart';
 
 class FamilySettingsPage extends ConsumerStatefulWidget {
   const FamilySettingsPage({super.key});
@@ -51,8 +54,8 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
       await familyRepo.updateFamily(
         familyId: currentFamily.id,
         name: _nameController.text.trim(),
-        address: _addressController.text.trim().isEmpty 
-            ? null 
+        address: _addressController.text.trim().isEmpty
+            ? null
             : _addressController.text.trim(),
       );
 
@@ -104,7 +107,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${isAdult ? "Adult" : "Child"} invite code regenerated!'),
+            content: Text(
+              '${isAdult ? "Adult" : "Child"} invite code regenerated!',
+            ),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -129,7 +134,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Member'),
-        content: Text('Are you sure you want to remove $memberName from this family?'),
+        content: Text(
+          'Are you sure you want to remove $memberName from this family?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -188,7 +195,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Leave Family'),
-        content: const Text('Are you sure you want to leave this family? You will need an invite code to rejoin.'),
+        content: const Text(
+          'Are you sure you want to leave this family? You will need an invite code to rejoin.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -303,355 +312,477 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
         : const AsyncValue.data(<FamilyMemberModel>[]);
 
     return BackgroundWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
-            child: currentFamily == null
-                ? const Center(child: CircularProgressIndicator())
-                : Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              onPressed: () => context.pop(),
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Family Settings',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                            ),
-                            if (_isEditing)
-                              TextButton(
-                                onPressed: _isLoading ? null : _saveFamily,
-                                child: _isLoading
-                                    ? SizedBox(
-                                        width: ResponsiveHelper.w(20),
-                                        height: ResponsiveHelper.h(20),
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Theme.of(context).colorScheme.primary,
-                                          ),
-                                        ),
-                                      )
-                                    : const Text('Save'),
+      child: SafeArea(
+        child: Column(
+          children: [
+            ModernHeader(
+              title: 'Family Settings',
+              leading: IconButton(
+                icon: Icon(
+                  Icons.menu_rounded,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              actions: [
+                _isEditing
+                    ? TextButton(
+                        onPressed: _isLoading ? null : _saveFamily,
+                        child: _isLoading
+                            ? SizedBox(
+                                width: ResponsiveHelper.w(20),
+                                height: ResponsiveHelper.h(20),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
                               )
-                            else
-                              TextButton(
-                                onPressed: () => setState(() => _isEditing = true),
-                                child: const Text('Edit'),
-                              ),
-                          ],
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-
-                        // Family Info Card
-                        Card(
-                          child: Padding(
-                            padding: ResponsiveHelper.padding(all: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Family Information',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                                
-                                // Family Name
-                                TextFormField(
-                                  controller: _nameController,
-                                  enabled: _isEditing,
-                                  decoration: InputDecoration(
-                                    labelText: 'Family Name',
-                                    border: OutlineInputBorder(
-                                      borderRadius: ResponsiveHelper.borderRadius(12),
-                                    ),
-                                    prefixIcon: const Icon(Icons.family_restroom),
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Family name is required';
-                                    }
-                                    if (value.trim().length < AppConstants.minDisplayNameLength) {
-                                      return 'Family name must be at least ${AppConstants.minDisplayNameLength} characters';
-                                    }
-                                    if (value.trim().length > AppConstants.maxFamilyNameLength) {
-                                      return 'Family name must be less than ${AppConstants.maxFamilyNameLength} characters';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                                
-                                // Address
-                                TextFormField(
-                                  controller: _addressController,
-                                  enabled: _isEditing,
-                                  decoration: InputDecoration(
-                                    labelText: 'Address (Optional)',
-                                    border: OutlineInputBorder(
-                                      borderRadius: ResponsiveHelper.borderRadius(12),
-                                    ),
-                                    prefixIcon: const Icon(Icons.location_on),
-                                  ),
-                                  maxLines: 2,
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(8)),
-                                
-                                // Created info
-                                Text(
-                                  'Created ${currentFamily.createdAt != null ? DateFormat(AppConstants.dateFormat).format(currentFamily.createdAt!) : "recently"}',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(16)),
-
-                        // Invite Codes Card
-                        Card(
-                          child: Padding(
-                            padding: ResponsiveHelper.padding(all: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Invite Codes',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                                
-                                // Adult Invite Code
-                                _buildInviteCodeSection(
-                                  context,
-                                  label: 'Adult Invite Code',
-                                  code: currentFamily.inviteCode,
-                                  onCopy: () async {
-                                    if (currentFamily.inviteCode != null) {
-                                      await Clipboard.setData(
-                                        ClipboardData(text: currentFamily.inviteCode!),
-                                      );
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('Adult invite code copied!'),
-                                            duration: AppConstants.snackBarDuration,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  onRegenerate: () => _regenerateInviteCode(true),
-                                  canRegenerate: isCreator,
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(12)),
-                                
-                                // Child Invite Code
-                                _buildInviteCodeSection(
-                                  context,
-                                  label: 'Child Invite Code',
-                                  code: currentFamily.childInviteCode,
-                                  onCopy: () async {
-                                    if (currentFamily.childInviteCode != null) {
-                                      await Clipboard.setData(
-                                        ClipboardData(text: currentFamily.childInviteCode!),
-                                      );
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('Child invite code copied!'),
-                                            duration: AppConstants.snackBarDuration,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  onRegenerate: () => _regenerateInviteCode(false),
-                                  canRegenerate: isCreator,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(16)),
-
-                        // Family Members Card
-                        Card(
-                          child: Padding(
-                            padding: ResponsiveHelper.padding(all: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Family Members',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                                
-                                familyMembers.when(
-                                  data: (members) {
-                                    if (members.isEmpty) {
-                                      return Center(
-                                        child: Padding(
-                                          padding: ResponsiveHelper.padding(vertical: 24),
-                                          child: Text(
-                                            'No members found',
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                                ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    
-                                    return Column(
-                                      children: members.map((member) {
-                                        final isCurrentUser = member.uid == currentUser?.id;
-                                        final canRemove = isCreator && !isCurrentUser;
-                                        
-                                        return ListTile(
-                                          leading: AvatarWidget(
-                                            avatarPath: member.photoURL,
-                                            radius: ResponsiveHelper.r(20),
-                                            displayName: member.displayName,
-                                            backgroundColor: Theme.of(context).colorScheme.primary,
-                                            textColor: Theme.of(context).colorScheme.onPrimary,
-                                          ),
-                                          title: Text(member.displayName),
-                                          subtitle: Text(
-                                            '${member.role} • ${member.points} points',
-                                            style: Theme.of(context).textTheme.bodySmall,
-                                          ),
-                                          trailing: canRemove
-                                              ? IconButton(
-                                                  icon: Icon(
-                                                    Icons.remove_circle_outline,
-                                                    color: Theme.of(context).colorScheme.error,
-                                                  ),
-                                                  onPressed: () => _removeMember(
-                                                    member.uid,
-                                                    member.displayName,
-                                                  ),
-                                                )
-                                              : isCurrentUser
-                                                  ? Chip(
-                                                      label: const Text('You'),
-                                                      backgroundColor: Theme.of(context)
-                                                          .colorScheme
-                                                          .primary
-                                                          .withOpacity(0.1),
-                                                    )
-                                                  : null,
-                                        );
-                                      }).toList(),
-                                    );
-                                  },
-                                  loading: () => const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(24.0),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  ),
-                                  error: (error, stack) => Center(
-                                    child: Padding(
-                                      padding: ResponsiveHelper.padding(vertical: 24),
-                                      child: Text(
-                                        'Error loading members: $error',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Theme.of(context).colorScheme.error,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(16)),
-
-                        // Danger Zone
-                        Card(
-                          color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.3),
-                          child: Padding(
-                            padding: ResponsiveHelper.padding(all: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Danger Zone',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.error,
-                                      ),
-                                ),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                                
-                                // Leave Family
-                                ListTile(
-                                  leading: Icon(
-                                    Icons.exit_to_app,
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                  title: const Text('Leave Family'),
-                                  subtitle: const Text('You will need an invite code to rejoin'),
-                                  trailing: IconButton(
-                                    icon: Icon(
-                                      Icons.chevron_right,
-                                      color: Theme.of(context).colorScheme.error,
-                                    ),
-                                    onPressed: _leaveFamily,
-                                  ),
-                                ),
-                                
-                                // Delete Family (only for creator)
-                                if (isCreator) ...[
-                                  const Divider(),
-                                  ListTile(
-                                    leading: Icon(
-                                      Icons.delete_forever,
-                                      color: Theme.of(context).colorScheme.error,
-                                    ),
-                                    title: const Text('Delete Family'),
-                                    subtitle: const Text('Permanently delete this family and all its data'),
-                                    trailing: IconButton(
-                                      icon: Icon(
-                                        Icons.chevron_right,
-                                        color: Theme.of(context).colorScheme.error,
-                                      ),
-                                      onPressed: _deleteFamily,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: ResponsiveHelper.h(80)), // Space for bottom nav
-                      ],
+                            : const Text('Save'),
+                      )
+                    : TextButton(
+                        onPressed: () => setState(() => _isEditing = true),
+                        child: const Text('Edit'),
+                      ),
+                Padding(
+                  padding: ResponsiveHelper.padding(right: 8),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppConstants.routeProfile),
+                    child: AvatarWidget(
+                      avatarPath: currentUser?.avatarUrl,
+                      radius: ResponsiveHelper.r(16),
+                      displayName:
+                          currentUser?.userMetadata?['full_name'] as String? ??
+                          'User',
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      textColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
                     ),
                   ),
-          ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: ResponsiveHelper.padding(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    currentFamily == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Family Info Card
+                                ModernCard(
+                                  padding: ResponsiveHelper.padding(all: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Family Information',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+
+                                      // Family Name
+                                      TextFormField(
+                                        controller: _nameController,
+                                        enabled: _isEditing,
+                                        decoration: InputDecoration(
+                                          labelText: 'Family Name',
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                ResponsiveHelper.borderRadius(
+                                                  12,
+                                                ),
+                                          ),
+                                          prefixIcon: const Icon(
+                                            Icons.family_restroom,
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Family name is required';
+                                          }
+                                          if (value.trim().length <
+                                              AppConstants
+                                                  .minDisplayNameLength) {
+                                            return 'Family name must be at least ${AppConstants.minDisplayNameLength} characters';
+                                          }
+                                          if (value.trim().length >
+                                              AppConstants
+                                                  .maxFamilyNameLength) {
+                                            return 'Family name must be less than ${AppConstants.maxFamilyNameLength} characters';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+
+                                      // Address
+                                      TextFormField(
+                                        controller: _addressController,
+                                        enabled: _isEditing,
+                                        decoration: InputDecoration(
+                                          labelText: 'Address (Optional)',
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                ResponsiveHelper.borderRadius(
+                                                  12,
+                                                ),
+                                          ),
+                                          prefixIcon: const Icon(
+                                            Icons.location_on,
+                                          ),
+                                        ),
+                                        maxLines: 2,
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(8)),
+
+                                      // Created info
+                                      Text(
+                                        'Created ${currentFamily.createdAt != null ? DateFormat(AppConstants.dateFormat).format(currentFamily.createdAt!) : "recently"}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.6),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveHelper.h(16)),
+
+                                // Invite Codes Card
+                                ModernCard(
+                                  padding: ResponsiveHelper.padding(all: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Invite Codes',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+
+                                      // Adult Invite Code
+                                      _buildInviteCodeSection(
+                                        context,
+                                        label: 'Adult Invite Code',
+                                        code: currentFamily.inviteCode,
+                                        onCopy: () async {
+                                          if (currentFamily.inviteCode !=
+                                              null) {
+                                            await Clipboard.setData(
+                                              ClipboardData(
+                                                text: currentFamily.inviteCode!,
+                                              ),
+                                            );
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text(
+                                                    'Adult invite code copied!',
+                                                  ),
+                                                  duration: AppConstants
+                                                      .snackBarDuration,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        onRegenerate: () =>
+                                            _regenerateInviteCode(true),
+                                        canRegenerate: isCreator,
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(12)),
+
+                                      // Child Invite Code
+                                      _buildInviteCodeSection(
+                                        context,
+                                        label: 'Child Invite Code',
+                                        code: currentFamily.childInviteCode,
+                                        onCopy: () async {
+                                          if (currentFamily.childInviteCode !=
+                                              null) {
+                                            await Clipboard.setData(
+                                              ClipboardData(
+                                                text: currentFamily
+                                                    .childInviteCode!,
+                                              ),
+                                            );
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text(
+                                                    'Child invite code copied!',
+                                                  ),
+                                                  duration: AppConstants
+                                                      .snackBarDuration,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        onRegenerate: () =>
+                                            _regenerateInviteCode(false),
+                                        canRegenerate: isCreator,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveHelper.h(16)),
+
+                                // Family Members Card
+                                ModernCard(
+                                  padding: ResponsiveHelper.padding(all: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Family Members',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+
+                                      familyMembers.when(
+                                        data: (members) {
+                                          if (members.isEmpty) {
+                                            return Center(
+                                              child: Padding(
+                                                padding:
+                                                    ResponsiveHelper.padding(
+                                                      vertical: 24,
+                                                    ),
+                                                child: Text(
+                                                  'No members found',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withOpacity(0.6),
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          return Column(
+                                            children: members.map((member) {
+                                              final isCurrentUser =
+                                                  member.uid == currentUser?.id;
+                                              final canRemove =
+                                                  isCreator && !isCurrentUser;
+
+                                              return ListTile(
+                                                leading: AvatarWidget(
+                                                  avatarPath: member.photoURL,
+                                                  radius: ResponsiveHelper.r(
+                                                    20,
+                                                  ),
+                                                  displayName:
+                                                      member.displayName,
+                                                  backgroundColor: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                                  textColor: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onPrimary,
+                                                ),
+                                                title: Text(member.displayName),
+                                                subtitle: Text(
+                                                  '${member.role} • ${member.points} points',
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodySmall,
+                                                ),
+                                                trailing: canRemove
+                                                    ? IconButton(
+                                                        icon: Icon(
+                                                          Icons
+                                                              .remove_circle_outline,
+                                                          color: Theme.of(
+                                                            context,
+                                                          ).colorScheme.error,
+                                                        ),
+                                                        onPressed: () =>
+                                                            _removeMember(
+                                                              member.uid,
+                                                              member
+                                                                  .displayName,
+                                                            ),
+                                                      )
+                                                    : isCurrentUser
+                                                    ? Chip(
+                                                        label: const Text(
+                                                          'You',
+                                                        ),
+                                                        backgroundColor:
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .primary
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                      )
+                                                    : null,
+                                              );
+                                            }).toList(),
+                                          );
+                                        },
+                                        loading: () => const Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(24.0),
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        ),
+                                        error: (error, stack) => Center(
+                                          child: Padding(
+                                            padding: ResponsiveHelper.padding(
+                                              vertical: 24,
+                                            ),
+                                            child: Text(
+                                              'Error loading members: $error',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.error,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveHelper.h(16)),
+
+                                // Danger Zone
+                                ModernCard(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.errorContainer.withOpacity(0.3),
+                                  padding: ResponsiveHelper.padding(all: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Danger Zone',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
+                                            ),
+                                      ),
+                                      SizedBox(height: ResponsiveHelper.h(16)),
+
+                                      // Leave Family
+                                      ListTile(
+                                        leading: Icon(
+                                          Icons.exit_to_app,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.error,
+                                        ),
+                                        title: const Text('Leave Family'),
+                                        subtitle: const Text(
+                                          'You will need an invite code to rejoin',
+                                        ),
+                                        trailing: IconButton(
+                                          icon: Icon(
+                                            Icons.chevron_right,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
+                                          ),
+                                          onPressed: _leaveFamily,
+                                        ),
+                                      ),
+
+                                      // Delete Family (only for creator)
+                                      if (isCreator) ...[
+                                        const Divider(),
+                                        ListTile(
+                                          leading: Icon(
+                                            Icons.delete_forever,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
+                                          ),
+                                          title: const Text('Delete Family'),
+                                          subtitle: const Text(
+                                            'Permanently delete this family and all its data',
+                                          ),
+                                          trailing: IconButton(
+                                            icon: Icon(
+                                              Icons.chevron_right,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
+                                            ),
+                                            onPressed: _deleteFamily,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: ResponsiveHelper.h(80),
+                                ), // Space for bottom nav
+                              ],
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -668,7 +799,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     return Container(
       padding: ResponsiveHelper.padding(all: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: ResponsiveHelper.borderRadius(12),
         border: Border.all(
           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
@@ -684,16 +817,18 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
                 SizedBox(height: ResponsiveHelper.h(4)),
                 Text(
                   code ?? 'Not generated',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                      ),
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ],
             ),
@@ -715,4 +850,3 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     );
   }
 }
-
