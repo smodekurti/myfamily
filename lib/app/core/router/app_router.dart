@@ -471,12 +471,12 @@ class MainShell extends ConsumerWidget {
               padding: MediaQuery.of(context).padding.copyWith(
                 bottom:
                     MediaQuery.of(context).padding.bottom +
-                    ResponsiveHelper.h(80),
+                    ResponsiveHelper.h(100),
               ),
               viewPadding: MediaQuery.of(context).viewPadding.copyWith(
                 bottom:
                     MediaQuery.of(context).viewPadding.bottom +
-                    ResponsiveHelper.h(80),
+                    ResponsiveHelper.h(100),
               ),
             ),
             child: child,
@@ -489,7 +489,7 @@ class MainShell extends ConsumerWidget {
             bottom: 0,
             child: SafeArea(
               child: Container(
-                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 8),
+                padding: ResponsiveHelper.padding(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
@@ -590,7 +590,7 @@ class MainShell extends ConsumerWidget {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 6),
+        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
