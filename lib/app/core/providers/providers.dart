@@ -15,6 +15,7 @@ import '../../data/repositories/achievement_repository.dart';
 import '../../data/repositories/task_template_repository.dart';
 import '../../data/repositories/announcement_repository.dart';
 import '../../data/repositories/weather_repository.dart';
+import '../../data/repositories/reward_repository.dart';
 import '../../data/models/weather_model.dart';
 import '../services/location_service.dart';
 import '../services/offline_service.dart';
@@ -26,6 +27,13 @@ import '../../data/models/points_history_model.dart';
 import '../../data/models/achievement_model.dart';
 import '../../data/models/task_template_model.dart';
 import '../../data/models/announcement_model.dart';
+import '../../data/models/reward_model.dart';
+import '../../data/models/reward_model.dart';
+import '../../data/models/reward_redemption_model.dart';
+import '../../data/models/recipe_model.dart';
+import '../../data/models/meal_plan_model.dart';
+import '../../data/repositories/recipe_repository.dart';
+import '../../data/repositories/meal_plan_repository.dart';
 import '../utils/streak_calculator.dart';
 
 /// Singleton repository instances to avoid provider evaluation issues
@@ -55,7 +63,9 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   return _taskRepositoryInstance;
 });
 
-final groceryTemplateRepositoryProvider = Provider<GroceryTemplateRepository>((ref) {
+final groceryTemplateRepositoryProvider = Provider<GroceryTemplateRepository>((
+  ref,
+) {
   return GroceryTemplateRepository();
 });
 
@@ -71,7 +81,9 @@ final consentRepositoryProvider = Provider<ConsentRepository>((ref) {
   return ConsentRepository();
 });
 
-final pointsHistoryRepositoryProvider = Provider<PointsHistoryRepository>((ref) {
+final pointsHistoryRepositoryProvider = Provider<PointsHistoryRepository>((
+  ref,
+) {
   return PointsHistoryRepository();
 });
 
@@ -89,6 +101,10 @@ final taskTemplateRepositoryProvider = Provider<TaskTemplateRepository>((ref) {
 
 final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
   return WeatherRepository();
+});
+
+final rewardRepositoryProvider = Provider<RewardRepository>((ref) {
+  return RewardRepository();
 });
 
 final locationServiceProvider = Provider<LocationService>((ref) {
@@ -109,9 +125,9 @@ final consentContentProvider = FutureProvider<ConsentContent>((ref) {
 final needsConsentProvider = FutureProvider<bool>((ref) {
   final consentRepo = ref.watch(consentRepositoryProvider);
   final currentUser = ref.watch(currentUserProvider);
-  
+
   if (currentUser == null) return Future.value(true);
-  
+
   return consentRepo.needsConsent(currentUser.id);
 });
 
@@ -151,36 +167,42 @@ final familyMembersProvider = StreamProvider.family((ref, String familyId) {
   return _familyRepositoryInstance.streamFamilyMembers(familyId);
 });
 
-final familyMemberProvider = StreamProvider.family((ref, (String familyId, String uid) params) {
+final familyMemberProvider = StreamProvider.family((
+  ref,
+  (String familyId, String uid) params,
+) {
   final familyRepo = ref.watch(familyRepositoryProvider);
-  return familyRepo.streamFamilyMember(
-    familyId: params.$1,
-    uid: params.$2,
-  );
+  return familyRepo.streamFamilyMember(familyId: params.$1, uid: params.$2);
 });
 
 /// Current family provider (will be set based on user selection)
 final currentFamilyIdProvider = StateProvider<String?>((ref) => null);
 
 /// Generate invite code provider
-final generateInviteCodeProvider = FutureProvider.family<String?, String>((ref, familyId) async {
+final generateInviteCodeProvider = FutureProvider.family<String?, String>((
+  ref,
+  familyId,
+) async {
   final familyRepo = ref.watch(familyRepositoryProvider);
   return familyRepo.generateInviteCodeForFamily(familyId);
 });
 
 /// Generate child invite code provider
-final generateChildInviteCodeProvider = FutureProvider.family<String?, String>((ref, familyId) async {
+final generateChildInviteCodeProvider = FutureProvider.family<String?, String>((
+  ref,
+  familyId,
+) async {
   final familyRepo = ref.watch(familyRepositoryProvider);
   return familyRepo.generateChildInviteCodeForFamily(familyId);
 });
 
 final currentFamilyProvider = Provider((ref) {
   final familyId = ref.watch(currentFamilyIdProvider);
-  
+
   if (familyId == null) {
     return null;
   }
-  
+
   final familyAsync = ref.watch(familyProvider(familyId));
   return familyAsync.when(
     data: (family) {
@@ -204,7 +226,7 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 final hasFamilyProvider = Provider<bool>((ref) {
   final currentUser = ref.watch(currentUserProvider);
   if (currentUser == null) return false;
-  
+
   final userFamilies = ref.watch(userFamiliesProvider(currentUser.id));
   return userFamilies.when(
     data: (families) => families.isNotEmpty,
@@ -217,11 +239,11 @@ final hasFamilyProvider = Provider<bool>((ref) {
 final routerStateProvider = Provider<RouterState>((ref) {
   final currentUser = ref.watch(currentUserProvider);
   final isAuthenticated = currentUser != null;
-  
+
   if (!isAuthenticated) {
     return RouterState.unauthenticated;
   }
-  
+
   final userFamilies = ref.watch(userFamiliesProvider(currentUser.id));
   return userFamilies.when(
     data: (families) {
@@ -255,47 +277,65 @@ final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
 final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Task providers
-final familyTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
+final familyTasksProvider = StreamProvider.family<List<TaskModel>, String>((
+  ref,
+  familyId,
+) {
   // Get current user for role-based filtering
   final currentUser = ref.watch(currentUserProvider);
   final userId = currentUser?.id;
-  
+
   // Use the singleton instance directly to avoid any provider evaluation issues
   return _taskRepositoryInstance.streamTasksForFamily(familyId, userId: userId);
 });
 
-final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((ref, userId) {
+final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((
+  ref,
+  userId,
+) {
   final currentFamily = ref.watch(currentFamilyProvider);
-  
+
   if (currentFamily == null) {
     return Stream.value([]);
   }
-  
+
   // Use the singleton instance directly to avoid any provider evaluation issues
   return _taskRepositoryInstance.streamTasksForUser(userId, currentFamily.id);
 });
 
-final tasksDueTodayProvider = StreamProvider.family<List<TaskModel>, String>((ref, familyId) {
+final tasksDueTodayProvider = StreamProvider.family<List<TaskModel>, String>((
+  ref,
+  familyId,
+) {
   // Get current user for role-based filtering
   final currentUser = ref.watch(currentUserProvider);
   final userId = currentUser?.id;
-  
+
   // Stream all tasks and filter for today's tasks
   // This will automatically update when tasks change in Supabase
   // The stream will emit whenever tasks are created, updated, or deleted
   // Use the singleton instance directly to avoid any provider evaluation issues
-  return _taskRepositoryInstance.streamTasksForFamily(familyId, userId: userId).map((tasks) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return tasks.where((task) {
-      if (task.dueDate == null || task.status == 'completed') return false;
-      final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
-      return due == today;
-    }).toList();
-  });
+  return _taskRepositoryInstance
+      .streamTasksForFamily(familyId, userId: userId)
+      .map((tasks) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        return tasks.where((task) {
+          if (task.dueDate == null || task.status == 'completed') return false;
+          final due = DateTime(
+            task.dueDate!.year,
+            task.dueDate!.month,
+            task.dueDate!.day,
+          );
+          return due == today;
+        }).toList();
+      });
 });
 
-final taskStatsProvider = FutureProvider.family<Map<String, int>, String>((ref, familyId) async {
+final taskStatsProvider = FutureProvider.family<Map<String, int>, String>((
+  ref,
+  familyId,
+) async {
   final taskRepo = ref.watch(taskRepositoryProvider);
   return taskRepo.getTaskStats(familyId);
 });
@@ -308,9 +348,9 @@ final taskActionsProvider = Provider<TaskActions>((ref) {
 
 class TaskActions {
   final TaskRepository _taskRepo;
-  
+
   TaskActions(this._taskRepo);
-  
+
   Future<TaskModel> createTask({
     required String title,
     String? description,
@@ -338,7 +378,7 @@ class TaskActions {
       points: points,
     );
   }
-  
+
   Future<TaskModel> updateTask({
     required String taskId,
     String? title,
@@ -364,27 +404,34 @@ class TaskActions {
       points: points,
     );
   }
-  
+
   Future<TaskModel> completeTask(String taskId) async {
     return _taskRepo.completeTask(taskId);
   }
-  
+
   Future<void> deleteTask(String taskId) async {
     return _taskRepo.deleteTask(taskId);
   }
 }
 
 /// Announcement providers
-final familyAnnouncementsProvider = StreamProvider.family<List<AnnouncementModel>, String>((ref, familyId) {
-  final announcementRepo = ref.watch(announcementRepositoryProvider);
-  // Get current user for role-based filtering
-  final currentUser = ref.watch(currentUserProvider);
-  final userId = currentUser?.id;
-  return announcementRepo.streamFamilyAnnouncements(familyId, userId: userId);
-});
+final familyAnnouncementsProvider =
+    StreamProvider.family<List<AnnouncementModel>, String>((ref, familyId) {
+      final announcementRepo = ref.watch(announcementRepositoryProvider);
+      // Get current user for role-based filtering
+      final currentUser = ref.watch(currentUserProvider);
+      final userId = currentUser?.id;
+      return announcementRepo.streamFamilyAnnouncements(
+        familyId,
+        userId: userId,
+      );
+    });
 
 /// Calendar providers
-final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((ref, familyId) {
+final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((
+  ref,
+  familyId,
+) {
   final calendarRepo = ref.watch(calendarRepositoryProvider);
   // Get current user for role-based filtering
   final currentUser = ref.watch(currentUserProvider);
@@ -393,61 +440,84 @@ final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((re
 });
 
 /// Weekly points provider - calculates points earned in the last 7 days
-final weeklyPointsProvider = FutureProvider.family<Map<String, int>, String>((ref, familyId) async {
+final weeklyPointsProvider = FutureProvider.family<Map<String, int>, String>((
+  ref,
+  familyId,
+) async {
   final taskRepo = ref.watch(taskRepositoryProvider);
   final now = DateTime.now();
   final weekAgo = now.subtract(const Duration(days: 7));
-  
+
   // Get all completed tasks in the last 7 days
   final allTasks = await taskRepo.getTasksForFamily(familyId);
   final weeklyTasks = allTasks.where((task) {
     if (task.status != 'completed' || task.completedAt == null) return false;
     return task.completedAt!.isAfter(weekAgo);
   }).toList();
-  
+
   // Calculate points per user
   final weeklyPoints = <String, int>{};
   for (final task in weeklyTasks) {
-    weeklyPoints[task.assignedTo] = (weeklyPoints[task.assignedTo] ?? 0) + task.points;
+    weeklyPoints[task.assignedTo] =
+        (weeklyPoints[task.assignedTo] ?? 0) + task.points;
   }
-  
+
   return weeklyPoints;
 });
 
 /// Grocery suggestions provider - suggests items from previous completed lists
-final grocerySuggestionsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, familyId) async {
-  final listRepo = ref.watch(groceryListRepositoryProvider);
-  return await listRepo.getSuggestedItems(familyId);
-});
+final grocerySuggestionsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      familyId,
+    ) async {
+      final listRepo = ref.watch(groceryListRepositoryProvider);
+      return await listRepo.getSuggestedItems(familyId);
+    });
 
 // Search state providers
 final searchModeProvider = StateProvider<bool>((ref) => false);
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Streak provider - calculates current and longest streaks for a user
-final userStreakProvider = FutureProvider.family<Map<String, int>, (String userId, String familyId)>((ref, params) async {
-  final taskRepo = ref.watch(taskRepositoryProvider);
-  final completedTasks = await taskRepo.getCompletedTasksForUser(params.$1, params.$2);
-  return StreakCalculator.calculateStreaks(completedTasks);
-});
+final userStreakProvider =
+    FutureProvider.family<Map<String, int>, (String userId, String familyId)>((
+      ref,
+      params,
+    ) async {
+      final taskRepo = ref.watch(taskRepositoryProvider);
+      final completedTasks = await taskRepo.getCompletedTasksForUser(
+        params.$1,
+        params.$2,
+      );
+      return StreakCalculator.calculateStreaks(completedTasks);
+    });
 
 /// Points history provider - gets points transaction history for a user
-final userPointsHistoryProvider = FutureProvider.family<List<PointsHistoryModel>, (String userId, String familyId)>((ref, params) async {
-  final historyRepo = ref.watch(pointsHistoryRepositoryProvider);
-  return await historyRepo.getPointsHistoryForUser(
-    userId: params.$1,
-    familyId: params.$2,
-  );
-});
+final userPointsHistoryProvider =
+    FutureProvider.family<
+      List<PointsHistoryModel>,
+      (String userId, String familyId)
+    >((ref, params) async {
+      final historyRepo = ref.watch(pointsHistoryRepositoryProvider);
+      return await historyRepo.getPointsHistoryForUser(
+        userId: params.$1,
+        familyId: params.$2,
+      );
+    });
 
 /// User achievements provider - gets all unlocked achievements for a user
-final userAchievementsProvider = FutureProvider.family<List<AchievementModel>, (String userId, String familyId)>((ref, params) async {
-  final achievementRepo = ref.watch(achievementRepositoryProvider);
-  return await achievementRepo.getUserAchievements(
-    userId: params.$1,
-    familyId: params.$2,
-  );
-});
+final userAchievementsProvider =
+    FutureProvider.family<
+      List<AchievementModel>,
+      (String userId, String familyId)
+    >((ref, params) async {
+      final achievementRepo = ref.watch(achievementRepositoryProvider);
+      return await achievementRepo.getUserAchievements(
+        userId: params.$1,
+        familyId: params.$2,
+      );
+    });
 
 /// Selected weather location provider - stores user's selected location
 /// null means use current location
@@ -463,7 +533,7 @@ final currentLocationProvider = FutureProvider<Position?>((ref) async {
 final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
   final weatherRepo = ref.watch(weatherRepositoryProvider);
   final selectedLocation = ref.watch(selectedWeatherLocationProvider);
-  
+
   // If user has selected a specific location, use it
   if (selectedLocation != null && selectedLocation.isNotEmpty) {
     // Check if it's a zipcode (numeric, 4-10 digits)
@@ -471,22 +541,24 @@ final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
     final weather = isZipcode
         ? await weatherRepo.getWeather(zipcode: selectedLocation.trim())
         : await weatherRepo.getWeather(cityName: selectedLocation);
-    
+
     // If weather not found for selected location, clear the selection and fall back to default
     // This prevents the widget from disappearing and stops retrying the invalid location
     if (weather == null) {
       // Clear invalid selection to prevent retrying
       ref.read(selectedWeatherLocationProvider.notifier).state = null;
       // Fall back to default location
-      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+      return await weatherRepo.getWeather(
+        cityName: AppConstants.defaultWeatherCity,
+      );
     }
-    
+
     return weather;
   }
-  
+
   // Otherwise, try to use current location
   final locationAsync = ref.watch(currentLocationProvider);
-  
+
   return locationAsync.when(
     data: (position) async {
       if (position != null) {
@@ -497,22 +569,113 @@ final weatherProvider = FutureProvider<WeatherModel?>((ref) async {
         );
       } else {
         // Fallback to default city
-        return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+        return await weatherRepo.getWeather(
+          cityName: AppConstants.defaultWeatherCity,
+        );
       }
     },
     loading: () async {
       // While loading location, try default city
-      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+      return await weatherRepo.getWeather(
+        cityName: AppConstants.defaultWeatherCity,
+      );
     },
     error: (error, stack) async {
       // On error, use default city
-      return await weatherRepo.getWeather(cityName: AppConstants.defaultWeatherCity);
+      return await weatherRepo.getWeather(
+        cityName: AppConstants.defaultWeatherCity,
+      );
     },
   );
 });
 
 /// Task templates provider - gets all task templates for a family
-final taskTemplatesProvider = FutureProvider.family<List<TaskTemplateModel>, String>((ref, familyId) async {
-  final templateRepo = ref.watch(taskTemplateRepositoryProvider);
-  return await templateRepo.getTemplatesForFamily(familyId);
+final taskTemplatesProvider =
+    FutureProvider.family<List<TaskTemplateModel>, String>((
+      ref,
+      familyId,
+    ) async {
+      final templateRepo = ref.watch(taskTemplateRepositoryProvider);
+      return await templateRepo.getTemplatesForFamily(familyId);
+    });
+
+/// Rewards providers
+final familyRewardsProvider = StreamProvider.family<List<RewardModel>, String>((
+  ref,
+  familyId,
+) {
+  final rewardRepo = ref.watch(rewardRepositoryProvider);
+  return rewardRepo.streamRewards(familyId);
 });
+
+final familyRedemptionsProvider =
+    StreamProvider.family<List<RewardRedemptionModel>, String>((ref, familyId) {
+      final rewardRepo = ref.watch(rewardRepositoryProvider);
+      // This stream currently performs async mapping which might be heavy,
+      // but acceptable for the expected volume of requests.
+      return rewardRepo.streamFamilyRedemptions(familyId);
+    });
+
+final userRedemptionsProvider = StreamProvider.family<List<RewardRedemptionModel>, String>((
+  ref,
+  userId,
+) {
+  // We need familyId usually to filter, but userRedemptions usually happens in context of a family.
+  // The repo method `streamUserRedemptions` asks for `(userId, familyId)`.
+  // We'll need a way to pass both.
+  // Let's rely on `currentFamilyProvider` being read inside the widget or pass a tuple.
+  // For consistency with other providers, let's assume we pass a tuple or familyId and get current user from auth inside repo?
+  // No, `streamUserRedemptions` takes `userId, familyId`.
+
+  // Let's redefine this provider to take a tuple if needed, or just familyId and use current user.
+  // But purely, let's use tuple: (familyId, userId)
+  throw UnimplementedError('Use userRedemptionsFamilyProvider instead');
+});
+
+final userRedemptionsFamilyProvider =
+    StreamProvider.family<
+      List<RewardRedemptionModel>,
+      (String familyId, String userId)
+    >((ref, params) {
+      final rewardRepo = ref.watch(rewardRepositoryProvider);
+      return rewardRepo.streamUserRedemptions(params.$2, params.$1);
+    });
+
+// ==============================================================================
+// Meal Planner Feature Providers
+// ==============================================================================
+
+final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
+  return RecipeRepository();
+});
+
+final mealPlanRepositoryProvider = Provider<MealPlanRepository>((ref) {
+  return MealPlanRepository();
+});
+
+final familyRecipesProvider = StreamProvider.family<List<RecipeModel>, String>((
+  ref,
+  familyId,
+) {
+  final repository = ref.watch(recipeRepositoryProvider);
+  return repository.streamRecipes(familyId);
+});
+
+final currentWeekMealPlanProvider =
+    FutureProvider.family<MealPlanModel, String>((ref, familyId) async {
+      final repository = ref.watch(mealPlanRepositoryProvider);
+      // Calculate start of current week (Sunday)
+      final now = DateTime.now();
+      // DateTime.weekday: Mon=1, ..., Sun=7
+      // To get Sunday: subtract (weekday % 7) days.
+      // e.g. Sunday(7) % 7 = 0 -> subtract 0 days. Correct.
+      // e.g. Monday(1) % 7 = 1 -> subtract 1 day (back to Sunday). Correct.
+      final daysToSubtract = now.weekday % 7;
+      final startOfWeek = now.subtract(Duration(days: daysToSubtract));
+      final normalizedStart = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day,
+      );
+      return repository.getOrCreateWeeklyPlan(familyId, normalizedStart);
+    });

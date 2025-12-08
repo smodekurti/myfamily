@@ -225,7 +225,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           ),
         ),
         floatingActionButton: Padding(
-          padding: EdgeInsets.only(bottom: ResponsiveHelper.h(80)),
+          padding: EdgeInsets.only(bottom: ResponsiveHelper.h(16)),
           child: PermissionAwareWidget(
             action: 'create_event',
             child: FloatingActionButton(

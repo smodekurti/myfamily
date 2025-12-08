@@ -36,6 +36,14 @@ import '../../features/settings/presentation/pages/help_page.dart';
 import '../../features/gamification/presentation/pages/leaderboard_page.dart';
 import '../../features/gamification/presentation/pages/points_history_page.dart';
 import '../../features/gamification/presentation/pages/achievements_page.dart';
+import '../../features/gamification/presentation/pages/rewards_page.dart';
+import '../../features/gamification/presentation/pages/create_reward_page.dart';
+import '../../features/meal_planner/presentation/pages/recipes_page.dart';
+import '../../features/meal_planner/presentation/pages/create_recipe_page.dart';
+import '../../features/meal_planner/presentation/pages/meal_planner_page.dart';
+import '../../features/meal_planner/presentation/pages/meal_slot_edit_page.dart';
+import '../../data/models/meal_plan_model.dart';
+import '../../data/models/recipe_model.dart';
 import '../../features/onboarding/presentation/pages/walkthrough_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -159,7 +167,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               state.matchedLocation == AppConstants.routePointsHistory ||
               state.matchedLocation == AppConstants.routeAchievements ||
               state.matchedLocation ==
-                  AppConstants.routeGroceryTemplatesManage) {
+                  AppConstants.routeGroceryTemplatesManage ||
+              state.matchedLocation.startsWith(AppConstants.routeRewards) ||
+              state.matchedLocation.startsWith(AppConstants.routeRecipes) ||
+              state.matchedLocation.startsWith(AppConstants.routeMealPlanner)) {
             return null;
           }
 
@@ -353,6 +364,66 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'achievements',
             builder: (context, state) => const AchievementsPage(),
           ),
+          GoRoute(
+            path: AppConstants.routeRewards,
+            name: 'rewards',
+            builder: (context, state) => const RewardsPage(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: 'create-reward',
+                builder: (context, state) => const CreateRewardPage(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: AppConstants.routeRecipes,
+            name: 'recipes',
+            builder: (context, state) => const RecipesPage(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: 'create-recipe',
+                builder: (context, state) => const CreateRecipePage(),
+              ),
+              GoRoute(
+                path: 'edit',
+                name: 'edit-recipe',
+                builder: (context, state) {
+                  final recipe = state.extra as RecipeModel?;
+                  return CreateRecipePage(existingRecipe: recipe);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: AppConstants.routeMealPlanner,
+            name: 'meal-planner',
+            builder: (context, state) => const MealPlannerPage(),
+            routes: [
+              GoRoute(
+                path:
+                    '${AppConstants.routeMealSlotEdit}/:date/:mealType/:familyId/:planId',
+                name: 'edit-meal-slot',
+                builder: (context, state) {
+                  final dateStr = state.pathParameters['date']!;
+                  final date = DateTime.parse(dateStr);
+                  final mealType = state.pathParameters['mealType']!;
+                  final familyId = state.pathParameters['familyId']!;
+                  final planId = state.pathParameters['planId']!;
+                  final existingEntry = state.extra as MealPlanEntryModel?;
+
+                  return MealSlotEditPage(
+                    date: date,
+                    mealType: mealType,
+                    familyId: familyId,
+                    planId: planId,
+                    existingEntry: existingEntry,
+                  );
+                },
+              ),
+            ],
+          ),
         ],
       ),
     ],
@@ -400,7 +471,12 @@ class MainShell extends ConsumerWidget {
               padding: MediaQuery.of(context).padding.copyWith(
                 bottom:
                     MediaQuery.of(context).padding.bottom +
-                    ResponsiveHelper.h(100),
+                    ResponsiveHelper.h(120),
+              ),
+              viewPadding: MediaQuery.of(context).viewPadding.copyWith(
+                bottom:
+                    MediaQuery.of(context).viewPadding.bottom +
+                    ResponsiveHelper.h(120),
               ),
             ),
             child: child,
@@ -410,10 +486,10 @@ class MainShell extends ConsumerWidget {
           Positioned(
             left: ResponsiveHelper.w(24),
             right: ResponsiveHelper.w(24),
-            bottom: ResponsiveHelper.h(24),
+            bottom: 0,
             child: SafeArea(
               child: Container(
-                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 12),
+                padding: ResponsiveHelper.padding(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
@@ -514,7 +590,7 @@ class MainShell extends ConsumerWidget {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
+        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
@@ -579,7 +655,11 @@ class MainShell extends ConsumerWidget {
         currentRoute == AppConstants.routeAchievements ||
         currentRoute == AppConstants.routeGroceryTemplatesManage ||
         currentRoute == AppConstants.routeEditProfile ||
-        currentRoute == AppConstants.routePointsHistory) {
+        currentRoute == AppConstants.routePointsHistory ||
+        currentRoute == AppConstants.routePointsHistory ||
+        currentRoute.startsWith(AppConstants.routeRewards) ||
+        currentRoute.startsWith(AppConstants.routeRecipes) ||
+        currentRoute.startsWith(AppConstants.routeMealPlanner)) {
       return null;
     }
 
@@ -733,6 +813,28 @@ class MainShell extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppConstants.routeAchievements);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.star_border,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Rewards Marketplace'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppConstants.routeRewards);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.restaurant_menu,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Meal Planner'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppConstants.routeMealPlanner);
                     },
                   ),
                   const Divider(),

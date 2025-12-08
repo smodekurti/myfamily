@@ -374,7 +374,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             return PermissionAwareWidget(
               action: 'create_task',
               child: Padding(
-                padding: ResponsiveHelper.padding(bottom: 80),
+                padding: ResponsiveHelper.padding(bottom: 16),
                 child: FloatingActionButton(
                   onPressed: () => context.push(AppConstants.routeCreateTask),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -390,7 +390,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           error: (_, __) => PermissionAwareWidget(
             action: 'create_task',
             child: Padding(
-              padding: ResponsiveHelper.padding(bottom: 80),
+              padding: ResponsiveHelper.padding(bottom: 16),
               child: FloatingActionButton(
                 onPressed: () => context.push(AppConstants.routeCreateTask),
                 backgroundColor: Theme.of(context).colorScheme.primary,
