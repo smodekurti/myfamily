@@ -4,7 +4,8 @@ import '../../data/repositories/family_repository.dart';
 
 /// Service for managing role-based permissions and access control
 class RolePermissionService {
-  static final RolePermissionService _instance = RolePermissionService._internal();
+  static final RolePermissionService _instance =
+      RolePermissionService._internal();
   factory RolePermissionService() => _instance;
   RolePermissionService._internal();
 
@@ -26,6 +27,15 @@ class RolePermissionService {
     }
   }
 
+  /// Check if user is parent or admin
+  Future<bool> isParentOrAdmin({
+    required String userId,
+    required String familyId,
+  }) async {
+    final role = await getUserRole(userId, familyId);
+    return role == 'parent' || role == 'admin';
+  }
+
   /// Get default permissions for a role
   Future<Map<String, bool>> getRolePermissions(String role) async {
     try {
@@ -35,7 +45,8 @@ class RolePermissionService {
           .eq('role', role.toLowerCase())
           .maybeSingle();
 
-      if (response == null) {        return {};
+      if (response == null) {
+        return {};
       }
 
       final permissions = response['permissions'] as Map<String, dynamic>;
@@ -55,7 +66,8 @@ class RolePermissionService {
           .eq('role', role.toLowerCase())
           .maybeSingle();
 
-      if (response == null) {        return {};
+      if (response == null) {
+        return {};
       }
 
       final restrictions = response['restrictions'] as Map<String, dynamic>;
@@ -70,16 +82,19 @@ class RolePermissionService {
   Future<bool> canPerformAction({
     required String userId,
     required String familyId,
-    required String action, // e.g., 'create_task', 'delete_event', 'manage_family'
+    required String
+    action, // e.g., 'create_task', 'delete_event', 'manage_family'
   }) async {
     try {
       final role = await getUserRole(userId, familyId);
-      if (role == null) {        return false;
+      if (role == null) {
+        return false;
       }
 
       // Map action to permission key
       final permissionKey = _actionToPermissionKey(action);
-      if (permissionKey == null) {        return false;
+      if (permissionKey == null) {
+        return false;
       }
 
       // Get role permissions
@@ -118,8 +133,10 @@ class RolePermissionService {
   /// Get parent count for a family
   Future<int> getParentCount(String familyId) async {
     try {
-      final response = await _supabase
-          .rpc('get_parent_count', params: {'family_uuid': familyId});
+      final response = await _supabase.rpc(
+        'get_parent_count',
+        params: {'family_uuid': familyId},
+      );
       return response as int? ?? 0;
     } catch (e) {
       // Fallback to manual count if RPC doesn't exist
@@ -164,4 +181,3 @@ class RolePermissionService {
     return actionMap[action];
   }
 }
-

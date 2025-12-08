@@ -138,7 +138,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         floatingActionButton: PermissionAwareWidget(
           action: 'create_list',
           child: Padding(
-            padding: EdgeInsets.only(bottom: ResponsiveHelper.h(80)),
+            padding: EdgeInsets.only(bottom: ResponsiveHelper.h(16)),
             child: FloatingActionButton.extended(
               onPressed: () => _showCreateListDialog(context),
               backgroundColor: Theme.of(context).colorScheme.primary,
