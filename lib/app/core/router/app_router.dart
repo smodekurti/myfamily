@@ -471,12 +471,12 @@ class MainShell extends ConsumerWidget {
               padding: MediaQuery.of(context).padding.copyWith(
                 bottom:
                     MediaQuery.of(context).padding.bottom +
-                    ResponsiveHelper.h(120),
+                    ResponsiveHelper.h(80),
               ),
               viewPadding: MediaQuery.of(context).viewPadding.copyWith(
                 bottom:
                     MediaQuery.of(context).viewPadding.bottom +
-                    ResponsiveHelper.h(120),
+                    ResponsiveHelper.h(80),
               ),
             ),
             child: child,
