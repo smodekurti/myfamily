@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>985416533716-n3cn247pk6ftagt9c7kdq3h4k3fqj0nu.apps.googleusercontent.com</string>
+	<string></string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.985416533716-n3cn247pk6ftagt9c7kdq3h4k3fqj0nu</string>
+	<string></string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>985416533716-aovmnhh45glq9oos67c5nlgql6lmllf7.apps.googleusercontent.com</string>
+	<string></string>
 	<key>API_KEY</key>
-	<string>AIzaSyDdhk0ZL-oZDvqOsLjTqNR2mpNiPEP5J1s</string>
+	<string></string>
 	<key>GCM_SENDER_ID</key>
-	<string>985416533716</string>
+	<string></string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
@@ -19,7 +19,7 @@
 	<key>PROJECT_ID</key>
 	<string>myfamily-d1388</string>
 	<key>STORAGE_BUCKET</key>
-	<string>myfamily-d1388.firebasestorage.app</string>
+	<string></string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:985416533716:ios:2164d5a7d5ee1287255d41</string>
+	<string></string>
 </dict>
 </plist>
