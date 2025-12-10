@@ -451,6 +451,9 @@ class MainShell extends ConsumerWidget {
       currentIndex = 2;
     } else if (currentRoute == AppConstants.routeCalendar) {
       currentIndex = 3;
+    } else if (currentRoute == AppConstants.routeMealPlanner ||
+        currentRoute.startsWith(AppConstants.routeRecipes)) {
+      currentIndex = 4;
     }
 
     // Update navigation index provider
@@ -543,6 +546,14 @@ class MainShell extends ConsumerWidget {
                       'Calendar',
                       currentIndex == 3,
                     ),
+                    _buildNavItem(
+                      context,
+                      ref,
+                      4,
+                      Icons.restaurant_menu_rounded,
+                      'Meals',
+                      currentIndex == 4,
+                    ),
                   ],
                 ),
               ),
@@ -584,6 +595,9 @@ class MainShell extends ConsumerWidget {
             break;
           case 3:
             context.go(AppConstants.routeCalendar);
+            break;
+          case 4:
+            context.go(AppConstants.routeMealPlanner);
             break;
         }
       },
