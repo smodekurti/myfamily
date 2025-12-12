@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/extensions/user_extensions.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/services/gemini_service.dart';
 import '../../../../data/models/meal_plan_model.dart';
@@ -34,15 +37,44 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         title: const Text('Enter Gemini API Key'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'To use Magic Plan, you need a free Google Gemini API Key. The key is stored securely on your device.',
             ),
             const SizedBox(height: 16),
+            const Text(
+              'Don\'t have a key?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse(
+                  'https://aistudio.google.com/app/apikey',
+                );
+                if (!await launchUrl(url)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch URL')),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'Get a free API Key here ↗',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                labelText: 'API Key',
+                labelText: 'Paste API Key',
+                hintText: 'AIzaSy...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -55,7 +87,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
+            child: const Text('Save Key'),
           ),
         ],
       ),
@@ -109,7 +141,9 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
-  Future<List<String>?> _showPreferencesDialog() async {
+  Future<List<String>?> _showPreferencesDialog([
+    List<String>? initialSelection,
+  ]) async {
     final List<String> options = [
       'Vegetarian',
       'Vegan',
@@ -121,8 +155,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       'Low-Carb',
     ];
 
-    // Default selection (none)
-    List<String> selected = [];
+    // Default selection
+    List<String> selected = List.from(initialSelection ?? []);
 
     return await showDialog<List<String>>(
       context: context,
@@ -227,6 +261,435 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     );
   }
 
+  Future<void> _showMagicPlanOptions() async {
+    final option = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Magic Plan 🪄'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'week'),
+            child: const ListTile(
+              leading: Icon(Icons.date_range),
+              title: Text('Plan Entire Week'),
+              subtitle: Text('Generate meals for the next 7 days'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'day'),
+            child: const ListTile(
+              leading: Icon(Icons.today),
+              title: Text('Plan Selected Day'),
+              subtitle: Text('Generate meals just for this day'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'meal'),
+            child: const ListTile(
+              leading: Icon(Icons.restaurant),
+              title: Text('Plan Single Meal'),
+              subtitle: Text('Generate one specific meal'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (option == null) return;
+
+    if (option == 'week') {
+      await _generateFullWeekPlan();
+    } else if (option == 'day') {
+      await _generateDayPlan();
+    } else if (option == 'meal') {
+      await _generateSingleMeal();
+    }
+  }
+
+  Future<void> _generateFullWeekPlan() async {
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentUser == null || currentFamilyId == null) return;
+
+    // 1. Get Preferences
+    final currentPrefs =
+        (currentUser.userMetadata?['dietary_preferences'] as List?)
+            ?.cast<String>() ??
+        [];
+    final selectedTags = await _showPreferencesDialog(currentPrefs);
+    if (selectedTags == null) return;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Designing your weekly menu...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final geminiService = ref.read(geminiServiceProvider);
+      final hasKey = await geminiService.hasApiKey();
+
+      if (!hasKey) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // Close loading
+          _showApiKeyDialog();
+        }
+        return;
+      }
+
+      // Generate plan for 7 days
+      final planData = await geminiService.generateMealPlan(
+        days: 7,
+        dietaryTags: selectedTags,
+      );
+
+      // Save to database
+      final planRepo = ref.read(mealPlanRepositoryProvider);
+      final now = DateTime.now();
+
+      // Create or update plan
+      // For simplicity, we'll create a new plan starting today if one doesn't exist for this week
+      // Or we could update the existing one.
+      // Let's use the current week's plan ID if available, or create new.
+      final currentPlanAsync = ref.read(
+        currentWeekMealPlanProvider(currentFamilyId),
+      );
+      // We can't easily get the value from AsyncValue here without listening.
+      // So detailed logic: fetch current plan for start date.
+      // For this MVP, let's just create entries linked to the family.
+      // We need a plan ID.
+      String planId;
+      final existingPlan =
+          currentPlanAsync.value; // Might be null if not loaded
+      if (existingPlan == null) {
+        // Create new
+        final created = await ref
+            .read(mealPlanRepositoryProvider)
+            .getOrCreateWeeklyPlan(currentFamilyId, DateTime.now());
+        planId = created.id;
+      } else {
+        planId = existingPlan.id;
+      }
+      for (int i = 0; i < planData.length; i++) {
+        final dayData = planData[i];
+        final date = now.add(Duration(days: i));
+        final meals = dayData['meals'] as List;
+
+        for (final meal in meals) {
+          final type = (meal['type'] as String).toLowerCase();
+          final entry = MealPlanEntryModel(
+            id: '', // New entry
+            planId: planId,
+            mealDate: date,
+            mealType: type,
+            customNote: '${meal['name']}: ${meal['description']}',
+            isCompleted: false,
+          );
+          await planRepo.saveMealEntry(entry);
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Weekly plan generated!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _generateDayPlan() async {
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentUser == null || currentFamilyId == null) return;
+
+    // 1. Get Preferences
+    final currentPrefs =
+        (currentUser.userMetadata?['dietary_preferences'] as List?)
+            ?.cast<String>() ??
+        [];
+    final selectedTags = await _showPreferencesDialog(currentPrefs);
+    if (selectedTags == null) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Planning your day...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final geminiService = ref.read(geminiServiceProvider);
+      final hasKey = await geminiService.hasApiKey();
+
+      if (!hasKey) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          _showApiKeyDialog();
+        }
+        return;
+      }
+
+      // Generate for 1 day
+      final planData = await geminiService.generateMealPlan(
+        days: 1,
+        dietaryTags: selectedTags,
+      );
+
+      if (planData.isEmpty) throw Exception('No plan generated');
+
+      // Get or create plan for this week (based on selected date)
+      // Find start of week for selected date?
+      // Actually getOrCreateWeeklyPlan usually takes "today" to find current plan.
+      // But we want to modify the plan that *contains* _selectedDate.
+      // If we are viewing a future week, we should likely be passing that week's start.
+      // For now, let's stick to modifying the currently loaded plan or creating one if missing.
+      final planRepo = ref.read(mealPlanRepositoryProvider);
+
+      // Helper to find start of week (assuming Monday start? Or just rely on repo logic?)
+      // Repo logic seems to take a date and normalize it.
+      // Let's pass _selectedDate, repo will find/create plan for that week.
+      // Wait, getOrCreateWeeklyPlan documentation says "for a specific week (start date)".
+      // It normalizes to start of day. It doesn't auto-snap to Monday.
+      // If our app logic assumes plans start on specific days, we might create multiple plans.
+      // Let's assume for now we just use _selectedDate and let backend handle it,
+      // or better: use the existing ID from the provider if we have one.
+
+      String planId = '';
+      MealPlanModel? plan;
+
+      final currentPlan = ref
+          .read(currentWeekMealPlanProvider(currentFamilyId))
+          .value;
+      if (currentPlan != null &&
+          !_selectedDate.isBefore(currentPlan.startDate) &&
+          !_selectedDate.isAfter(currentPlan.endDate)) {
+        planId = currentPlan.id;
+        plan = currentPlan;
+      } else {
+        // We are on a different week or no plan loaded.
+        // Create/Get plan starting at _selectedDate (or its week start).
+        // For safety, let's just use _selectedDate.
+        plan = await planRepo.getOrCreateWeeklyPlan(
+          currentFamilyId,
+          _selectedDate,
+        );
+        planId = plan.id;
+      }
+
+      // Map Day 1 to _selectedDate
+      final dayData = planData.first;
+      final meals = dayData['meals'] as List;
+
+      for (final meal in meals) {
+        final type = (meal['type'] as String).toLowerCase();
+
+        final existingEntry = plan.entries
+            ?.cast<MealPlanEntryModel?>()
+            .firstWhere(
+              (e) =>
+                  DateUtils.isSameDay(e?.mealDate, _selectedDate) &&
+                  e?.mealType.toLowerCase() == type,
+              orElse: () => null,
+            );
+
+        final entry = MealPlanEntryModel(
+          id: existingEntry?.id ?? '',
+          planId: planId,
+          mealDate: _selectedDate,
+          mealType: type,
+          customNote: '${meal['name']}: ${meal['description']}',
+          isCompleted: false,
+          recipeId: null,
+        );
+
+        await planRepo.saveMealEntry(entry);
+      }
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Day plan updated!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _generateSingleMeal() async {
+    final type = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Which meal?'),
+        children: ['Breakfast', 'Lunch', 'Dinner', 'Snack']
+            .map(
+              (t) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, t),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(t, style: const TextStyle(fontSize: 16)),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+
+    if (type == null) return;
+
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentUser == null || currentFamilyId == null) return;
+
+    // 1. Get Preferences
+    final currentPrefs =
+        (currentUser.userMetadata?['dietary_preferences'] as List?)
+            ?.cast<String>() ??
+        [];
+    final selectedTags = await _showPreferencesDialog(currentPrefs);
+    if (selectedTags == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Cooking up an idea...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final geminiService = ref.read(geminiServiceProvider);
+      final hasKey = await geminiService.hasApiKey();
+
+      if (!hasKey) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          _showApiKeyDialog();
+        }
+        return;
+      }
+
+      final mealData = await geminiService.generateSingleMeal(
+        mealType: type,
+        dietaryTags: selectedTags,
+      );
+
+      final planRepo = ref.read(mealPlanRepositoryProvider);
+
+      // Resolve Plan ID (same logic as day plan)
+      String planId = '';
+      MealPlanModel? plan;
+
+      final currentPlan = ref
+          .read(currentWeekMealPlanProvider(currentFamilyId))
+          .value;
+      if (currentPlan != null &&
+          !_selectedDate.isBefore(currentPlan.startDate) &&
+          !_selectedDate.isAfter(currentPlan.endDate)) {
+        planId = currentPlan.id;
+        plan = currentPlan;
+      } else {
+        plan = await planRepo.getOrCreateWeeklyPlan(
+          currentFamilyId,
+          _selectedDate,
+        );
+        planId = plan.id;
+      }
+
+      final existingEntry = plan.entries
+          ?.cast<MealPlanEntryModel?>()
+          .firstWhere(
+            (e) =>
+                DateUtils.isSameDay(e?.mealDate, _selectedDate) &&
+                e?.mealType.toLowerCase() == type.toLowerCase(),
+            orElse: () => null,
+          );
+
+      final entry = MealPlanEntryModel(
+        id: existingEntry?.id ?? '',
+        planId: planId,
+        mealDate: _selectedDate,
+        mealType: type.toLowerCase(),
+        customNote: '${mealData['name']}: ${mealData['description']}',
+        isCompleted: false,
+        recipeId: null,
+      );
+
+      await planRepo.saveMealEntry(entry);
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Meal updated!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
   Future<void> _saveGeneratedPlan(
     List<Map<String, dynamic>> generatedPlan,
   ) async {
@@ -297,6 +760,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
   @override
   Widget build(BuildContext context) {
     final currentFamilyId = ref.watch(currentFamilyIdProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final planAsync = ref.watch(
       currentWeekMealPlanProvider(currentFamilyId ?? ''),
     );
@@ -304,16 +768,34 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meal Planner'),
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu_rounded,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Magic Plan',
-            onPressed: _handleMagicPlan,
+            onPressed: _showMagicPlanOptions,
           ),
-          IconButton(
-            icon: const Icon(Icons.restaurant_menu),
-            tooltip: 'Recipes',
-            onPressed: () => context.push(AppConstants.routeRecipes),
+
+          Padding(
+            padding: ResponsiveHelper.padding(right: 8),
+            child: GestureDetector(
+              onTap: () => context.push(AppConstants.routeProfile),
+              child: AvatarWidget(
+                avatarPath: currentUser?.avatarUrl,
+                radius: ResponsiveHelper.r(16),
+                displayName:
+                    currentUser?.userMetadata?['full_name'] as String? ??
+                    'User',
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                textColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
           ),
         ],
       ),
@@ -353,7 +835,21 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                       ),
                     ),
                     const Spacer(),
-                    // Future: Add Week Navigation Arrows here
+                    TextButton.icon(
+                      onPressed: () => context.push(AppConstants.routeRecipes),
+                      icon: Icon(
+                        Icons.restaurant_menu,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      label: Text(
+                        'My Recipes',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -529,17 +1025,15 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const Spacer(),
-        TextButton.icon(
-          onPressed: () => context.push(AppConstants.routeRecipes),
-          icon: const Icon(Icons.menu_book),
-          label: const Text('My Recipes'),
-        ),
       ],
     );
   }
 
-  Future<void> _showRecipeDialog(String mealName, String? description) async {
+  Future<void> _showRecipeDialog(
+    String mealName,
+    String? description,
+    dynamic entry, // Pass the entry (is MealPlanEntryModel usually)
+  ) async {
     // Show loading
     showDialog(
       context: context,
@@ -558,73 +1052,109 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         description: description,
       );
 
+      // Check if already exists
+      final familyId = ref.read(currentFamilyIdProvider);
+      bool isAlreadySaved = false;
+      if (familyId != null && recipe['title'] != null) {
+        // We should really get the ID if it exists, not just bool
+        // But repository method currently returns bool.
+        // For now, if it exists, we assume user might want to create a NEW copy or link old?
+        // The checkRecipeExists only returns bool.
+        // Let's stick to the request: "If recipe already exists, disable import".
+        // But if we want to LINK it, we'd need the ID.
+        // For now, let's focus on the IMPORT flow (creating new).
+        // If it exists, they can't import (button disabled), so they can't link via this flow?
+        // Wait, if it exists, maybe we should finding it and linking it?
+        // user said: "If the recipe already exists, then disable import".
+        // So we assume duplicate recipes are bad.
+        // But user ALSO said: "If a recipe is imported, switch from custom note to receipe directly".
+        // Use case: I generate a recipe -> Save It -> My Meal Entry updates to link to it.
+        isAlreadySaved = await ref
+            .read(recipeRepositoryProvider)
+            .checkRecipeExists(familyId, recipe['title']);
+      }
+
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
 
         await showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text(recipe['title'] ?? mealName),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (recipe['description'] != null) ...[
-                      Text(
-                        recipe['description'],
-                        style: const TextStyle(fontStyle: FontStyle.italic),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+          builder: (context) => StatefulBuilder(
+            // Use StatefulBuilder to update local loading state if needed
+            builder: (context, setState) {
+              return AlertDialog(
+                title: Text(recipe['title'] ?? mealName),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildInfoChip(Icons.timer, recipe['prepTime']),
-                        _buildInfoChip(Icons.soup_kitchen, recipe['cookTime']),
-                        _buildInfoChip(
-                          Icons.person,
-                          '${recipe['servings']} servings',
+                        if (recipe['description'] != null) ...[
+                          Text(
+                            recipe['description'],
+                            style: const TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        // ... chips ...
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildInfoChip(Icons.timer, recipe['prepTime']),
+                            _buildInfoChip(
+                              Icons.soup_kitchen,
+                              recipe['cookTime'],
+                            ),
+                            _buildInfoChip(
+                              Icons.person,
+                              '${recipe['servings']} servings',
+                            ),
+                          ],
                         ),
+                        const Divider(),
+                        const Text(
+                          'Ingredients',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        ...(recipe['ingredients'] as List? ?? []).map(
+                          (i) => Text('• $i'),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Instructions',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        ...(recipe['instructions'] as List? ?? [])
+                            .asMap()
+                            .entries
+                            .map((e) => Text('${e.key + 1}. ${e.value}\n')),
                       ],
                     ),
-                    const Divider(),
-                    const Text(
-                      'Ingredients',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ...(recipe['ingredients'] as List? ?? []).map(
-                      (i) => Text('• $i'),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Instructions',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ...(recipe['instructions'] as List? ?? [])
-                        .asMap()
-                        .entries
-                        .map((e) => Text('${e.key + 1}. ${e.value}\n')),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-              FilledButton.icon(
-                // IMPORT BUTTON
-                onPressed: () => _saveRecipeToRepo(recipe),
-                icon: const Icon(Icons.save_alt),
-                label: const Text('Save to Recipes'),
-              ),
-            ],
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: isAlreadySaved
+                        ? null
+                        : () async {
+                            // Optimistic update
+                            setState(() => isAlreadySaved = true);
+                            await _saveRecipeToRepo(recipe, entry);
+                          },
+                    icon: Icon(isAlreadySaved ? Icons.check : Icons.save_alt),
+                    label: Text(isAlreadySaved ? 'Saved' : 'Save to Recipes'),
+                  ),
+                ],
+              );
+            },
           ),
         );
       }
@@ -638,7 +1168,10 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
-  Future<void> _saveRecipeToRepo(Map<String, dynamic> recipeData) async {
+  Future<void> _saveRecipeToRepo(
+    Map<String, dynamic> recipeData,
+    dynamic entry,
+  ) async {
     // Show Loading to prevent double-tap and ensure correct context handling
     showDialog(
       context: context,
@@ -677,7 +1210,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           .toList();
 
       // 3. Save
-      await ref
+      final newRecipe = await ref
           .read(recipeRepositoryProvider)
           .createRecipe(
             familyId: familyId,
@@ -692,19 +1225,105 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
             sourceUrl: 'Magic Plan AI',
           );
 
+      // LINK TO ENTRY if provided
+      if (entry != null) {
+        // Determine type of 'entry'. It should be MealPlanEntryModel.
+        // Since we are inside the page file, we might not have the import visible or castable purely by dynamic.
+        // We will assume it's the model object because we passed it.
+        // We need to clone it with new recipeId.
+
+        // Since 'dynamic', we rely on runtime reflection or just casting if we import the model.
+        // Actually imports are at top of file. Let's check imports.
+        // The file has access to `MealPlanEntryModel`.
+        if (entry is MealPlanEntryModel) {
+          final updatedEntry = entry.copyWith(
+            recipeId: newRecipe.id,
+            recipeTitle: newRecipe
+                .title, // Ensure local display updates if stream is slow
+            // customNote: null, // Maybe clear custom note? User said "switch from custom note to recipe"
+            // Ideally we clear custom note if it was just the name.
+          );
+          await ref
+              .read(mealPlanRepositoryProvider)
+              .saveMealEntry(updatedEntry);
+          ref.invalidate(currentWeekMealPlanProvider(familyId));
+        }
+      }
+
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close Loading
         Navigator.of(context, rootNavigator: true).pop(); // Close Recipe Dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recipe saved to My Recipes!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recipe saved & linked!')));
       }
     } catch (e) {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close Loading
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to save recipe: $e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+      }
+    }
+  }
+
+  Future<void> _regenerateSingleMeal(
+    DateTime date,
+    String mealType,
+    String planId,
+    String? currentEntryId,
+  ) async {
+    // 1. Get Preferences (Optional: reuse last or ask)
+    // For speed, let's just ask quickly or use defaults.
+    // Let's re-use the preference dialog but maybe simpler title?
+    final tags = await _showPreferencesDialog(); // Reuse dialog
+    if (tags == null) return;
+
+    // 2. Show Loading
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final gemini = ref.read(geminiServiceProvider);
+      final meal = await gemini.generateSingleMeal(
+        mealType: mealType,
+        dietaryTags: tags,
+      );
+
+      final familyId = ref.read(currentFamilyIdProvider);
+      if (familyId == null) throw Exception('No family selected');
+
+      // 3. Update or Create Entry
+      final entry = MealPlanEntryModel(
+        id: currentEntryId ?? '', // Update if exists, else create
+        planId: planId,
+        mealDate: date,
+        mealType: mealType.toLowerCase(),
+        customNote: '${meal['name']}: ${meal['description']}',
+        isCompleted: false,
+        recipeId: null, // Clear recipe link on regen
+      );
+
+      await ref.read(mealPlanRepositoryProvider).saveMealEntry(entry);
+      ref.invalidate(currentWeekMealPlanProvider(familyId));
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close Loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Meal regenerated!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close Loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to regenerate: $e')));
       }
     }
   }
@@ -836,6 +1455,17 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                     ),
 
                     // Actions
+                    IconButton(
+                      icon: const Icon(Icons.auto_awesome, size: 20),
+                      tooltip: isPlanned ? 'Regenerate Meal' : 'Generate Meal',
+                      onPressed: () => _regenerateSingleMeal(
+                        date,
+                        mealType,
+                        planId,
+                        entry?.id,
+                      ),
+                    ),
+
                     if (isPlanned)
                       IconButton(
                         icon: const Icon(Icons.menu_book),
@@ -846,6 +1476,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                                 entry.customNote as String? ??
                                 'Meal',
                             entry.customNote as String?,
+                            entry, // Pass the entry object for linking
                           );
                         },
                       ),

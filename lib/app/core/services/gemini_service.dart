@@ -28,6 +28,10 @@ class GeminiService {
     return key != null && key.isNotEmpty;
   }
 
+  Future<void> deleteApiKey() async {
+    await _storage.delete(key: _apiKeyStorageKey);
+  }
+
   Future<List<Map<String, dynamic>>> generateMealPlan({
     required int days,
     List<String>? preferences,
@@ -210,7 +214,37 @@ class GeminiService {
     Do NOT include markdown formatting. Just raw JSON.
     ''';
 
-    // Note: We delegate fully to the robust fallback logic
+    return _generateWithFallback(apiKey, prompt);
+  }
+
+  Future<Map<String, dynamic>> generateSingleMeal({
+    required String mealType,
+    List<String> dietaryTags = const [],
+  }) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) {
+      throw Exception('API Key not found');
+    }
+
+    final dietString = dietaryTags.isEmpty
+        ? ""
+        : "Dietary Requirements: ${dietaryTags.join(', ')}";
+
+    final prompt =
+        '''
+    Suggest a single meal idea for: $mealType
+    $dietString
+
+    Return a valid JSON object:
+    {
+      "name": "Meal Name",
+      "description": "Short appetizing description",
+      "tags": ["Vegetarian", "Quick"]
+    }
+    Do NOT include markdown. Raw JSON only.
+    ''';
+
+    // Reuse the robust map generation logic
     return _generateWithFallback(apiKey, prompt);
   }
 
