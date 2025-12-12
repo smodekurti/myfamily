@@ -7,6 +7,8 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../common/responsive/responsive_helper.dart';
+import '../../../../core/services/gemini_service.dart';
+import '../../../../data/models/meal_plan_model.dart';
 
 class MealPlannerPage extends ConsumerStatefulWidget {
   const MealPlannerPage({super.key});
@@ -24,6 +26,187 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     _selectedDate = DateTime.now();
   }
 
+  Future<void> _showApiKeyDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter Gemini API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'To use Magic Plan, you need a free Google Gemini API Key. The key is stored securely on your device.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'API Key',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await ref.read(geminiServiceProvider).setApiKey(result);
+      if (mounted) _handleMagicPlan();
+    }
+  }
+
+  Future<void> _handleMagicPlan() async {
+    final gemini = ref.read(geminiServiceProvider);
+    final hasKey = await gemini.hasApiKey();
+
+    if (!hasKey) {
+      if (mounted) _showApiKeyDialog();
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final plan = await gemini.generateMealPlan(days: 7);
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        _showPlanPreview(plan);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  void _showPlanPreview(List<Map<String, dynamic>> generatedPlan) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Magic Plan Preview'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: generatedPlan.length,
+            itemBuilder: (context, index) {
+              final day = generatedPlan[index];
+              final meals = (day['meals'] as List).cast<Map<String, dynamic>>();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Day ${index + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...meals.map(
+                    (meal) => ListTile(
+                      title: Text(meal['name']),
+                      subtitle: Text(
+                        '${meal['type']} - ${meal['description']}',
+                      ),
+                      dense: true,
+                    ),
+                  ),
+                  const Divider(),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _saveGeneratedPlan(generatedPlan);
+            },
+            child: const Text('Apply Plan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveGeneratedPlan(
+    List<Map<String, dynamic>> generatedPlan,
+  ) async {
+    final familyId = ref.read(currentFamilyIdProvider);
+    if (familyId == null) return;
+
+    final planAsync = await ref.read(
+      currentWeekMealPlanProvider(familyId).future,
+    );
+    final planId = planAsync.id;
+    final startDate = planAsync.startDate;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      for (int i = 0; i < generatedPlan.length; i++) {
+        final dayPlan = generatedPlan[i];
+        final date = startDate.add(Duration(days: i));
+        final meals = (dayPlan['meals'] as List).cast<Map<String, dynamic>>();
+
+        for (final meal in meals) {
+          final entry = MealPlanEntryModel(
+            id: '', // Repo generates ID
+            planId: planId,
+            mealDate: date,
+            mealType: (meal['type'] as String).toLowerCase(),
+            customNote: '${meal['name']}: ${meal['description']}',
+            isCompleted: false,
+          );
+
+          await ref.read(mealPlanRepositoryProvider).saveMealEntry(entry);
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ref.invalidate(currentWeekMealPlanProvider(familyId));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save plan: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentFamilyId = ref.watch(currentFamilyIdProvider);
@@ -35,6 +218,11 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       appBar: AppBar(
         title: const Text('Meal Planner'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'Magic Plan',
+            onPressed: _handleMagicPlan,
+          ),
           IconButton(
             icon: const Icon(Icons.restaurant_menu),
             tooltip: 'Recipes',
