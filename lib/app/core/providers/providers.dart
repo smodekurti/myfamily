@@ -217,6 +217,11 @@ final currentFamilyProvider = Provider((ref) {
   );
 });
 
+/// Biometric lock state (true = locked, false = unlocked)
+/// Defaults to false initially, but logic should check if bio is enabled
+/// For simplicity in this phase, we assume if logged in, we check bio.
+final biometricLockedProvider = StateProvider<bool>((ref) => false);
+
 /// App state providers
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final currentUser = ref.watch(currentUserProvider);
@@ -244,6 +249,12 @@ final routerStateProvider = Provider<RouterState>((ref) {
     return RouterState.unauthenticated;
   }
 
+  // Check biometric lock
+  final isLocked = ref.watch(biometricLockedProvider);
+  if (isLocked) {
+    return RouterState.biometricLocked;
+  }
+
   final userFamilies = ref.watch(userFamiliesProvider(currentUser.id));
   return userFamilies.when(
     data: (families) {
@@ -268,6 +279,7 @@ enum RouterState {
   loading,
   authenticatedWithoutFamily,
   authenticatedWithFamily,
+  biometricLocked,
 }
 
 /// Theme provider - defaults to dark theme

@@ -326,10 +326,10 @@ class AppConstants {
   // ============================================================================
 
   /// Splash screen animation duration
-  static const Duration splashAnimationDuration = Duration(seconds: 2);
+  static const Duration splashAnimationDuration = Duration(seconds: 3);
 
   /// Splash screen display duration before navigation
-  static const Duration splashDisplayDuration = Duration(seconds: 5);
+  static const Duration splashDisplayDuration = Duration(seconds: 3);
 
   /// Fade animation interval start
   static const double fadeAnimationStart = 0.0;

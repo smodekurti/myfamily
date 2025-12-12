@@ -45,16 +45,16 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   Future<void> _checkBiometricAvailability() async {
     if (!Platform.isIOS) return;
-    
+
     try {
       final biometricService = ref.read(biometricAuthServiceProvider);
-      
+
       // Check availability with error handling
       final isAvailable = await biometricService.isAvailable().catchError((e) {
         // Plugin may not be ready yet, return false
         return false;
       });
-      
+
       if (!isAvailable) {
         if (mounted) {
           setState(() {
@@ -64,17 +64,21 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         }
         return;
       }
-      
+
       // Check if enabled
-      final isEnabled = await biometricService.isBiometricLoginEnabled().catchError((e) {
-        return false;
-      });
-      
+      final isEnabled = await biometricService
+          .isBiometricLoginEnabled()
+          .catchError((e) {
+            return false;
+          });
+
       // Get type name
-      final typeName = await biometricService.getBiometricTypeName().catchError((e) {
-        return 'Face ID';
-      });
-      
+      final typeName = await biometricService.getBiometricTypeName().catchError(
+        (e) {
+          return 'Face ID';
+        },
+      );
+
       if (mounted) {
         setState(() {
           _isBiometricAvailable = isAvailable;
@@ -100,7 +104,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
     try {
       final biometricService = ref.read(biometricAuthServiceProvider);
-      
+
       // Authenticate with Face ID/Touch ID
       final authenticated = await biometricService.authenticate(
         reason: 'Please authenticate to sign in',
@@ -115,13 +119,15 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
       // Get saved credentials
       final credentials = await biometricService.getSavedCredentials();
-      
+
       if (credentials == null) {
         if (mounted) {
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('No saved credentials found. Please sign in with email and password.'),
+              content: Text(
+                'No saved credentials found. Please sign in with email and password.',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -135,7 +141,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         email: credentials['email']!,
         password: credentials['password']!,
       );
-      
+
       if (mounted) {
         context.go(AppConstants.routeHome);
       }
@@ -161,12 +167,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       final authRepo = ref.read(authRepositoryProvider);
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      
+
       await authRepo.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       // Save credentials for biometric login if on iOS
       if (Platform.isIOS && mounted) {
         try {
@@ -178,7 +184,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               context: context,
               builder: (context) => AlertDialog(
                 title: Text('Enable $_biometricTypeName?'),
-                content: Text('Would you like to use $_biometricTypeName to sign in quickly next time?'),
+                content: Text(
+                  'Would you like to use $_biometricTypeName to sign in quickly next time?',
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
@@ -191,7 +199,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 ],
               ),
             );
-            
+
             if (shouldEnable == true && mounted) {
               await biometricService.saveCredentials(
                 email: email,
@@ -206,7 +214,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           // Silently fail - don't block sign-in
         }
       }
-      
+
       if (mounted) {
         context.go(AppConstants.routeHome);
       }
@@ -232,7 +240,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
-      
+
       // OAuth flow will handle navigation via auth state listener
       // Don't navigate immediately as OAuth is asynchronous
     } catch (e) {
@@ -257,7 +265,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithApple();
-      
+
       if (mounted) {
         context.go(AppConstants.routeHome);
       }
@@ -293,7 +301,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: ResponsiveHelper.padding(horizontal: 24, vertical: 16),
+                    padding: ResponsiveHelper.padding(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -308,14 +319,18 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             ),
                           ),
                           SizedBox(height: ResponsiveHelper.h(20)),
-                          
+
                           // Face ID / Touch ID button (iOS only, if enabled)
-                          if (Platform.isIOS && _isBiometricAvailable && _isBiometricEnabled) ...[
+                          if (Platform.isIOS &&
+                              _isBiometricAvailable &&
+                              _isBiometricEnabled) ...[
                             SizedBox(
                               width: double.infinity,
                               height: ResponsiveHelper.buttonHeight(56),
                               child: OutlinedButton.icon(
-                                onPressed: _isLoading ? null : _signInWithBiometric,
+                                onPressed: _isLoading
+                                    ? null
+                                    : _signInWithBiometric,
                                 icon: Icon(
                                   Icons.face,
                                   size: ResponsiveHelper.iconSize(20),
@@ -323,18 +338,25 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                 ),
                                 label: Text(
                                   'Sign in with $_biometricTypeName',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                     width: 2,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: ResponsiveHelper.borderRadius(12),
+                                    borderRadius: ResponsiveHelper.borderRadius(
+                                      12,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -345,12 +367,20 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               children: [
                                 const Expanded(child: Divider()),
                                 Padding(
-                                  padding: ResponsiveHelper.padding(horizontal: 16),
+                                  padding: ResponsiveHelper.padding(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     'Or',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                   ),
                                 ),
                                 const Expanded(child: Divider()),
@@ -358,7 +388,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             ),
                             SizedBox(height: ResponsiveHelper.h(16)),
                           ],
-                          
+
                           // Email field
                           TextFormField(
                             controller: _emailController,
@@ -378,7 +408,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             },
                           ),
                           SizedBox(height: ResponsiveHelper.h(12)),
-                          
+
                           // Password field
                           TextFormField(
                             controller: _passwordController,
@@ -388,10 +418,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               prefixIcon: const Icon(Icons.lock_outlined),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                  _obscurePassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscurePassword = !_obscurePassword);
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
                                 },
                               ),
                             ),
@@ -399,14 +433,15 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password';
                               }
-                              if (value.length < AppConstants.minPasswordLength) {
+                              if (value.length <
+                                  AppConstants.minPasswordLength) {
                                 return 'Password must be at least ${AppConstants.minPasswordLength} characters';
                               }
                               return null;
                             },
                           ),
                           SizedBox(height: ResponsiveHelper.h(20)),
-                          
+
                           // Sign In button
                           SizedBox(
                             width: double.infinity,
@@ -414,47 +449,66 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _signInWithEmail,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimary,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: ResponsiveHelper.borderRadius(12),
+                                  borderRadius: ResponsiveHelper.borderRadius(
+                                    12,
+                                  ),
                                 ),
                               ),
                               child: _isLoading
                                   ? CircularProgressIndicator(
-                                      color: Theme.of(context).colorScheme.onPrimary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
                                     )
                                   : Text(
                                       'Sign In',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Theme.of(context).colorScheme.onPrimary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                             ),
                           ),
-                          
+
                           SizedBox(height: ResponsiveHelper.h(16)),
-                          
+
                           // Divider
                           Row(
                             children: [
                               const Expanded(child: Divider()),
                               Padding(
-                                padding: ResponsiveHelper.padding(horizontal: 16),
+                                padding: ResponsiveHelper.padding(
+                                  horizontal: 16,
+                                ),
                                 child: Text(
                                   'Or',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
                                 ),
                               ),
                               const Expanded(child: Divider()),
                             ],
                           ),
-                          
+
                           SizedBox(height: ResponsiveHelper.h(16)),
-                          
+
                           // Google Sign In button
                           SizedBox(
                             width: double.infinity,
@@ -469,29 +523,32 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                   return Icon(
                                     Icons.login,
                                     size: ResponsiveHelper.iconSize(20),
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   );
                                 },
                               ),
                               label: Text(
                                 'Sign in with Google',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(
                                   color: Theme.of(context).colorScheme.outline,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: ResponsiveHelper.borderRadius(12),
+                                  borderRadius: ResponsiveHelper.borderRadius(
+                                    12,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          
+
                           SizedBox(height: ResponsiveHelper.h(12)),
-                          
+
                           // Apple Sign In button (iOS only)
                           if (Platform.isIOS)
                             SizedBox(
@@ -502,25 +559,30 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                 icon: Icon(
                                   Icons.apple,
                                   size: ResponsiveHelper.iconSize(20),
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                 ),
                                 label: Text(
                                   'Sign in with Apple',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: ResponsiveHelper.borderRadius(12),
+                                    borderRadius: ResponsiveHelper.borderRadius(
+                                      12,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          
+
                           SizedBox(height: ResponsiveHelper.h(16)),
                         ],
                       ),
@@ -528,7 +590,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   ),
                 ),
               ),
-              
+
               // Sign Up link (fixed at bottom)
               Padding(
                 padding: ResponsiveHelper.padding(horizontal: 24, vertical: 16),
