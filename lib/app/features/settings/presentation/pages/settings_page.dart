@@ -8,6 +8,8 @@ import '../../../../core/services/push_notification_service.dart';
 // import 'package:package_info_plus/package_info_plus.dart'; // Optional - can be added later
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/gemini_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/user_model.dart';
@@ -116,6 +118,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     // Account Settings
                     _buildSectionHeader(context, 'Account'),
                     _buildAccountCard(context),
+
+                    SizedBox(height: ResponsiveHelper.h(24)),
+
+                    // Magic AI Settings
+                    _buildSectionHeader(context, 'Magic AI'),
+                    _buildMagicPlanCard(context),
 
                     SizedBox(height: ResponsiveHelper.h(24)),
 
@@ -429,6 +437,180 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
+        );
+      }
+    }
+  }
+
+  Widget _buildMagicPlanCard(BuildContext context) {
+    return ModernCard(
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: Icon(
+          Icons.auto_awesome,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text('Magic AI Settings'),
+        subtitle: const Text('Manage your Gemini API Key'),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+        ),
+        onTap: _showKeyManagementDialog,
+      ),
+    );
+  }
+
+  Future<void> _showKeyManagementDialog() async {
+    final hasKey = await ref.read(geminiServiceProvider).hasApiKey();
+    if (!hasKey) {
+      _showApiKeyDialog();
+      return;
+    }
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Gemini API Settings'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context);
+              _showApiKeyDialog();
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.edit),
+                  SizedBox(width: 12),
+                  Text('Update API Key'),
+                ],
+              ),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () async {
+              Navigator.pop(context);
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete API Key?'),
+                  content: const Text(
+                    'This will remove the key from your device. You will need to enter it again to use Magic features.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await ref.read(geminiServiceProvider).deleteApiKey();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('API Key deleted')),
+                  );
+                }
+              }
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Delete API Key', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showApiKeyDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter Gemini API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'To use Magic Plan, you need a free Google Gemini API Key. The key is stored securely on your device.',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Don\'t have a key?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse(
+                  'https://aistudio.google.com/app/apikey',
+                );
+                if (!await launchUrl(url)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch URL')),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'Get a free API Key here ↗',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Paste API Key',
+                hintText: 'AIzaSy...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save Key'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await ref.read(geminiServiceProvider).setApiKey(result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('API Key saved successfully')),
         );
       }
     }

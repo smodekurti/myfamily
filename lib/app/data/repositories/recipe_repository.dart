@@ -1,3 +1,4 @@
+import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/services/role_permission_service.dart';
 import '../models/recipe_model.dart';
@@ -5,6 +6,7 @@ import 'family_repository.dart';
 
 class RecipeRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final _logger = Logger();
   final RolePermissionService _roleService = RolePermissionService();
   final FamilyRepository _familyRepository = FamilyRepository();
 
@@ -104,6 +106,21 @@ class RecipeRepository {
       return RecipeModelHelpers.fromSupabase(response);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<bool> checkRecipeExists(String familyId, String title) async {
+    try {
+      final response = await _supabase
+          .from('recipes')
+          .select('id')
+          .eq('family_id', familyId)
+          .ilike('title', title) // Case-insensitive check
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      _logger.e('Check recipe exists error: $e');
+      return false;
     }
   }
 }
