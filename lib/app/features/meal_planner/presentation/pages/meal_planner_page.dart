@@ -79,8 +79,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     if (!mounted) return;
 
     // Show Preferences Dialog
-    final isVegetarian = await _showPreferencesDialog();
-    if (isVegetarian == null) return; // User cancelled
+    final selectedTags = await _showPreferencesDialog();
+    if (selectedTags == null) return; // User cancelled
 
     // Show loading
     showDialog(
@@ -93,7 +93,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     try {
       final plan = await gemini.generateMealPlan(
         days: 7,
-        isVegetarian: isVegetarian,
+        dietaryTags: selectedTags,
       );
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
@@ -109,9 +109,22 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
-  Future<bool?> _showPreferencesDialog() async {
-    bool isVegetarian = false;
-    return await showDialog<bool>(
+  Future<List<String>?> _showPreferencesDialog() async {
+    final List<String> options = [
+      'Vegetarian',
+      'Vegan',
+      'Gluten-Free',
+      'Dairy-Free',
+      'Nut-Free',
+      'Kid-Friendly',
+      'Healthy',
+      'Low-Carb',
+    ];
+
+    // Default selection (none)
+    List<String> selected = [];
+
+    return await showDialog<List<String>>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
@@ -119,14 +132,29 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
             title: const Text('Magic Plan Options'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Customize your meal plan generation.'),
+                const Text('Select dietary requirements and preferences:'),
                 const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Vegetarian Only'),
-                  subtitle: const Text('Exclude meat and fish'),
-                  value: isVegetarian,
-                  onChanged: (value) => setState(() => isVegetarian = value),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: options.map((option) {
+                    final isSelected = selected.contains(option);
+                    return FilterChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      onSelected: (bool value) {
+                        setState(() {
+                          if (value) {
+                            selected.add(option);
+                          } else {
+                            selected.remove(option);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -136,7 +164,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                 child: const Text('Cancel'),
               ),
               FilledButton.icon(
-                onPressed: () => Navigator.pop(context, isVegetarian),
+                onPressed: () => Navigator.pop(context, selected),
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text('Generate'),
               ),
@@ -511,6 +539,186 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     );
   }
 
+  Future<void> _showRecipeDialog(String mealName, String? description) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final gemini = ref.read(geminiServiceProvider);
+      // We can pass current dietary tags if we tracked them globally,
+      // but for now let's just generate a standard recipe matching the description.
+      // Improvement: Store dietary tags in the meal entry or pass from global state.
+      final recipe = await gemini.generateRecipe(
+        mealName: mealName,
+        description: description,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(recipe['title'] ?? mealName),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (recipe['description'] != null) ...[
+                      Text(
+                        recipe['description'],
+                        style: const TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildInfoChip(Icons.timer, recipe['prepTime']),
+                        _buildInfoChip(Icons.soup_kitchen, recipe['cookTime']),
+                        _buildInfoChip(
+                          Icons.person,
+                          '${recipe['servings']} servings',
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const Text(
+                      'Ingredients',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ...(recipe['ingredients'] as List? ?? []).map(
+                      (i) => Text('• $i'),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Instructions',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ...(recipe['instructions'] as List? ?? [])
+                        .asMap()
+                        .entries
+                        .map((e) => Text('${e.key + 1}. ${e.value}\n')),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              FilledButton.icon(
+                // IMPORT BUTTON
+                onPressed: () => _saveRecipeToRepo(recipe),
+                icon: const Icon(Icons.save_alt),
+                label: const Text('Save to Recipes'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate recipe: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveRecipeToRepo(Map<String, dynamic> recipeData) async {
+    // Show Loading to prevent double-tap and ensure correct context handling
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final familyId = ref.read(currentFamilyIdProvider);
+      if (familyId == null) throw Exception('No family selected');
+
+      // 1. Parse Integers (Regex to extract digits)
+      int? parseTime(String? val) {
+        if (val == null) return null;
+        final match = RegExp(r'(\d+)').firstMatch(val);
+        return match != null ? int.parse(match.group(1)!) : null;
+      }
+
+      final prepTime = parseTime(recipeData['prepTime']);
+      final cookTime = parseTime(recipeData['cookTime']);
+      final servings = parseTime(recipeData['servings'].toString()) ?? 4;
+
+      // 2. Map Ingredients to Structured JSON
+      // RecipeModel expects List<Map<String, dynamic>> usually {name, quantity, unit}
+      // AI gives us a string list. We'll verify what RecipeModel expects.
+      // Based on previous view, it expects List<Map<String, dynamic>>.
+      // We will put the whole string in 'name' for simplicity as parsing NLP is hard.
+      final ingredients = (recipeData['ingredients'] as List? ?? [])
+          .map((i) => {'name': i.toString(), 'qty': 1, 'unit': ''})
+          .toList()
+          .cast<Map<String, dynamic>>();
+
+      final instructions = (recipeData['instructions'] as List? ?? [])
+          .map((i) => i.toString())
+          .toList();
+
+      // 3. Save
+      await ref
+          .read(recipeRepositoryProvider)
+          .createRecipe(
+            familyId: familyId,
+            title: recipeData['title'],
+            description: recipeData['description'],
+            prepTimeMinutes: prepTime,
+            cookTimeMinutes: cookTime,
+            servings: servings,
+            ingredients: ingredients,
+            instructions: instructions,
+            tags: ['AI Generated'], // Tag it!
+            sourceUrl: 'Magic Plan AI',
+          );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close Loading
+        Navigator.of(context, rootNavigator: true).pop(); // Close Recipe Dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recipe saved to My Recipes!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close Loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save recipe: $e')));
+      }
+    }
+  }
+
+  Widget _buildInfoChip(IconData icon, String? label) {
+    if (label == null) return const SizedBox();
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
   Widget _buildMealCard(
     BuildContext context,
     String mealType,
@@ -627,14 +835,22 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                       ),
                     ),
 
-                    // Action Icon
-                    Icon(
-                      isPlanned
-                          ? Icons.chevron_right
-                          : Icons.add_circle_outline,
-                      color: isPlanned ? Colors.grey : AppTheme.primaryColor,
-                      size: 24.sp,
-                    ),
+                    // Actions
+                    if (isPlanned)
+                      IconButton(
+                        icon: const Icon(Icons.menu_book),
+                        tooltip: 'View Recipe',
+                        onPressed: () {
+                          _showRecipeDialog(
+                            entry.recipeTitle as String? ??
+                                entry.customNote as String? ??
+                                'Meal',
+                            entry.customNote as String?,
+                          );
+                        },
+                      ),
+
+                    Icon(Icons.chevron_right, color: Colors.grey, size: 24.sp),
                   ],
                 ),
               ],
