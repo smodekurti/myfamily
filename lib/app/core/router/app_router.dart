@@ -449,10 +449,10 @@ class MainShell extends ConsumerWidget {
       currentIndex = 1;
     } else if (currentRoute == AppConstants.routeGroceries) {
       currentIndex = 2;
-    } else if (currentRoute == AppConstants.routeCalendar) {
-      currentIndex = 3;
     } else if (currentRoute == AppConstants.routeMealPlanner ||
         currentRoute.startsWith(AppConstants.routeRecipes)) {
+      currentIndex = 3;
+    } else if (currentRoute == AppConstants.routeCalendar) {
       currentIndex = 4;
     }
 
@@ -542,16 +542,16 @@ class MainShell extends ConsumerWidget {
                       context,
                       ref,
                       3,
-                      Icons.calendar_month_rounded,
-                      'Calendar',
+                      Icons.restaurant_menu_rounded,
+                      'Meals',
                       currentIndex == 3,
                     ),
                     _buildNavItem(
                       context,
                       ref,
                       4,
-                      Icons.restaurant_menu_rounded,
-                      'Meals',
+                      Icons.calendar_month_rounded,
+                      'Calendar',
                       currentIndex == 4,
                     ),
                   ],
@@ -594,17 +594,17 @@ class MainShell extends ConsumerWidget {
             context.go(AppConstants.routeGroceries);
             break;
           case 3:
-            context.go(AppConstants.routeCalendar);
+            context.go(AppConstants.routeMealPlanner);
             break;
           case 4:
-            context.go(AppConstants.routeMealPlanner);
+            context.go(AppConstants.routeCalendar);
             break;
         }
       },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: ResponsiveHelper.padding(horizontal: 16, vertical: 10),
+        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
