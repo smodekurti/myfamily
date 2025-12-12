@@ -11,6 +11,7 @@ import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/sign_in_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/consent_page.dart';
+import '../../features/auth/presentation/pages/bio_auth_screen.dart';
 import '../../features/family/presentation/pages/get_started_page.dart';
 import '../../features/family/presentation/pages/family_selection_page.dart';
 import '../../features/family/presentation/pages/family_setup_page.dart';
@@ -73,6 +74,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             return null;
           }
           return AppConstants.routeSplash;
+
+        case RouterState.biometricLocked:
+          if (state.matchedLocation == '/bio-auth') {
+            return null;
+          }
+          return '/bio-auth';
 
         case RouterState.authenticatedWithoutFamily:
           // Check if user needs consent (either no consent or version mismatch)
@@ -179,6 +186,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
+      GoRoute(
+        path: '/bio-auth',
+        builder: (context, state) => BioAuthScreen(
+          onAuthenticated: () {
+            ref.read(biometricLockedProvider.notifier).state = false;
+          },
+        ),
+      ),
       // Splash route
       GoRoute(
         path: AppConstants.routeSplash,

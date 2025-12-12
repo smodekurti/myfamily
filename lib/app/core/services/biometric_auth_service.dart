@@ -1,224 +1,106 @@
-import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:local_auth/error_codes.dart' as auth_error;
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:logger/logger.dart';
 
-/// Service for handling biometric authentication (Face ID / Touch ID)
 class BiometricAuthService {
-  final LocalAuthentication _localAuth = LocalAuthentication();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  final Logger _logger = Logger();
+  final LocalAuthentication auth = LocalAuthentication();
+  final _storage = const FlutterSecureStorage();
 
-  /// Check if biometric authentication is available on the device
+  static const _keyEmail = 'biometric_email';
+  static const _keyPassword = 'biometric_password';
+  static const _keyEnabled = 'biometric_enabled';
+
+  Future<bool> get isDeviceSupported async {
+    try {
+      return await auth.isDeviceSupported();
+    } on PlatformException catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> isAvailable() async {
-    if (!Platform.isIOS) {
-      return false; // Only support iOS for now
-    }
-
     try {
-      // Check if device is supported (may fail if plugin not ready)
-      final isDeviceSupported = await _localAuth.isDeviceSupported().catchError((e) {
-        return false;
-      });
-      
-      if (!isDeviceSupported) {
-        return false;
-      }
-      
-      // Check if biometrics can be checked
-      final canCheckBiometrics = await _localAuth.canCheckBiometrics.catchError((e) {
-        return false;
-      });
-      
-      final isAvailable = isDeviceSupported && canCheckBiometrics;
-      
-      return isAvailable;
-    } catch (e, stackTrace) {
-      _logger.e('Error checking biometric availability: $e', error: e, stackTrace: stackTrace);
+      final supported = await auth.isDeviceSupported();
+      final canCheck = await auth.canCheckBiometrics;
+      return supported && canCheck;
+    } on PlatformException catch (_) {
       return false;
     }
   }
 
-  /// Get available biometric types
-  Future<List<BiometricType>> getAvailableBiometrics() async {
-    try {
-      return await _localAuth.getAvailableBiometrics().catchError((e) {
-        return <BiometricType>[];
-      });
-    } catch (e) {
-      _logger.e('Error getting available biometrics: $e');
-      return [];
-    }
-  }
-
-  /// Check if Face ID is available
-  Future<bool> isFaceIdAvailable() async {
-    if (!Platform.isIOS) return false;
-    
-    try {
-      final biometrics = await getAvailableBiometrics();
-      return biometrics.contains(BiometricType.face);
-    } catch (e) {
-      _logger.e('Error checking Face ID availability: $e');
-      return false;
-    }
-  }
-
-  /// Check if Touch ID is available
-  Future<bool> isTouchIdAvailable() async {
-    if (!Platform.isIOS) return false;
-    
-    try {
-      final biometrics = await getAvailableBiometrics();
-      return biometrics.contains(BiometricType.fingerprint);
-    } catch (e) {
-      _logger.e('Error checking Touch ID availability: $e');
-      return false;
-    }
-  }
-
-  /// Get the biometric type name for display
   Future<String> getBiometricTypeName() async {
     try {
-      if (await isFaceIdAvailable()) {
+      final biometrics = await auth.getAvailableBiometrics();
+      if (biometrics.contains(BiometricType.face)) {
         return 'Face ID';
-      } else if (await isTouchIdAvailable()) {
+      } else if (biometrics.contains(BiometricType.fingerprint)) {
         return 'Touch ID';
+      } else if (biometrics.contains(BiometricType.iris)) {
+        return 'Iris Scanner';
       }
-      return 'Biometric';
-    } catch (e) {      return 'Face ID'; // Default to Face ID
-    }
+    } catch (_) {}
+    return 'Biometrics';
   }
 
-  /// Authenticate using biometrics
-  /// Returns true if authentication succeeds, false otherwise
   Future<bool> authenticate({
-    String reason = 'Please authenticate to continue',
-    bool useErrorDialogs = true,
-    bool stickyAuth = true,
+    String reason = 'Please authenticate to access the app',
   }) async {
     try {
-      final isAvailable = await this.isAvailable();
-      if (!isAvailable) {        return false;
-      }
-
-      final biometricType = await getBiometricTypeName();
-      final localizedReason = reason.replaceAll('authenticate', biometricType.toLowerCase());
-
-      final didAuthenticate = await _localAuth.authenticate(
-        localizedReason: localizedReason,
-        options: AuthenticationOptions(
-          useErrorDialogs: useErrorDialogs,
-          stickyAuth: stickyAuth,
-          biometricOnly: true, // Only use biometrics, not device passcode
+      final bool didAuthenticate = await auth.authenticate(
+        localizedReason: reason,
+        options: const AuthenticationOptions(
+          stickyAuth: true, // Re-auth if app moved to background
+          biometricOnly: false, // Allow PIN/Pattern fallback
         ),
-      ).catchError((e) {
-        _logger.e('Biometric authentication failed: $e');
-        return false;
-      });
-
-      if (didAuthenticate) {      } else {      }
-
+      );
       return didAuthenticate;
     } on PlatformException catch (e) {
-      _logger.e('Biometric authentication platform error: ${e.code} - ${e.message}');
-      return false;
-    } catch (e, stackTrace) {
-      _logger.e('Biometric authentication error: $e', error: e, stackTrace: stackTrace);
-      return false;
+      if (e.code == auth_error.notAvailable) {
+        // Biometrics not available
+        return false;
+      } else if (e.code == auth_error.notEnrolled) {
+        // User has not enrolled biometrics
+        return false;
+      } else {
+        // Other error
+        return false;
+      }
     }
   }
 
-  /// Save credentials securely for biometric login
+  // Persistence for Login
   Future<void> saveCredentials({
     required String email,
     required String password,
   }) async {
-    try {
-      await _secureStorage.write(key: 'biometric_email', value: email).catchError((e) {
-        _logger.e('Error saving email: $e');
-        throw Exception('Failed to save credentials: $e');
-      });
-      await _secureStorage.write(key: 'biometric_password', value: password).catchError((e) {
-        _logger.e('Error saving password: $e');
-        throw Exception('Failed to save credentials: $e');
-      });
-      await _secureStorage.write(key: 'biometric_enabled', value: 'true').catchError((e) {
-        _logger.e('Error saving enabled flag: $e');
-        throw Exception('Failed to save credentials: $e');
-      });    } catch (e, stackTrace) {
-      _logger.e('Error saving credentials: $e', error: e, stackTrace: stackTrace);
-      rethrow;
-    }
+    await _storage.write(key: _keyEmail, value: email);
+    await _storage.write(key: _keyPassword, value: password);
+    await _storage.write(key: _keyEnabled, value: 'true');
   }
 
-  /// Get saved credentials
   Future<Map<String, String>?> getSavedCredentials() async {
-    try {
-      final email = await _secureStorage.read(key: 'biometric_email').catchError((e) {
-        return null;
-      });
-      final password = await _secureStorage.read(key: 'biometric_password').catchError((e) {
-        return null;
-      });
-      
-      if (email != null && password != null) {
-        return {
-          'email': email,
-          'password': password,
-        };
-      }
-      return null;
-    } catch (e, stackTrace) {
-      _logger.e('Error reading saved credentials: $e', error: e, stackTrace: stackTrace);
-      return null;
+    final enabled = await _storage.read(key: _keyEnabled);
+    if (enabled != 'true') return null;
+
+    final email = await _storage.read(key: _keyEmail);
+    final password = await _storage.read(key: _keyPassword);
+
+    if (email != null && password != null) {
+      return {'email': email, 'password': password};
     }
+    return null;
   }
 
-  /// Check if biometric login is enabled
   Future<bool> isBiometricLoginEnabled() async {
-    try {
-      final enabled = await _secureStorage.read(key: 'biometric_enabled').catchError((e) {
-        return null;
-      });
-      return enabled == 'true';
-    } catch (e) {
-      _logger.e('Error checking biometric login status: $e');
-      return false;
-    }
+    final val = await _storage.read(key: _keyEnabled);
+    return val == 'true';
   }
 
-  /// Enable biometric login
-  Future<void> enableBiometricLogin() async {
-    try {
-      await _secureStorage.write(key: 'biometric_enabled', value: 'true').catchError((e) {
-        _logger.e('Error enabling biometric login: $e');
-        throw Exception('Failed to enable biometric login: $e');
-      });    } catch (e, stackTrace) {
-      _logger.e('Error enabling biometric login: $e', error: e, stackTrace: stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Disable biometric login and clear saved credentials
   Future<void> disableBiometricLogin() async {
-    try {
-      await _secureStorage.delete(key: 'biometric_enabled').catchError((e) {      });
-      await _secureStorage.delete(key: 'biometric_email').catchError((e) {      });
-      await _secureStorage.delete(key: 'biometric_password').catchError((e) {      });    } catch (e, stackTrace) {
-      _logger.e('Error disabling biometric login: $e', error: e, stackTrace: stackTrace);
-      // Don't rethrow - allow graceful degradation
-    }
-  }
-
-  /// Clear all saved credentials
-  Future<void> clearCredentials() async {
-    try {
-      await _secureStorage.delete(key: 'biometric_email').catchError((e) {      });
-      await _secureStorage.delete(key: 'biometric_password').catchError((e) {      });    } catch (e, stackTrace) {
-      _logger.e('Error clearing credentials: $e', error: e, stackTrace: stackTrace);
-      // Don't rethrow - allow graceful degradation
-    }
+    await _storage.delete(key: _keyEnabled);
+    await _storage.delete(key: _keyEmail);
+    await _storage.delete(key: _keyPassword);
   }
 }
