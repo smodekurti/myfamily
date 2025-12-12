@@ -32,21 +32,19 @@ class GeminiService {
     required int days,
     List<String>? preferences,
     List<String>? avoid,
-    bool isVegetarian = false,
+    List<String> dietaryTags = const [],
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null) {
       throw Exception('API Key not found');
     }
 
-    final dietString = isVegetarian
-        ? "STRICTLY VEGETARIAN (No meat, poultry, or fish)"
-        : "Non-Vegetarian (Include meat, poultry, or fish)";
+    final dietString = dietaryTags.isEmpty ? "None" : dietaryTags.join(', ');
 
     final prompt =
         '''
     Generate a meal plan for $days days.
-    Dietary Requirement: $dietString
+    Dietary Requirements: $dietString
     Preferences: ${preferences?.join(', ') ?? 'None'}
     Avoid: ${avoid?.join(', ') ?? 'None'}
     
@@ -166,6 +164,154 @@ class GeminiService {
 
     _logger.e(errorMsg.toString());
     throw Exception(errorMsg.toString());
+  }
+
+  Future<Map<String, dynamic>> generateRecipe({
+    required String mealName,
+    String? description,
+    List<String> dietaryTags = const [],
+  }) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) {
+      throw Exception('API Key not found');
+    }
+
+    final dietString = dietaryTags.isEmpty
+        ? ""
+        : "Dietary Requirements: ${dietaryTags.join(', ')}";
+
+    final prompt =
+        '''
+    Create a detailed recipe for: $mealName
+    Context/Description: ${description ?? ''}
+    $dietString
+
+    You MUST return a valid JSON object with the following structure:
+    {
+      "title": "Recipe Title",
+      "description": "Short appetizing description",
+      "prepTime": "15 mins",
+      "cookTime": "30 mins",
+      "servings": "4",
+      "ingredients": [
+        "1 cup rice",
+        "200g chicken breast"
+      ],
+      "instructions": [
+        "Step 1...",
+        "Step 2..."
+      ],
+      "nutritionalInfo": {
+         "calories": "300 kcal",
+         "protein": "20g"
+      }
+    }
+    
+    Do NOT include markdown formatting. Just raw JSON.
+    ''';
+
+    // Note: We delegate fully to the robust fallback logic
+    return _generateWithFallback(apiKey, prompt);
+  }
+
+  // Helper to reuse the robust discovery/fallback logic
+  Future<Map<String, dynamic>> _generateWithFallback(
+    String apiKey,
+    String prompt,
+  ) async {
+    // 1. DYNAMIC DISCOVERY (REST)
+    // ... (Reuse the exact same logic as generateMealPlan but generic)
+    try {
+      final discoveredModels = await _listModelsRaw(apiKey);
+
+      if (discoveredModels.isNotEmpty) {
+        // Prioritize: 2.5 Flash > 1.5 Flash > 1.5 Pro > 1.0 Pro
+        discoveredModels.sort((a, b) {
+          final nA = a.toLowerCase();
+          final nB = b.toLowerCase();
+          int score(String n) {
+            if (n.contains('2.5') && n.contains('flash')) return 4;
+            if (n.contains('1.5') && n.contains('flash')) return 3;
+            if (n.contains('1.5') && n.contains('pro')) return 2;
+            if (n.contains('pro')) return 1;
+            return 0;
+          }
+
+          return score(nB).compareTo(score(nA));
+        });
+
+        for (final modelName in discoveredModels) {
+          try {
+            return await _generateMapWithModel(modelName, apiKey, prompt);
+          } catch (e) {
+            _logger.w(
+              'Recipe: Discovered model $modelName failed: $e. Trying next...',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      _logger.w('Recipe: REST Discovery failed ($e). Falling back.');
+    }
+
+    // 2. FALLBACK
+    final potentialModels = [
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-latest',
+      'gemini-pro',
+      'gemini-1.0-pro',
+    ];
+
+    for (final modelName in potentialModels) {
+      try {
+        return await _generateMapWithModel(modelName, apiKey, prompt);
+      } catch (e) {
+        // continue
+      }
+    }
+    throw Exception('Failed to generate recipe. No working model found.');
+  }
+
+  /// Helper for generating a generic Map (JSON object) response
+  Future<Map<String, dynamic>> _generateMapWithModel(
+    String modelName,
+    String apiKey,
+    String prompt,
+  ) async {
+    _logger.d('Attempting map generation with model: $modelName');
+    final model = GenerativeModel(model: modelName, apiKey: apiKey);
+
+    final content = [Content.text(prompt)];
+    final response = await model.generateContent(content);
+
+    if (response.text == null) {
+      throw Exception('Empty response from AI');
+    }
+
+    // Clean the response if it contains markdown code blocks
+    String jsonString = response.text!;
+    if (jsonString.startsWith('```json')) {
+      jsonString = jsonString.replaceAll('```json', '').replaceAll('```', '');
+    } else if (jsonString.startsWith('```')) {
+      jsonString = jsonString.replaceAll('```', '');
+    }
+
+    // Trim whitespace
+    jsonString = jsonString.trim();
+
+    try {
+      final dynamic decoded = json.decode(jsonString);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      throw Exception('Response was not a JSON object');
+    } catch (parseError) {
+      _logger.e('JSON Parse Error: $parseError\nContent: $jsonString');
+      throw Exception('Failed to parse AI response: $parseError');
+    }
   }
 
   /// Manually list models via REST to avoid SDK versioning issues.
