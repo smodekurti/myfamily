@@ -32,15 +32,21 @@ class GeminiService {
     required int days,
     List<String>? preferences,
     List<String>? avoid,
+    bool isVegetarian = false,
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null) {
       throw Exception('API Key not found');
     }
 
+    final dietString = isVegetarian
+        ? "STRICTLY VEGETARIAN (No meat, poultry, or fish)"
+        : "Non-Vegetarian (Include meat, poultry, or fish)";
+
     final prompt =
         '''
     Generate a meal plan for $days days.
+    Dietary Requirement: $dietString
     Preferences: ${preferences?.join(', ') ?? 'None'}
     Avoid: ${avoid?.join(', ') ?? 'None'}
     
