@@ -78,6 +78,10 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
 
     if (!mounted) return;
 
+    // Show Preferences Dialog
+    final isVegetarian = await _showPreferencesDialog();
+    if (isVegetarian == null) return; // User cancelled
+
     // Show loading
     showDialog(
       context: context,
@@ -87,7 +91,10 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     );
 
     try {
-      final plan = await gemini.generateMealPlan(days: 7);
+      final plan = await gemini.generateMealPlan(
+        days: 7,
+        isVegetarian: isVegetarian,
+      );
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
         _showPlanPreview(plan);
@@ -100,6 +107,44 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  Future<bool?> _showPreferencesDialog() async {
+    bool isVegetarian = false;
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Magic Plan Options'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Customize your meal plan generation.'),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Vegetarian Only'),
+                  subtitle: const Text('Exclude meat and fish'),
+                  value: isVegetarian,
+                  onChanged: (value) => setState(() => isVegetarian = value),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, isVegetarian),
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Generate'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showPlanPreview(List<Map<String, dynamic>> generatedPlan) {
@@ -166,6 +211,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     final planId = planAsync.id;
     final startDate = planAsync.startDate;
 
+    final existingEntries = planAsync.entries ?? [];
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -180,13 +227,25 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         final meals = (dayPlan['meals'] as List).cast<Map<String, dynamic>>();
 
         for (final meal in meals) {
+          final type = (meal['type'] as String).toLowerCase();
+
+          // Find existing entry to update
+          final existingEntry = existingEntries.where((e) {
+            return DateUtils.isSameDay(e.mealDate, date) &&
+                e.mealType.toLowerCase() == type;
+          }).firstOrNull;
+
           final entry = MealPlanEntryModel(
-            id: '', // Repo generates ID
+            id:
+                existingEntry?.id ??
+                '', // Use existing ID to update, or empty to create
             planId: planId,
             mealDate: date,
-            mealType: (meal['type'] as String).toLowerCase(),
+            mealType: type,
             customNote: '${meal['name']}: ${meal['description']}',
             isCompleted: false,
+            // Clear recipe link if we are overwriting with a generic AI plan
+            recipeId: null,
           );
 
           await ref.read(mealPlanRepositoryProvider).saveMealEntry(entry);
