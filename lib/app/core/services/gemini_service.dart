@@ -72,102 +72,7 @@ class GeminiService {
     ]
     ''';
 
-    // Diagnostic state
-    String discoveryStatus = 'Not Attempted';
-    int modelsFoundCount = 0;
-    String? discoveryError;
-
-    // 1. DYNAMIC DISCOVERY (REST)
-    try {
-      _logger.i('Attempting to discover available models via REST API...');
-      final discoveredModels = await _listModelsRaw(apiKey);
-      modelsFoundCount = discoveredModels.length;
-      discoveryStatus = 'Success';
-
-      if (discoveredModels.isNotEmpty) {
-        _logger.d('Discovered models (REST): ${discoveredModels.join(', ')}');
-
-        // Prioritize: 2.5 Flash > 1.5 Flash > 1.5 Pro > 1.0 Pro
-        discoveredModels.sort((a, b) {
-          final nA = a.toLowerCase();
-          final nB = b.toLowerCase();
-          int score(String n) {
-            if (n.contains('2.5') && n.contains('flash')) return 4;
-            if (n.contains('1.5') && n.contains('flash')) return 3;
-            if (n.contains('1.5') && n.contains('pro')) return 2;
-            if (n.contains('pro')) return 1;
-            return 0;
-          }
-
-          return score(nB).compareTo(score(nA));
-        });
-
-        // Try *all* discovered models, not just the first one
-        for (final modelName in discoveredModels) {
-          try {
-            _logger.i('Trying discovered model: $modelName');
-            return await _generateWithModel(modelName, apiKey, prompt);
-          } catch (e) {
-            _logger.w('Discovered model $modelName failed: $e. Trying next...');
-          }
-        }
-        // If we exit loop, all discovered models failed
-        discoveryStatus = 'All Discovered Models Failed';
-      } else {
-        discoveryStatus = 'Success (0 models found)';
-      }
-    } catch (e) {
-      discoveryStatus = 'Failed';
-      discoveryError = e.toString();
-      _logger.w(
-        'REST Discovery failed ($e). Falling back to hardcoded aliases.',
-      );
-    }
-
-    // 2. FALLBACK: Hardcoded list
-    final potentialModels = [
-      'gemini-2.5-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-latest',
-      'gemini-pro',
-      'gemini-1.0-pro',
-    ];
-
-    Exception? lastError;
-
-    for (final modelName in potentialModels) {
-      try {
-        return await _generateWithModel(modelName, apiKey, prompt);
-      } catch (e) {
-        _logger.w('Fallback alias $modelName failed: $e');
-        lastError = e as Exception;
-      }
-    }
-
-    // FINAL ERROR REPORT
-    final StringBuffer errorMsg = StringBuffer();
-    errorMsg.writeln('AI Generation Failed.');
-    errorMsg.writeln('Diagnostics:');
-    errorMsg.writeln('- Discovery Status: $discoveryStatus');
-    if (discoveryError != null)
-      errorMsg.writeln('- Discovery Error: $discoveryError');
-    errorMsg.writeln('- Models Found via API: $modelsFoundCount');
-    errorMsg.writeln('- Last Fallback Error: ${lastError.toString()}');
-
-    if (modelsFoundCount == 0 && discoveryStatus.contains('Success')) {
-      errorMsg.writeln(
-        '\nSUGGESTION: Your API Key works, but has NO access to any Generative Models. Enable "Generative Language API" in Google Cloud Console.',
-      );
-    } else if (discoveryStatus == 'Failed') {
-      errorMsg.writeln(
-        '\nSUGGESTION: Network connection to Google API failed. Check internet.',
-      );
-    }
-
-    _logger.e(errorMsg.toString());
-    throw Exception(errorMsg.toString());
+    return _generateListWithFallback(apiKey, prompt);
   }
 
   Future<Map<String, dynamic>> generateRecipe({
@@ -214,7 +119,7 @@ class GeminiService {
     Do NOT include markdown formatting. Just raw JSON.
     ''';
 
-    return _generateWithFallback(apiKey, prompt);
+    return _generateMapWithFallback(apiKey, prompt);
   }
 
   Future<Map<String, dynamic>> generateSingleMeal({
@@ -245,11 +150,55 @@ class GeminiService {
     ''';
 
     // Reuse the robust map generation logic
-    return _generateWithFallback(apiKey, prompt);
+    return _generateMapWithFallback(apiKey, prompt);
   }
 
   // Helper to reuse the robust discovery/fallback logic
-  Future<Map<String, dynamic>> _generateWithFallback(
+  Future<List<Map<String, dynamic>>> extractIngredientsFromPlan(
+    List<Map<String, dynamic>> planData,
+  ) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) throw Exception('API Key not found');
+
+    // Simplify plan for prompt to save tokens
+    final simplePlan = planData.map((day) {
+      final meals = day['meals'] as List;
+      return {
+        'day': day['day'],
+        'meals': meals
+            .map((m) => '${m['name']} (${m['description']})')
+            .join(', '),
+      };
+    }).toList();
+
+    final prompt =
+        '''
+    Analyze this meal plan and extract a consolidated shopping list.
+    Plan: ${jsonEncode(simplePlan)}
+
+    Rules:
+    1. STRICTLY CONSOLIDATE DUPLICATES. List each ingredient EXACTLY ONCE. 
+       - Sum quantities (e.g., "4 cans" + "3 cans" = "7 cans", "1 cup" + "0.5 cup" = "1.5 cups").
+       - If units differ, use the most appropriate common unit or combined string (e.g. "1 bag + 2 cups").
+    2. Categorize items (Produce, Meat, Dairy, Pantry, Frozen, Bakery, Other).
+    3. Return valid JSON only.
+
+    Format:
+    [
+      {
+        "name": "Item Name",
+        "category": "Category",
+        "qty": 1, 
+        "unit": "unit or descriptive string if inferred" 
+      }
+    ]
+    ''';
+
+    return _generateListWithFallback(apiKey, prompt);
+  }
+
+  // Helper to reuse the robust discovery/fallback logic for Map<String, dynamic>
+  Future<Map<String, dynamic>> _generateMapWithFallback(
     String apiKey,
     String prompt,
   ) async {
@@ -378,17 +327,71 @@ class GeminiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _generateWithModel(
+  /// Helper for generating a generic List<Map> response with fallback logic
+  Future<List<Map<String, dynamic>>> _generateListWithFallback(
+    String apiKey,
+    String prompt,
+  ) async {
+    // 1. DYNAMIC DISCOVERY (REST)
+    try {
+      final discoveredModels = await _listModelsRaw(apiKey);
+
+      if (discoveredModels.isNotEmpty) {
+        discoveredModels.sort((a, b) {
+          final nA = a.toLowerCase();
+          final nB = b.toLowerCase();
+          int score(String n) {
+            if (n.contains('2.5') && n.contains('flash')) return 4;
+            if (n.contains('1.5') && n.contains('flash')) return 3;
+            if (n.contains('1.5') && n.contains('pro')) return 2;
+            if (n.contains('pro')) return 1;
+            return 0;
+          }
+
+          return score(nB).compareTo(score(nA));
+        });
+
+        for (final modelName in discoveredModels) {
+          try {
+            return await _generateListWithModel(modelName, apiKey, prompt);
+          } catch (e) {
+            _logger.w('List: Discovered model $modelName failed: $e');
+          }
+        }
+      }
+    } catch (e) {
+      _logger.w('List: REST Discovery failed ($e).');
+    }
+
+    // 2. FALLBACK
+    final potentialModels = [
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-latest',
+      'gemini-pro',
+      'gemini-1.0-pro',
+    ];
+
+    for (final modelName in potentialModels) {
+      try {
+        return await _generateListWithModel(modelName, apiKey, prompt);
+      } catch (e) {
+        // continue
+      }
+    }
+    throw Exception('Failed to generate list. No working model found.');
+  }
+
+  /// Helper for generating a generic List<Map> response with a specific model
+  Future<List<Map<String, dynamic>>> _generateListWithModel(
     String modelName,
     String apiKey,
     String prompt,
   ) async {
-    _logger.d('Attempting generation with model: $modelName');
-    final model = GenerativeModel(
-      model: modelName,
-      apiKey: apiKey,
-      // Manual JSON handling for compatibility
-    );
+    _logger.d('Attempting list generation with model: $modelName');
+    final model = GenerativeModel(model: modelName, apiKey: apiKey);
 
     final content = [Content.text(prompt)];
     final response = await model.generateContent(content);
@@ -397,7 +400,6 @@ class GeminiService {
       throw Exception('Empty response from AI');
     }
 
-    // Clean the response if it contains markdown code blocks
     String jsonString = response.text!;
     if (jsonString.startsWith('```json')) {
       jsonString = jsonString.replaceAll('```json', '').replaceAll('```', '');
@@ -405,12 +407,14 @@ class GeminiService {
       jsonString = jsonString.replaceAll('```', '');
     }
 
-    // Trim whitespace
     jsonString = jsonString.trim();
 
     try {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      return List<Map<String, dynamic>>.from(jsonList);
+      final dynamic decoded = json.decode(jsonString);
+      if (decoded is List) {
+        return List<Map<String, dynamic>>.from(decoded);
+      }
+      throw Exception('Response was not a JSON list');
     } catch (parseError) {
       _logger.e('JSON Parse Error: $parseError\nContent: $jsonString');
       throw Exception('Failed to parse AI response: $parseError');

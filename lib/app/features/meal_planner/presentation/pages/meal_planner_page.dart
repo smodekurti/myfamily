@@ -560,6 +560,285 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
+  Future<void> _handleAddToShoppingList() async {
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentFamilyId == null) return;
+
+    final plan = ref.read(currentWeekMealPlanProvider(currentFamilyId)).value;
+
+    if (plan == null || (plan.entries?.isEmpty ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No meal plan found to generate list from.'),
+        ),
+      );
+      return;
+    }
+
+    // Ask for scope
+    final scope = await _showScopeSelectionDialog();
+    if (scope == null) return; // User cancelled
+
+    // Show loading
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Analyzing menu for ingredients...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final geminiService = ref.read(geminiServiceProvider);
+
+      // Prepare plan data for Gemini
+      final planData = <Map<String, dynamic>>[];
+
+      // Filter entries based on scope
+      final allEntries = plan.entries!.cast<MealPlanEntryModel>();
+      final List<MealPlanEntryModel> scopedEntries;
+
+      switch (scope) {
+        case ShoppingListScope.week:
+          scopedEntries = allEntries;
+          break;
+        case ShoppingListScope.day:
+          scopedEntries = allEntries
+              .where((e) => DateUtils.isSameDay(e.mealDate, _selectedDate))
+              .toList();
+          break;
+        default:
+          scopedEntries = [];
+      }
+
+      if (scopedEntries.isEmpty) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No meals found for selected range.')),
+          );
+        }
+        return;
+      }
+
+      // Group by date
+      final Map<DateTime, List<MealPlanEntryModel>> byDate = {};
+      for (final e in scopedEntries) {
+        final date = DateUtils.dateOnly(e.mealDate);
+        if (!byDate.containsKey(date)) byDate[date] = [];
+        byDate[date]!.add(e);
+      }
+
+      final sortedDates = byDate.keys.toList()..sort();
+      for (final date in sortedDates) {
+        planData.add({
+          'day': '${date.month}/${date.day}',
+          'meals': byDate[date]!
+              .map(
+                (e) => {
+                  'name': e.mealType
+                      .toUpperCase(), // Using type as name if recipe generic, or customNote
+                  'description': e.customNote,
+                },
+              )
+              .toList(),
+        });
+      }
+
+      final ingredients = await geminiService.extractIngredientsFromPlan(
+        planData,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+
+        if (ingredients.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No ingredients could be extracted.')),
+          );
+          return;
+        }
+
+        // Ask where to add
+        // Determine default list name
+        final timestamp = DateTime.now();
+        final listName =
+            'Meal Plan Shopping (${timestamp.month}/${timestamp.day})';
+        await _showAddToListDialog(ingredients, listName);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
+  Future<ShoppingListScope?> _showScopeSelectionDialog() async {
+    return await showDialog<ShoppingListScope>(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: const Text('Generate Shopping List For...'),
+          children: <Widget>[
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context, ShoppingListScope.week);
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Text('Enter Week'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context, ShoppingListScope.day);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Selected Day Only (${_selectedDate.month}/${_selectedDate.day})',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddToListDialog(
+    List<Map<String, dynamic>> ingredients,
+    String listName,
+  ) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Found ${ingredients.length} items'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ready to add ${ingredients.length} ingredients to "$listName".',
+              ),
+              const SizedBox(height: 16),
+              // Preview a few
+              Wrap(
+                spacing: 8,
+                children: ingredients
+                    .take(5)
+                    .map(
+                      (e) => Chip(
+                        label: Text(e['name']),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                    .toList(),
+              ),
+              if (ingredients.length > 5)
+                Text('+ ${(ingredients.length - 5)} more...'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _addItemsToNewList(ingredients, listName);
+            },
+            child: const Text('Add to List'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addItemsToNewList(
+    List<Map<String, dynamic>> items,
+    String listName,
+  ) async {
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentUser == null || currentFamilyId == null) return;
+
+    try {
+      final repo = ref.read(groceryListRepositoryProvider);
+
+      // Check for existing list
+      final existingLists = await repo.getStandaloneListsForFamily(
+        currentFamilyId,
+      );
+      final existingList = existingLists
+          .where((l) => l.name == listName)
+          .firstOrNull;
+
+      late String listId;
+      late bool isNew;
+
+      if (existingList != null) {
+        listId = existingList.id;
+        isNew = false;
+      } else {
+        final list = await repo.createStandaloneList(
+          familyId: currentFamilyId,
+          name: listName,
+          createdBy: currentUser.id,
+        );
+        listId = list.id;
+        isNew = true;
+      }
+
+      // Add items
+      await repo.addItemsBatch(listId: listId, items: items);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isNew
+                  ? 'List "$listName" created!'
+                  : 'Added items to "$listName"',
+            ),
+            action: SnackBarAction(
+              label: 'View',
+              onPressed: () {
+                // Navigation to grocery list page would go here
+                // for now just close snackbar
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save list: $e')));
+      }
+    }
+  }
+
   Future<void> _generateSingleMeal() async {
     final type = await showDialog<String>(
       context: context,
@@ -776,6 +1055,11 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_checkout),
+            tooltip: 'Create Shopping List',
+            onPressed: _handleAddToShoppingList,
+          ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Magic Plan',
@@ -1492,3 +1776,5 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     );
   }
 }
+
+enum ShoppingListScope { week, day }

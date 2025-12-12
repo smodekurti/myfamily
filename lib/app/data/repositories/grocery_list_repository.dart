@@ -23,11 +23,11 @@ class GroceryListRepository {
         familyId: familyId,
         action: 'create_list',
       );
-      
+
       if (!canCreate) {
         throw Exception('You do not have permission to create grocery lists');
       }
-      
+
       final now = DateTime.now();
       final listData = {
         'task_id': null, // Standalone list
@@ -56,7 +56,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {      }
+      } catch (e) {}
 
       return createdList;
     } catch (e) {
@@ -80,11 +80,11 @@ class GroceryListRepository {
         familyId: familyId,
         action: 'create_list',
       );
-      
+
       if (!canCreate) {
         throw Exception('You do not have permission to create grocery lists');
       }
-      
+
       final now = DateTime.now();
       final listData = {
         'task_id': taskId,
@@ -113,7 +113,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: createdBy,
         );
-      } catch (e) {      }
+      } catch (e) {}
 
       return createdList;
     } catch (e) {
@@ -123,7 +123,9 @@ class GroceryListRepository {
   }
 
   /// Get all standalone grocery lists for a family
-  Future<List<GroceryListModel>> getStandaloneListsForFamily(String familyId) async {
+  Future<List<GroceryListModel>> getStandaloneListsForFamily(
+    String familyId,
+  ) async {
     try {
       final response = await _supabase
           .from('grocery_lists')
@@ -132,9 +134,7 @@ class GroceryListRepository {
           .isFilter('task_id', null)
           .order('updated_at', ascending: false);
 
-      return (response as List)
-          .map((json) => _fromSupabase(json))
-          .toList();
+      return (response as List).map((json) => _fromSupabase(json)).toList();
     } catch (e) {
       _logger.e('Get standalone lists error: $e');
       rethrow;
@@ -143,59 +143,71 @@ class GroceryListRepository {
 
   /// Stream all standalone grocery lists for a family
   /// Children can now view and edit lists (permissions updated)
-  Stream<List<GroceryListModel>> streamStandaloneListsForFamily(String familyId, {String? userId}) async* {
+  Stream<List<GroceryListModel>> streamStandaloneListsForFamily(
+    String familyId, {
+    String? userId,
+  }) async* {
     try {
       yield* _supabase
-        .from('grocery_lists')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .map((data) {
-          // Filter out lists with task_id in memory
-          return data
-              .where((json) => json['task_id'] == null)
-              .map((json) => _fromSupabase(json))
-              .toList();
-        })
-        .map((lists) {
-          // Sort by updated_at descending
-          lists.sort((a, b) {
-            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-            return bDate.compareTo(aDate);
+          .from('grocery_lists')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .map((data) {
+            // Filter out lists with task_id in memory
+            return data
+                .where((json) => json['task_id'] == null)
+                .map((json) => _fromSupabase(json))
+                .toList();
+          })
+          .map((lists) {
+            // Sort by updated_at descending
+            lists.sort((a, b) {
+              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+              return bDate.compareTo(aDate);
+            });
+            return lists;
           });
-          return lists;
-        });
     } catch (e, stackTrace) {
-      _logger.e('Error creating stream for standalone lists: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Error creating stream for standalone lists: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       yield <GroceryListModel>[];
     }
   }
 
   /// Stream all grocery lists for a family (both standalone and task-linked)
   /// Children can now view and edit lists (permissions updated)
-  Stream<List<GroceryListModel>> streamAllListsForFamily(String familyId, {String? userId}) async* {
+  Stream<List<GroceryListModel>> streamAllListsForFamily(
+    String familyId, {
+    String? userId,
+  }) async* {
     try {
       yield* _supabase
-        .from('grocery_lists')
-        .stream(primaryKey: ['id'])
-        .eq('family_id', familyId)
-        .map((data) {
-          // Include all lists (both standalone and task-linked)
-          return data
-              .map((json) => _fromSupabase(json))
-              .toList();
-        })
-        .map((lists) {
-          // Sort by updated_at descending
-          lists.sort((a, b) {
-            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-            return bDate.compareTo(aDate);
+          .from('grocery_lists')
+          .stream(primaryKey: ['id'])
+          .eq('family_id', familyId)
+          .map((data) {
+            // Include all lists (both standalone and task-linked)
+            return data.map((json) => _fromSupabase(json)).toList();
+          })
+          .map((lists) {
+            // Sort by updated_at descending
+            lists.sort((a, b) {
+              final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+              final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+              return bDate.compareTo(aDate);
+            });
+            return lists;
           });
-          return lists;
-        });
     } catch (e, stackTrace) {
-      _logger.e('Error creating stream for all lists: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Error creating stream for all lists: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       yield <GroceryListModel>[];
     }
   }
@@ -289,7 +301,9 @@ class GroceryListRepository {
       );
 
       if (!canEdit) {
-        throw Exception('You do not have permission to add items to grocery lists');
+        throw Exception(
+          'You do not have permission to add items to grocery lists',
+        );
       }
 
       final now = DateTime.now();
@@ -325,6 +339,51 @@ class GroceryListRepository {
     }
   }
 
+  /// Add multiple items to grocery list
+  Future<void> addItemsBatch({
+    required String listId,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    try {
+      // Get list to check permissions
+      final list = await getListById(listId);
+      if (list == null) throw Exception('List not found');
+
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      final canEdit = await _roleService.canPerformAction(
+        userId: userId,
+        familyId: list.familyId,
+        action: 'edit_list',
+      );
+      if (!canEdit)
+        throw Exception(
+          'You do not have permission to add items to grocery lists',
+        );
+
+      final now = DateTime.now();
+      final rows = items.map((item) {
+        return {
+          'list_id': listId,
+          'name': item['name'],
+          'category': item['category'] ?? 'Other',
+          'qty': item['qty'] ?? 1,
+          'unit': item['unit'],
+          'checked': false,
+          'source': 'magic_plan', // Track source
+          'created_at': now.toIso8601String(),
+          'updated_at': now.toIso8601String(),
+        };
+      }).toList();
+
+      await _supabase.from('grocery_list_items').insert(rows);
+    } catch (e) {
+      _logger.e('Batch add items error: $e');
+      rethrow;
+    }
+  }
+
   /// Get items for a grocery list
   Future<List<GroceryListItemModel>> getListItems(String listId) async {
     try {
@@ -335,9 +394,7 @@ class GroceryListRepository {
           .order('category', ascending: true)
           .order('name', ascending: true);
 
-      return (response as List)
-          .map((json) => _itemFromSupabase(json))
-          .toList();
+      return (response as List).map((json) => _itemFromSupabase(json)).toList();
     } catch (e) {
       _logger.e('Get list items error: $e');
       rethrow;
@@ -357,7 +414,10 @@ class GroceryListRepository {
 
   /// Get suggested items from previous completed lists
   /// Returns items that were checked in previous lists, ordered by frequency
-  Future<List<Map<String, dynamic>>> getSuggestedItems(String familyId, {int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getSuggestedItems(
+    String familyId, {
+    int limit = 20,
+  }) async {
     try {
       // Get all lists for the family
       final listsResponse = await _supabase
@@ -369,7 +429,9 @@ class GroceryListRepository {
         return [];
       }
 
-      final listIds = (listsResponse as List).map((list) => list['id'] as String).toList();
+      final listIds = (listsResponse as List)
+          .map((list) => list['id'] as String)
+          .toList();
 
       // Get all checked items from these lists
       // Note: Supabase Flutter doesn't have inFilter, so we'll fetch all items and filter in memory
@@ -377,7 +439,7 @@ class GroceryListRepository {
           .from('grocery_list_items')
           .select('list_id, name, category, unit, qty, checked')
           .eq('checked', true);
-      
+
       // Filter items that belong to our lists
       final itemsResponse = allItemsResponse.where((item) {
         return listIds.contains(item['list_id'] as String);
@@ -389,12 +451,12 @@ class GroceryListRepository {
 
       // Count frequency of each item (by name and category)
       final itemCounts = <String, Map<String, dynamic>>{};
-      
+
       for (final item in itemsResponse as List) {
         final name = (item['name'] as String).toLowerCase().trim();
         final category = (item['category'] as String).toLowerCase().trim();
         final key = '$name|$category';
-        
+
         if (itemCounts.containsKey(key)) {
           itemCounts[key]!['count'] = (itemCounts[key]!['count'] as int) + 1;
         } else {
@@ -410,7 +472,9 @@ class GroceryListRepository {
 
       // Convert to list and sort by frequency (most frequent first)
       final suggestions = itemCounts.values.toList();
-      suggestions.sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+      suggestions.sort(
+        (a, b) => (b['count'] as int).compareTo(a['count'] as int),
+      );
 
       // Return top suggestions
       return suggestions.take(limit).toList();
@@ -430,7 +494,7 @@ class GroceryListRepository {
           .eq('id', itemId)
           .single();
       final listId = itemResponse['list_id'] as String;
-      
+
       // Get list to check permissions
       final list = await getListById(listId);
       if (list == null) {
@@ -451,7 +515,9 @@ class GroceryListRepository {
       );
 
       if (!canEdit) {
-        throw Exception('You do not have permission to modify grocery list items');
+        throw Exception(
+          'You do not have permission to modify grocery list items',
+        );
       }
 
       final updates = {
@@ -497,34 +563,36 @@ class GroceryListRepository {
           .eq('id', itemId)
           .single();
       final listId = itemResponse['list_id'] as String;
-      
+
       // Get list to check permissions
       final list = await getListById(listId);
       if (list == null) {
         throw Exception('List not found');
       }
-      
+
       // Get current user
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Check permission to edit lists
       final canEdit = await _roleService.canPerformAction(
         userId: userId,
         familyId: list.familyId,
         action: 'edit_list',
       );
-      
+
       if (!canEdit) {
-        throw Exception('You do not have permission to edit grocery list items');
+        throw Exception(
+          'You do not have permission to edit grocery list items',
+        );
       }
-      
+
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
-      
+
       if (name != null) updates['name'] = name;
       if (category != null) updates['category'] = category;
       if (qty != null) updates['qty'] = qty;
@@ -555,7 +623,7 @@ class GroceryListRepository {
           .eq('id', itemId)
           .single();
       final listId = itemResponse['list_id'] as String;
-      
+
       // Get list to check permissions
       final list = await getListById(listId);
       if (list == null) {
@@ -576,13 +644,12 @@ class GroceryListRepository {
       );
 
       if (!canEdit) {
-        throw Exception('You do not have permission to delete grocery list items');
+        throw Exception(
+          'You do not have permission to delete grocery list items',
+        );
       }
 
-      await _supabase
-          .from('grocery_list_items')
-          .delete()
-          .eq('id', itemId);
+      await _supabase.from('grocery_list_items').delete().eq('id', itemId);
 
       // NOTE: Not sending notification for deleting items (nested event)
       // Notifications are only sent for top-level events (creating/updating/deleting lists)
@@ -645,7 +712,7 @@ class GroceryListRepository {
           listName: name,
           excludeUserId: updatedList.createdBy,
         );
-      } catch (e) {      }
+      } catch (e) {}
 
       return updatedList;
     } catch (e) {
@@ -708,7 +775,8 @@ class GroceryListRepository {
     try {
       // Check if list is referenced by any tasks via categoryData
       final list = await getListById(listId);
-      if (list == null) {        return;
+      if (list == null) {
+        return;
       }
 
       // Get current user
@@ -745,10 +813,9 @@ class GroceryListRepository {
 
       // If list is referenced by tasks, create a copy for each task
       if (tasksWithList.isNotEmpty) {
-        
         // Get all items from the original list
         final originalItems = await getListItems(listId);
-        
+
         // Create a copy for each task
         for (final taskId in tasksWithList) {
           // Create a new list for this task (copy)
@@ -758,7 +825,7 @@ class GroceryListRepository {
             name: '${list.name} (Copy)',
             createdBy: list.createdBy,
           );
-          
+
           // Copy all items to the new list
           for (final item in originalItems) {
             final newItem = await addItem(
@@ -770,13 +837,13 @@ class GroceryListRepository {
               unit: item.unit,
               source: item.source ?? 'manual',
             );
-            
+
             // If item was checked, mark it as checked in the copy
             if (item.checked) {
               await toggleItem(newItem.id, true);
             }
           }
-          
+
           // Update the task's categoryData to point to the new list
           await _supabase
               .from('tasks')
@@ -785,15 +852,11 @@ class GroceryListRepository {
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .eq('id', taskId);
-          
         }
       }
 
       // Now safe to delete the original list
-      await _supabase
-          .from('grocery_lists')
-          .delete()
-          .eq('id', listId);
+      await _supabase.from('grocery_lists').delete().eq('id', listId);
 
       // Notify family members
       try {
@@ -804,7 +867,7 @@ class GroceryListRepository {
           listName: list.name,
           excludeUserId: list.createdBy,
         );
-      } catch (e) {      }
+      } catch (e) {}
     } catch (e) {
       _logger.e('Delete list error: $e');
       rethrow;
@@ -851,4 +914,3 @@ class GroceryListRepository {
     );
   }
 }
-
