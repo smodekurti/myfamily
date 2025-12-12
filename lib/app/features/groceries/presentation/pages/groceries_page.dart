@@ -7,11 +7,13 @@ import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/push_notification_service.dart';
-import '../../../../data/models/grocery_template_model.dart';
 import '../../../../data/models/family_model.dart';
+import '../../../../data/models/grocery_template_model.dart';
+import '../../../../data/models/meal_plan_model.dart';
+import '../../../../core/services/gemini_service.dart';
 import '../../../../data/repositories/grocery_list_repository.dart';
 import '../../../../data/repositories/grocery_template_repository.dart';
-import 'grocery_list_page.dart'; // For providers
+import 'grocery_list_page.dart';
 import '../../../../common/widgets/modern_header.dart';
 import '../../../../common/widgets/modern_card.dart';
 import '../../../../common/widgets/avatar_widget.dart';
@@ -66,6 +68,155 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
     super.dispose();
   }
 
+  Future<void> _importFromMealPlan() async {
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentFamilyId == null) return;
+
+    final plan = ref.read(currentWeekMealPlanProvider(currentFamilyId)).value;
+
+    if (plan == null || (plan.entries?.isEmpty ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active meal plan found.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Fetching ingredients from plan...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final geminiService = ref.read(geminiServiceProvider);
+
+      final planData = <Map<String, dynamic>>[];
+      final entries = plan.entries!.cast<MealPlanEntryModel>();
+      final Map<DateTime, List<MealPlanEntryModel>> byDate = {};
+      for (final e in entries) {
+        final date = DateUtils.dateOnly(e.mealDate);
+        if (!byDate.containsKey(date)) byDate[date] = [];
+        byDate[date]!.add(e);
+      }
+
+      final sortedDates = byDate.keys.toList()..sort();
+      for (final date in sortedDates) {
+        planData.add({
+          'day': '${date.month}/${date.day}',
+          'meals': byDate[date]!
+              .map(
+                (e) => {
+                  'name': e.mealType.toUpperCase(),
+                  'description': e.customNote,
+                },
+              )
+              .toList(),
+        });
+      }
+
+      final ingredients = await geminiService.extractIngredientsFromPlan(
+        planData,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+
+        if (ingredients.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No ingredients found.')),
+          );
+          return;
+        }
+
+        final timestamp = DateTime.now();
+        final listName =
+            'Meal Plan Shopping (${timestamp.month}/${timestamp.day})';
+
+        await _addItemsToNewList(ingredients, listName);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _addItemsToNewList(
+    List<Map<String, dynamic>> items,
+    String listName,
+  ) async {
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentUser == null || currentFamilyId == null) return;
+
+    try {
+      final repo = ref.read(groceryListRepositoryProvider);
+
+      final existingLists = await repo.getStandaloneListsForFamily(
+        currentFamilyId,
+      );
+      final existingList = existingLists
+          .where((l) => l.name == listName)
+          .firstOrNull;
+
+      late String listId;
+      late bool isNew;
+
+      if (existingList != null) {
+        listId = existingList.id;
+        isNew = false;
+      } else {
+        final list = await repo.createStandaloneList(
+          familyId: currentFamilyId,
+          name: listName,
+          createdBy: currentUser.id,
+        );
+        listId = list.id;
+        isNew = true;
+      }
+
+      await repo.addItemsBatch(listId: listId, items: items);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isNew
+                  ? 'List "$listName" created!'
+                  : 'Added items to "$listName"',
+            ),
+          ),
+        );
+        // Refresh lists
+        ref.invalidate(allGroceryListsProvider(currentFamilyId));
+        ref.invalidate(standaloneGroceryListsProvider(currentFamilyId));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save list: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
@@ -90,6 +241,11 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
                 actions: [
+                  IconButton(
+                    icon: const Icon(Icons.playlist_add_check),
+                    onPressed: _importFromMealPlan,
+                    tooltip: 'Import from Meal Plan',
+                  ),
                   IconButton(
                     icon: Icon(Icons.inventory_2_outlined),
                     onPressed: () =>

@@ -1401,25 +1401,26 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                           ),
                         ),
                       ),
-                      if (hasQuantity)
-                        Padding(
-                          padding: EdgeInsets.only(left: ResponsiveHelper.w(8)),
-                          child: Text(
-                            '${item.qty} ${item.unit}',
-                            style: TextStyle(
-                              color: item.checked
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.4)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
-                              fontSize: ResponsiveHelper.sp(11),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
+                  if (hasQuantity)
+                    Padding(
+                      padding: EdgeInsets.only(top: ResponsiveHelper.h(2)),
+                      child: Text(
+                        '${item.qty} ${item.unit}',
+                        style: TextStyle(
+                          color: item.checked
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4)
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                          fontSize: ResponsiveHelper.sp(12),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   if (hasNotes)
                     Padding(
                       padding: EdgeInsets.only(top: ResponsiveHelper.h(2)),
