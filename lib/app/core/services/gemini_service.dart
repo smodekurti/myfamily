@@ -153,6 +153,42 @@ class GeminiService {
     return _generateMapWithFallback(apiKey, prompt);
   }
 
+  Future<List<Map<String, dynamic>>> generateRewardSuggestions({
+    required int age,
+    required List<String> interests,
+  }) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) {
+      throw Exception('API Key not found');
+    }
+
+    final interestsString = interests.isEmpty
+        ? "general fun activities"
+        : interests.join(', ');
+
+    final prompt =
+        '''
+    Suggest 5 motivating reward ideas for a child aged $age who likes: $interestsString.
+
+    Return a valid JSON list. Each item should have:
+    - "title": Short reward name (max 50 chars)
+    - "description": Brief enticing description (max 100 chars)
+    - "cost": Suggested point cost (integer between 10 and 500, based on value/effort)
+
+    Format:
+    [
+      {
+        "title": "Movie Night",
+        "description": "Pick the family movie this weekend",
+        "cost": 100
+      }
+    ]
+    Do NOT include markdown. Raw JSON only.
+    ''';
+
+    return _generateListWithFallback(apiKey, prompt);
+  }
+
   // Helper to reuse the robust discovery/fallback logic
   Future<List<Map<String, dynamic>>> extractIngredientsFromPlan(
     List<Map<String, dynamic>> planData,
@@ -195,6 +231,105 @@ class GeminiService {
     ''';
 
     return _generateListWithFallback(apiKey, prompt);
+  }
+
+  Future<String> generateWeeklySummary({
+    required Map<String, dynamic> summaryData,
+  }) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) {
+      throw Exception('API Key not found');
+    }
+
+    final prompt =
+        '''
+    You are a cheerful, encouraging family assistant. 
+    Write a weekly summary newsletter for the family based on the following data:
+    ${jsonEncode(summaryData)}
+
+    Highlights to include:
+    - Who earned the most points (Top Earner), celebrate them!
+    - Mention some specific tasks completed (e.g. "Dad fixed the sink!").
+    - Mention cool rewards redeemed.
+    - Keep it short, fun, and use emojis. 
+    - Structure it with Markdown headers (e.g. ## 🏆 Top Earner, ## ✅ Tasks Crushed).
+    
+    If data is empty, just say everyone had a quiet week but nice job relaxing.
+    Do NOT output JSON. Output formatted text (Markdown).
+    ''';
+
+    return _generateTextWithFallback(apiKey, prompt);
+  }
+
+  // Helper to reuse the robust discovery/fallback logic for Text
+  Future<String> _generateTextWithFallback(String apiKey, String prompt) async {
+    // 1. DYNAMIC DISCOVERY (REST)
+    try {
+      final discoveredModels = await _listModelsRaw(apiKey);
+
+      if (discoveredModels.isNotEmpty) {
+        discoveredModels.sort((a, b) {
+          final nA = a.toLowerCase();
+          final nB = b.toLowerCase();
+          int score(String n) {
+            if (n.contains('2.5') && n.contains('flash')) return 4;
+            if (n.contains('1.5') && n.contains('flash')) return 3;
+            if (n.contains('1.5') && n.contains('pro')) return 2;
+            if (n.contains('pro')) return 1;
+            return 0;
+          }
+
+          return score(nB).compareTo(score(nA));
+        });
+
+        for (final modelName in discoveredModels) {
+          try {
+            return await _generateTextWithModel(modelName, apiKey, prompt);
+          } catch (e) {
+            _logger.w('Text: Discovered model $modelName failed: $e');
+          }
+        }
+      }
+    } catch (e) {
+      _logger.w('Text: REST Discovery failed ($e).');
+    }
+
+    // 2. FALLBACK
+    final potentialModels = [
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-latest',
+      'gemini-pro',
+      'gemini-1.0-pro',
+    ];
+
+    for (final modelName in potentialModels) {
+      try {
+        return await _generateTextWithModel(modelName, apiKey, prompt);
+      } catch (e) {
+        // continue
+      }
+    }
+    throw Exception('Failed to generate text. No working model found.');
+  }
+
+  Future<String> _generateTextWithModel(
+    String modelName,
+    String apiKey,
+    String prompt,
+  ) async {
+    _logger.d('Attempting text generation with model: $modelName');
+    final model = GenerativeModel(model: modelName, apiKey: apiKey);
+    final content = [Content.text(prompt)];
+    final response = await model.generateContent(content);
+
+    if (response.text == null) {
+      throw Exception('Empty response from AI');
+    }
+
+    return response.text!;
   }
 
   // Helper to reuse the robust discovery/fallback logic for Map<String, dynamic>
