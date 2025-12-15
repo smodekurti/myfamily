@@ -36,11 +36,11 @@ class TaskRepository {
         familyId: familyId,
         action: 'create_task',
       );
-      
+
       if (!canCreate) {
         throw Exception('You do not have permission to create tasks');
       }
-      
+
       // Check permission to assign tasks if assigning to someone else
       if (assignedTo != createdBy) {
         final canAssign = await _roleService.canPerformAction(
@@ -48,14 +48,16 @@ class TaskRepository {
           familyId: familyId,
           action: 'assign_task',
         );
-        
+
         if (!canAssign) {
-          throw Exception('You do not have permission to assign tasks to others');
+          throw Exception(
+            'You do not have permission to assign tasks to others',
+          );
         }
       }
-      
+
       final now = DateTime.now();
-      
+
       final taskData = {
         'family_id': familyId,
         'title': title,
@@ -83,7 +85,7 @@ class TaskRepository {
       // Send notifications to family members
       try {
         // Send visible notification to assignee (if different from creator)
-      if (assignedTo != createdBy) {
+        if (assignedTo != createdBy) {
           await FamilyNotificationService().notifyTaskAssigned(
             familyId: familyId,
             assigneeId: assignedTo,
@@ -92,7 +94,7 @@ class TaskRepository {
             createdById: createdBy,
           );
         }
-        
+
         // Send silent notification to all other family members to trigger refresh
         await FamilyNotificationService().notifyFamilyDataChanged(
           familyId: familyId,
@@ -102,7 +104,8 @@ class TaskRepository {
           itemTitle: title,
           excludeUserId: createdBy,
         );
-        } catch (e) {        // Don't fail task creation if notifications fail
+      } catch (e) {
+        // Don't fail task creation if notifications fail
       }
 
       // Schedule due date reminder if due date is set
@@ -113,7 +116,7 @@ class TaskRepository {
             taskTitle: title,
             dueDate: dueDate,
           );
-        } catch (e) {        }
+        } catch (e) {}
       }
 
       return createdTask;
@@ -148,34 +151,38 @@ class TaskRepository {
       final taskPoints = currentTaskResponse['points'] as int;
       final taskAssignedTo = currentTaskResponse['assigned_to'] as String;
       final taskFamilyId = currentTaskResponse['family_id'] as String;
-      
+
       // Get current user
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Check permission to edit tasks
       final canEdit = await _roleService.canPerformAction(
         userId: userId,
         familyId: taskFamilyId,
         action: 'edit_task',
       );
-      
+
       if (!canEdit) {
         throw Exception('You do not have permission to edit tasks');
       }
-      
+
       // Check permission to assign tasks if reassigning
-      if (assignedTo != null && assignedTo != taskAssignedTo && assignedTo != userId) {
+      if (assignedTo != null &&
+          assignedTo != taskAssignedTo &&
+          assignedTo != userId) {
         final canAssign = await _roleService.canPerformAction(
           userId: userId,
           familyId: taskFamilyId,
           action: 'assign_task',
         );
-        
+
         if (!canAssign) {
-          throw Exception('You do not have permission to assign tasks to others');
+          throw Exception(
+            'You do not have permission to assign tasks to others',
+          );
         }
       }
 
@@ -188,7 +195,7 @@ class TaskRepository {
             .eq('id', taskId)
             .single();
         final taskTitle = taskTitleResponse['title'] as String?;
-        
+
         if (status == 'completed' && currentStatus != 'completed') {
           // Task is being marked as complete - award points
           await _familyRepo.awardPointsToMember(
@@ -265,7 +272,7 @@ class TaskRepository {
             createdById: updatedTask.createdBy,
           );
         }
-        
+
         // Send silent notification to all family members about the update
         await FamilyNotificationService().notifyFamilyDataChanged(
           familyId: updatedTask.familyId,
@@ -290,7 +297,7 @@ class TaskRepository {
           // Due date was removed, cancel reminder
           await NotificationService().cancelTaskNotifications(taskId);
         }
-      } catch (e) {      }
+      } catch (e) {}
 
       return updatedTask;
     } catch (e) {
@@ -311,28 +318,25 @@ class TaskRepository {
       final familyId = taskResponse['family_id'] as String;
       final taskTitle = taskResponse['title'] as String;
       final createdBy = taskResponse['created_by'] as String;
-      
+
       // Get current user
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Check permission to delete tasks
       final canDelete = await _roleService.canPerformAction(
         userId: userId,
         familyId: familyId,
         action: 'delete_task',
       );
-      
+
       if (!canDelete) {
         throw Exception('You do not have permission to delete tasks');
       }
 
-      await _supabase
-          .from('tasks')
-          .delete()
-          .eq('id', taskId);
+      await _supabase.from('tasks').delete().eq('id', taskId);
 
       // Notify family members about deletion
       try {
@@ -344,7 +348,7 @@ class TaskRepository {
           itemTitle: taskTitle,
           excludeUserId: createdBy,
         );
-      } catch (e) {      }
+      } catch (e) {}
     } catch (e) {
       _logger.e('Delete task error: $e');
       rethrow;
@@ -353,7 +357,10 @@ class TaskRepository {
 
   /// Get tasks for a specific family
   /// Children can now view all tasks (permissions updated)
-  Future<List<TaskModel>> getTasksForFamily(String familyId, {String? userId}) async {
+  Future<List<TaskModel>> getTasksForFamily(
+    String familyId, {
+    String? userId,
+  }) async {
     try {
       // Return all family tasks for all roles
       final response = await _supabase
@@ -372,7 +379,10 @@ class TaskRepository {
   }
 
   /// Get tasks assigned to a specific user
-  Future<List<TaskModel>> getTasksForUser(String userId, String familyId) async {
+  Future<List<TaskModel>> getTasksForUser(
+    String userId,
+    String familyId,
+  ) async {
     try {
       final response = await _supabase
           .from('tasks')
@@ -392,7 +402,10 @@ class TaskRepository {
 
   /// Get tasks due today
   /// Children can now view all tasks (permissions updated)
-  Future<List<TaskModel>> getTasksDueToday(String familyId, {String? userId}) async {
+  Future<List<TaskModel>> getTasksDueToday(
+    String familyId, {
+    String? userId,
+  }) async {
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -400,22 +413,26 @@ class TaskRepository {
       final endOfDay = today.add(const Duration(days: 1)).toIso8601String();
 
       final response = await _supabase
-        .from('tasks')
-        .select()
-        .eq('family_id', familyId)
-        .gte('due_date', startOfDay)
-        .lt('due_date', endOfDay)
-        .neq('status', 'completed')
-        .order('due_date', ascending: true);
+          .from('tasks')
+          .select()
+          .eq('family_id', familyId)
+          .gte('due_date', startOfDay)
+          .lt('due_date', endOfDay)
+          .neq('status', 'completed')
+          .order('due_date', ascending: true);
 
       // Also filter in memory to ensure we only get tasks due today (handles timezone issues)
       final allTasks = (response as List)
           .map((json) => TaskModelHelpers.fromSupabase(json))
           .toList();
-      
+
       return allTasks.where((task) {
         if (task.dueDate == null) return false;
-        final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        final due = DateTime(
+          task.dueDate!.year,
+          task.dueDate!.month,
+          task.dueDate!.day,
+        );
         return due == today;
       }).toList();
     } catch (e) {
@@ -427,7 +444,10 @@ class TaskRepository {
   /// Stream tasks for a specific family (real-time updates)
   /// Stream tasks for a specific family
   /// Children can now view all tasks (permissions updated)
-  Stream<List<TaskModel>> streamTasksForFamily(String familyId, {String? userId}) async* {
+  Stream<List<TaskModel>> streamTasksForFamily(
+    String familyId, {
+    String? userId,
+  }) async* {
     try {
       // Stream all family tasks for all roles
       yield* _supabase
@@ -435,9 +455,17 @@ class TaskRepository {
           .stream(primaryKey: ['id'])
           .eq('family_id', familyId)
           .order('created_at', ascending: false)
-          .map((data) => data.map((json) => TaskModelHelpers.fromSupabase(json)).toList());
+          .map(
+            (data) => data
+                .map((json) => TaskModelHelpers.fromSupabase(json))
+                .toList(),
+          );
     } catch (e, stackTrace) {
-      _logger.e('Error creating stream for family tasks: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Error creating stream for family tasks: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       yield <TaskModel>[];
     }
   }
@@ -459,22 +487,37 @@ class TaskRepository {
                   .toList();
               return tasks;
             } catch (e, stackTrace) {
-              _logger.e('Error parsing user tasks from stream: $e', error: e, stackTrace: stackTrace);
+              _logger.e(
+                'Error parsing user tasks from stream: $e',
+                error: e,
+                stackTrace: stackTrace,
+              );
               return <TaskModel>[];
             }
           })
           .handleError((error, stackTrace) {
-            _logger.e('Stream error for user tasks: $error', error: error, stackTrace: stackTrace);
+            _logger.e(
+              'Stream error for user tasks: $error',
+              error: error,
+              stackTrace: stackTrace,
+            );
             // Log error but don't close the stream - it will automatically reconnect
           });
     } catch (e, stackTrace) {
-      _logger.e('Error creating stream for user tasks: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Error creating stream for user tasks: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Stream.value(<TaskModel>[]);
     }
   }
 
   /// Get completed tasks for a user to calculate streaks
-  Future<List<TaskModel>> getCompletedTasksForUser(String userId, String familyId) async {
+  Future<List<TaskModel>> getCompletedTasksForUser(
+    String userId,
+    String familyId,
+  ) async {
     try {
       final response = await _supabase
           .from('tasks')
@@ -494,6 +537,31 @@ class TaskRepository {
     }
   }
 
+  /// Get completed tasks for a family within a date range
+  Future<List<TaskModel>> getCompletedTasksInRange(
+    String familyId,
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('tasks')
+          .select()
+          .eq('family_id', familyId)
+          .eq('status', 'completed')
+          .gte('completed_at', start.toIso8601String())
+          .lte('completed_at', end.toIso8601String())
+          .order('completed_at', ascending: false);
+
+      return (response as List)
+          .map((json) => TaskModelHelpers.fromSupabase(json))
+          .toList();
+    } catch (e) {
+      _logger.e('Get completed tasks in range error: $e');
+      rethrow;
+    }
+  }
+
   /// Mark a task as completed and award points
   Future<TaskModel> completeTask(String taskId) async {
     try {
@@ -508,8 +576,9 @@ class TaskRepository {
       final assignedTo = taskResponse['assigned_to'] as String;
       final familyId = taskResponse['family_id'] as String;
       final currentStatus = taskResponse['status'] as String;
-      final categoryData = taskResponse['category_data'] as Map<String, dynamic>?;
-      final dueDate = taskResponse['due_date'] != null 
+      final categoryData =
+          taskResponse['category_data'] as Map<String, dynamic>?;
+      final dueDate = taskResponse['due_date'] != null
           ? DateTime.parse(taskResponse['due_date'] as String)
           : null;
 
@@ -549,9 +618,12 @@ class TaskRepository {
         familyId: familyId,
         completedTask: completedTask,
       );
-      
+
       // Check streak achievements
-      final completedTasks = await getCompletedTasksForUser(assignedTo, familyId);
+      final completedTasks = await getCompletedTasksForUser(
+        assignedTo,
+        familyId,
+      );
       final streaks = StreakCalculator.calculateStreaks(completedTasks);
       final currentStreak = streaks['currentStreak'] ?? 0;
       await _achievementRepo.checkStreakAchievements(
@@ -563,7 +635,7 @@ class TaskRepository {
       // Cancel due date reminder since task is completed
       try {
         await NotificationService().cancelTaskNotifications(taskId);
-      } catch (e) {      }
+      } catch (e) {}
 
       // Check if this is a recurring task and create the next occurrence
       if (categoryData != null && categoryData['recurrenceType'] != null) {
@@ -639,8 +711,10 @@ class TaskRepository {
 
       // Create the next occurrence
       final now = DateTime.now();
-      final nextCategoryData = Map<String, dynamic>.from(originalTask.categoryData ?? {});
-      
+      final nextCategoryData = Map<String, dynamic>.from(
+        originalTask.categoryData ?? {},
+      );
+
       final nextTaskData = {
         'family_id': originalTask.familyId,
         'title': originalTask.title,
@@ -657,9 +731,7 @@ class TaskRepository {
         'updated_at': now.toIso8601String(),
       };
 
-      await _supabase
-          .from('tasks')
-          .insert(nextTaskData);
+      await _supabase.from('tasks').insert(nextTaskData);
     } catch (e) {
       _logger.e('Error creating next recurrence: $e');
       // Don't rethrow - we don't want to fail task completion if recurrence creation fails
@@ -669,8 +741,12 @@ class TaskRepository {
   /// Get upcoming tasks (future dates, not completed)
   Stream<List<TaskModel>> getUpcomingTasks(String familyId) {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
-    final startOfTomorrow = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
-    
+    final startOfTomorrow = DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+    );
+
     return _supabase
         .from('tasks')
         .stream(primaryKey: ['id'])
@@ -683,7 +759,9 @@ class TaskRepository {
                 final status = json['status'] as String?;
                 if (dueDate == null || status == 'completed') return false;
                 final due = DateTime.parse(dueDate);
-                return due.isAfter(startOfTomorrow.subtract(const Duration(seconds: 1)));
+                return due.isAfter(
+                  startOfTomorrow.subtract(const Duration(seconds: 1)),
+                );
               })
               .map((json) => TaskModelHelpers.fromSupabase(json))
               .toList();
@@ -714,12 +792,7 @@ class TaskRepository {
       return stats;
     } catch (e) {
       _logger.e('Get task stats error: $e');
-      return {
-        'total': 0,
-        'pending': 0,
-        'in_progress': 0,
-        'completed': 0,
-      };
+      return {'total': 0, 'pending': 0, 'in_progress': 0, 'completed': 0};
     }
   }
 }

@@ -12,12 +12,177 @@ import '../../../../core/extensions/user_extensions.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../groceries/presentation/pages/grocery_list_page.dart';
 import '../widgets/weather_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../core/services/gemini_service.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  Future<void> _showWeeklySummary() async {
+    final currentFamily = ref.read(currentFamilyProvider);
+    if (currentFamily == null) return;
+
+    // Check API Key
+    final gemini = ref.read(geminiServiceProvider);
+    final hasKey = await gemini.hasApiKey();
+
+    if (!hasKey) {
+      if (mounted) _showApiKeyDialog();
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Show Loading
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Creating Weekly Summary...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Gather Data
+      final dataService = ref.read(familyDataServiceProvider);
+      final summaryData = await dataService.getWeeklyData(currentFamily.id);
+
+      // Generate Text
+      final summaryText = await gemini.generateWeeklySummary(
+        summaryData: summaryData,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        _showSummaryResult(summaryText);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate summary: $e')),
+        );
+      }
+    }
+  }
+
+  void _showSummaryResult(String text) {
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      builder: (context) => AlertDialog(
+        title: const Text('Weekly Family Summary 📰'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              final box = context.findRenderObject() as RenderBox?;
+              Share.share(
+                text,
+                sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+              );
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showApiKeyDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter Gemini API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'To use AI features, you need a free Google Gemini API Key.',
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse(
+                  'https://aistudio.google.com/app/apikey',
+                );
+                if (!await launchUrl(url)) {
+                  // ignore
+                }
+              },
+              child: const Text(
+                'Get Key ↗',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Paste API Key',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await ref.read(geminiServiceProvider).setApiKey(result);
+      if (mounted) _showWeeklySummary();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final currentFamily = ref.watch(currentFamilyProvider);
 
@@ -41,6 +206,14 @@ class HomePage extends ConsumerWidget {
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
               actions: [
+                // AI Summary Button
+                if (currentFamily != null)
+                  IconButton(
+                    tooltip: 'Weekly Summary',
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    color: Colors.purple,
+                    onPressed: _showWeeklySummary,
+                  ),
                 Padding(
                   padding: ResponsiveHelper.padding(right: 8),
                   child: GestureDetector(

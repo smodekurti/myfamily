@@ -248,8 +248,69 @@ class RewardRepository {
               .toList(),
         );
 
-    // Wait, I should augment these too if I want titles in history.
     // For brevity, skipping augmentation here, UI can look up reward from rewards list.
+  }
+
+  /// Get redemptions for a family within a date range
+  Future<List<RewardRedemptionModel>> getRedemptionsInRange(
+    String familyId,
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('reward_redemptions')
+          .select()
+          .eq('family_id', familyId)
+          .gte('redeemed_at', start.toIso8601String())
+          .lte('redeemed_at', end.toIso8601String())
+          .order('redeemed_at', ascending: false);
+
+      final redemptions = <RewardRedemptionModel>[];
+
+      // Manual augmentation since we can't join efficiently yet for list
+      // Optimization: Fetch all needed users and rewards in one go if list is large
+      // For now, doing it individually for simplicity as weekly volume is low
+      for (final json in response as List) {
+        final rewardId = json['reward_id'];
+        final userId = json['user_id'];
+
+        String? rewardTitle;
+        String? userName;
+
+        try {
+          final rewardRes = await _supabase
+              .from('rewards')
+              .select('title')
+              .eq('id', rewardId)
+              .maybeSingle();
+          if (rewardRes != null) rewardTitle = rewardRes['title'];
+        } catch (_) {}
+
+        try {
+          final userRes = await _supabase
+              .from('users')
+              .select('display_name')
+              .eq('id', userId)
+              .maybeSingle();
+          if (userRes != null) userName = userRes['display_name'];
+        } catch (_) {}
+
+        Map<String, dynamic> augmentedJson = Map.from(json);
+        if (rewardTitle != null) {
+          augmentedJson['rewards'] = {'title': rewardTitle};
+        }
+
+        var model = RewardRedemptionModelHelpers.fromSupabase(augmentedJson);
+        model = model.copyWith(userName: userName);
+        redemptions.add(model);
+      }
+
+      return redemptions;
+    } catch (e) {
+      _logger.e('Get redemptions in range error: $e');
+      rethrow;
+    }
   }
 
   /// Request a reward (Redeem)

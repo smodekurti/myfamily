@@ -21,13 +21,13 @@ import '../services/location_service.dart';
 import '../services/offline_service.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/avatar_url_service.dart';
+import '../services/family_data_service.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/event_model.dart';
 import '../../data/models/points_history_model.dart';
 import '../../data/models/achievement_model.dart';
 import '../../data/models/task_template_model.dart';
 import '../../data/models/announcement_model.dart';
-import '../../data/models/reward_model.dart';
 import '../../data/models/reward_model.dart';
 import '../../data/models/reward_redemption_model.dart';
 import '../../data/models/recipe_model.dart';
@@ -691,3 +691,7 @@ final currentWeekMealPlanProvider =
       );
       return repository.getOrCreateWeeklyPlan(familyId, normalizedStart);
     });
+
+final familyDataServiceProvider = Provider<FamilyDataService>((ref) {
+  return FamilyDataService();
+});
