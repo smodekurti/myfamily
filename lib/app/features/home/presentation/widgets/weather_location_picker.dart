@@ -99,128 +99,139 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
     return Scaffold(
       appBar: AppBar(title: const Text('Weather Location')),
       body: SafeArea(
-        child: Column(
-          children: [
+        child: CustomScrollView(
+          slivers: [
             // Current location option
-            ListTile(
-              leading: Icon(
-                Icons.my_location,
-                color: Theme.of(context).colorScheme.primary,
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: Icon(
+                  Icons.my_location,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: const Text('Use Current Location'),
+                subtitle: const Text('Automatically detect your location'),
+                trailing: selectedLocation == null
+                    ? Icon(
+                        Icons.check,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
+                onTap: () {
+                  ref.read(selectedWeatherLocationProvider.notifier).state =
+                      null;
+                  // Force refresh of current location
+                  ref.invalidate(currentLocationProvider);
+                  Navigator.pop(context);
+                },
               ),
-              title: const Text('Use Current Location'),
-              subtitle: const Text('Automatically detect your location'),
-              trailing: selectedLocation == null
-                  ? Icon(
-                      Icons.check,
-                      color: Theme.of(context).colorScheme.primary,
-                    )
-                  : null,
-              onTap: () {
-                ref.read(selectedWeatherLocationProvider.notifier).state = null;
-                // Force refresh of current location
-                ref.invalidate(currentLocationProvider);
-                Navigator.pop(context);
-              },
             ),
-            const Divider(),
+            const SliverToBoxAdapter(child: Divider()),
 
             // Search section
-            Padding(
-              padding: ResponsiveHelper.padding(all: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Search for a City or Zipcode',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.h(12)),
-                  TextField(
-                    controller: _searchController,
-                    enabled: !_isValidating,
-                    keyboardType: _isZipcodeInput
-                        ? TextInputType.number
-                        : TextInputType.text,
-                    decoration: InputDecoration(
-                      hintText: _isZipcodeInput
-                          ? 'Enter zipcode (e.g., 10001, 60060)'
-                          : 'Enter city name or zipcode (e.g., New York, 10001)',
-                      helperText: _isZipcodeInput
-                          ? 'Searching by zipcode'
-                          : 'You can search by city name or zipcode',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _isZipcodeInput = false;
-                                });
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: ResponsiveHelper.borderRadius(12),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: ResponsiveHelper.padding(all: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Search for a City or Zipcode',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    onChanged: (value) {
-                      // Detect if user is typing a zipcode
-                      final isZipcode = _isZipcode(value);
-                      setState(() {
-                        _isZipcodeInput = isZipcode;
-                      });
-                    },
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty && !_isValidating) {
-                        _selectLocation(value);
-                      }
-                    },
-                  ),
-                  if (_isValidating) ...[
-                    SizedBox(height: ResponsiveHelper.h(8)),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: ResponsiveHelper.w(16),
-                          height: ResponsiveHelper.h(16),
-                          child: CircularProgressIndicator(
-                            strokeWidth: ResponsiveHelper.w(2),
-                          ),
+                    SizedBox(height: ResponsiveHelper.h(12)),
+                    TextField(
+                      controller: _searchController,
+                      enabled: !_isValidating,
+                      keyboardType: _isZipcodeInput
+                          ? TextInputType.number
+                          : TextInputType.text,
+                      decoration: InputDecoration(
+                        hintText: _isZipcodeInput
+                            ? 'Enter zipcode (e.g., 10001, 60060)'
+                            : 'Enter city name or zipcode (e.g., New York, 10001)',
+                        helperText: _isZipcodeInput
+                            ? 'Searching by zipcode'
+                            : 'You can search by city name or zipcode',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _isZipcodeInput = false;
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: ResponsiveHelper.borderRadius(12),
                         ),
-                        SizedBox(width: ResponsiveHelper.w(8)),
-                        Text(
-                          'Validating location...',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                        ),
-                      ],
+                      ),
+                      onChanged: (value) {
+                        // Detect if user is typing a zipcode
+                        final isZipcode = _isZipcode(value);
+                        setState(() {
+                          _isZipcodeInput = isZipcode;
+                        });
+                      },
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty && !_isValidating) {
+                          _selectLocation(value);
+                        }
+                      },
                     ),
+                    if (_isValidating) ...[
+                      SizedBox(height: ResponsiveHelper.h(8)),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: ResponsiveHelper.w(16),
+                            height: ResponsiveHelper.h(16),
+                            child: CircularProgressIndicator(
+                              strokeWidth: ResponsiveHelper.w(2),
+                            ),
+                          ),
+                          SizedBox(width: ResponsiveHelper.w(8)),
+                          Text(
+                            'Validating location...',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
 
-            // Popular cities
-            Expanded(
-              child: ListView(
-                padding: ResponsiveHelper.padding(horizontal: 16),
-                children: [
-                  Text(
-                    'Popular Cities',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            // Popular cities header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: ResponsiveHelper.padding(horizontal: 16, bottom: 12),
+                child: Text(
+                  'Popular Cities',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  SizedBox(height: ResponsiveHelper.h(12)),
-                  ..._buildPopularCities(context, selectedLocation),
-                ],
+                ),
+              ),
+            ),
+
+            // Popular cities list
+            SliverPadding(
+              padding: ResponsiveHelper.padding(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  _buildPopularCities(context, selectedLocation),
+                ),
               ),
             ),
           ],
