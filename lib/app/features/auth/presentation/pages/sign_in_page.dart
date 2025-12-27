@@ -235,19 +235,15 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   Future<void> _signInWithGoogle() async {
-    print('DEBUG: _signInWithGoogle button pressed');
     setState(() => _isLoading = true);
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
-      print('DEBUG: Calling authRepo.signInWithGoogle()');
       await authRepo.signInWithGoogle();
-      print('DEBUG: authRepo.signInWithGoogle() completed successfully');
 
       // OAuth flow will handle navigation via auth state listener
       // Don't navigate immediately as OAuth is asynchronous
     } catch (e) {
-      print('DEBUG: _signInWithGoogle caught error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

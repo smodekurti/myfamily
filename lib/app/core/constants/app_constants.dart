@@ -290,6 +290,7 @@ class AppConstants {
   static const String routeCreateTask = '/tasks/create';
   static const String routeEditTask = '/tasks/edit';
   static const String routeGroceries = '/groceries';
+  static const String routeGroceryTemplateCreate = '/create-grocery-template';
   static const String routeGroceryTemplatesManage = '/grocery-templates/manage';
   static const String routeWalkthrough = '/walkthrough';
   static const String routeFamilySelection = '/family-selection';
@@ -308,10 +309,9 @@ class AppConstants {
   static const String routeCreateReward = '/rewards/create';
   static const String routeRecipes = '/recipes';
   static const String routeCreateRecipe = '/recipes/create';
-  static const String routeEditRecipe = 'edit'; // Sub-route of recipes
+  static const String routeEditRecipe = '/recipes/edit';
   static const String routeMealPlanner = '/meal-planner';
-  static const String routeMealSlotEdit =
-      'edit-slot'; // Sub-route of meal-planner
+  static const String routeMealSlotEdit = '/meal-planner/edit-slot';
 
   // ============================================================================
   // Weather Configuration

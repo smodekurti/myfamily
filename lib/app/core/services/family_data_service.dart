@@ -3,12 +3,25 @@ import '../../data/repositories/task_repository.dart';
 import '../../data/repositories/reward_repository.dart';
 import '../../data/repositories/family_repository.dart';
 
+/// Service responsible for aggregating family-related data.
+///
+/// This service connects to multiple repositories (Task, Reward, Family) to
+/// provide consolidated views of data, such as weekly summaries.
 class FamilyDataService {
   final _logger = Logger();
   final TaskRepository _taskRepo = TaskRepository();
   final RewardRepository _rewardRepo = RewardRepository();
   final FamilyRepository _familyRepo = FamilyRepository();
 
+  /// Aggregates data for the past 7 days for a given [familyId].
+  ///
+  /// Returns a Map containing:
+  /// - `period`: Start and end dates.
+  /// - `top_earner`: Name of the family member with the most points earned from tasks.
+  /// - `max_points`: Points earned by the top earner.
+  /// - `tasks`: List of completed tasks in the period.
+  /// - `redemptions`: List of rewards redeemed in the period.
+  /// - `stats`: Counts of total tasks and redemptions.
   Future<Map<String, dynamic>> getWeeklyData(String familyId) async {
     try {
       final now = DateTime.now();

@@ -248,11 +248,18 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               return _buildEmptyState(context);
                             }
 
-                            // Sort by earliest due date (null dates go to end)
+                            // Sort by status (incomplete first) then by earliest due date
                             final sortedTasks = List<TaskModel>.from(
                               filteredTasks,
                             );
                             sortedTasks.sort((a, b) {
+                              // First, sort by completion status
+                              final aCompleted = a.status == 'completed';
+                              final bCompleted = b.status == 'completed';
+                              if (aCompleted && !bCompleted) return 1;
+                              if (!aCompleted && bCompleted) return -1;
+
+                              // Then sort by due date
                               if (a.dueDate == null && b.dueDate == null)
                                 return 0;
                               if (a.dueDate == null)

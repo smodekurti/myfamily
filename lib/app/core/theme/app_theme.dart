@@ -28,6 +28,9 @@ class AppTheme {
     0xFF1A202C,
   ); // Dark text for light theme
 
+  // Global text scaler for slight font increase (10% larger than base)
+  static const TextScaler globalTextScale = TextScaler.linear(1.1);
+
   /// Light theme configuration
   static ThemeData get lightTheme {
     return ThemeData(

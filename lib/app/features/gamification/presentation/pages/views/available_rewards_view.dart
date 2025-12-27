@@ -82,25 +82,38 @@ class _AvailableRewardsViewState extends ConsumerState<AvailableRewardsView> {
           );
         }
 
-        return GridView.builder(
-          padding: EdgeInsets.all(16.r),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16.w,
-            mainAxisSpacing: 16.h,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: rewards.length,
-          itemBuilder: (context, index) {
-            final reward = rewards[index];
-            return _RewardCard(
-              reward: reward,
-              isParent: _isParent,
-              onRedeem: () => _redeemReward(reward),
-              onEdit: () => _editReward(reward),
-              onDelete: () => _deleteReward(reward),
-            );
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(familyRewardsProvider(currentFamily.id));
+            // Also refresh member points which might be displayed in parent
+            final currentUser = ref.read(currentUserProvider);
+            if (currentUser != null) {
+              ref.invalidate(
+                familyMemberProvider((currentFamily.id, currentUser.id)),
+              );
+            }
+            await Future.delayed(const Duration(milliseconds: 500));
           },
+          child: GridView.builder(
+            padding: EdgeInsets.all(16.r),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16.w,
+              mainAxisSpacing: 16.h,
+              childAspectRatio: 0.8,
+            ),
+            itemCount: rewards.length,
+            itemBuilder: (context, index) {
+              final reward = rewards[index];
+              return _RewardCard(
+                reward: reward,
+                isParent: _isParent,
+                onRedeem: () => _redeemReward(reward),
+                onEdit: () => _editReward(reward),
+                onDelete: () => _deleteReward(reward),
+              );
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

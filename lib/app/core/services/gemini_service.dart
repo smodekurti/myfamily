@@ -10,15 +10,27 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
   return GeminiService();
 });
 
+/// Service responsible for interacting with the Google Gemini AI API.
+///
+/// This service handles:
+/// - API Key management (storage and retrieval).
+/// - Content generation for various features (Meal Plans, Recipes, Rewards, etc.).
+/// - Robust error handling and model fallback mechanisms.
 class GeminiService {
   final _storage = const FlutterSecureStorage();
   static const _apiKeyStorageKey = 'gemini_api_key';
   final _logger = Logger();
 
+  /// Securely saves the Gemini API Key.
+  ///
+  /// [apiKey] is the API key string to be stored.
   Future<void> setApiKey(String apiKey) async {
     await _storage.write(key: _apiKeyStorageKey, value: apiKey);
   }
 
+  /// Retrieves the stored Gemini API Key.
+  ///
+  /// Returns `null` if no key is stored.
   Future<String?> getApiKey() async {
     return await _storage.read(key: _apiKeyStorageKey);
   }
@@ -32,11 +44,22 @@ class GeminiService {
     await _storage.delete(key: _apiKeyStorageKey);
   }
 
+  /// Generates a meal plan for a specified number of [days].
+  ///
+  /// Optional parameters:
+  /// - [preferences]: List of user food preferences.
+  /// - [avoid]: List of food items to avoid.
+  /// - [dietaryTags]: List of dietary requirements (e.g., Vegan, Gluten-Free).
+  /// - [cuisines]: List of preferred cuisine styles.
+  ///
+  /// Returns a list of daily meal plans in JSON format.
+  /// Throws an [Exception] if the API key is missing or generation fails.
   Future<List<Map<String, dynamic>>> generateMealPlan({
     required int days,
     List<String>? preferences,
     List<String>? avoid,
     List<String> dietaryTags = const [],
+    List<String> cuisines = const [],
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null) {
@@ -44,10 +67,14 @@ class GeminiService {
     }
 
     final dietString = dietaryTags.isEmpty ? "None" : dietaryTags.join(', ');
+    final cuisineString = cuisines.isNotEmpty
+        ? "Cuisine Styles (mix these): ${cuisines.join(', ')}"
+        : "";
 
     final prompt =
         '''
     Generate a meal plan for $days days.
+    $cuisineString
     Dietary Requirements: $dietString
     Preferences: ${preferences?.join(', ') ?? 'None'}
     Avoid: ${avoid?.join(', ') ?? 'None'}
@@ -55,6 +82,10 @@ class GeminiService {
     You MUST return a valid JSON object. 
     Do NOT include markdown formatting (like ```json ... ```). 
     Just return the raw JSON string.
+
+    Rules:
+    - Include "Breakfast", "Lunch", "Dinner", and "Snack" for EACH day.
+    - Ensure variety.
 
     Format:
     [
@@ -75,6 +106,13 @@ class GeminiService {
     return _generateListWithFallback(apiKey, prompt);
   }
 
+  /// Generates a detailed recipe for a given [mealName].
+  ///
+  /// Optional parameters:
+  /// - [description]: Context/description for the meal.
+  /// - [dietaryTags]: List of dietary requirements.
+  ///
+  /// Returns a map containing recipe details (ingredients, instructions, nutrition).
   Future<Map<String, dynamic>> generateRecipe({
     required String mealName,
     String? description,
@@ -122,9 +160,15 @@ class GeminiService {
     return _generateMapWithFallback(apiKey, prompt);
   }
 
+  /// Generates a single meal suggestion for a specific [mealType] (e.g., "Dinner").
+  ///
+  /// Optional parameters:
+  /// - [dietaryTags]: List of dietary requirements.
+  /// - [cuisines]: List of preferred cuisine styles.
   Future<Map<String, dynamic>> generateSingleMeal({
     required String mealType,
     List<String> dietaryTags = const [],
+    List<String> cuisines = const [],
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null) {
@@ -134,10 +178,14 @@ class GeminiService {
     final dietString = dietaryTags.isEmpty
         ? ""
         : "Dietary Requirements: ${dietaryTags.join(', ')}";
+    final cuisineString = cuisines.isNotEmpty
+        ? "Cuisine Style: ${cuisines.join(', ')}"
+        : "";
 
     final prompt =
         '''
     Suggest a single meal idea for: $mealType
+    $cuisineString
     $dietString
 
     Return a valid JSON object:
@@ -153,6 +201,51 @@ class GeminiService {
     return _generateMapWithFallback(apiKey, prompt);
   }
 
+  /// Generates multiple distinct options for a specific [mealType].
+  ///
+  /// Returns a list of meal options with titles and descriptions.
+  Future<List<Map<String, dynamic>>> generateMealOptions({
+    required String mealType,
+    List<String> dietaryTags = const [],
+    List<String> cuisines = const [],
+  }) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null) {
+      throw Exception('API Key not found');
+    }
+
+    final dietString = dietaryTags.isEmpty
+        ? ""
+        : "Dietary Requirements: ${dietaryTags.join(', ')}";
+    final cuisineString = cuisines.isNotEmpty
+        ? "Cuisine Style: ${cuisines.join(', ')}"
+        : "";
+
+    final prompt =
+        '''
+    Suggest 3 DISTINCT meal options for: $mealType
+    $cuisineString
+    $dietString
+    
+    Make them varying styles if no specific cuisine is set.
+
+    Return a valid JSON list:
+    [
+      {
+        "title": "Option 1 Name",
+        "description": "Short appetizing description"
+      },
+      ...
+    ]
+    Do NOT include markdown. Raw JSON only.
+    ''';
+
+    return _generateListWithFallback(apiKey, prompt);
+  }
+
+  /// Generates reward suggestions for a child based on [age] and [interests].
+  ///
+  /// Returns a list of reward ideas with suggested point costs.
   Future<List<Map<String, dynamic>>> generateRewardSuggestions({
     required int age,
     required List<String> interests,
@@ -190,7 +283,10 @@ class GeminiService {
   }
 
   // Helper to reuse the robust discovery/fallback logic
-  Future<List<Map<String, dynamic>>> extractIngredientsFromPlan(
+  /// Analyzes a [planData] (list of daily meals) and compiles a shopping list.
+  ///
+  /// Consolidates ingredients, categorizes them, and estimates costs.
+  Future<Map<String, dynamic>> extractIngredientsFromPlan(
     List<Map<String, dynamic>> planData,
   ) async {
     final apiKey = await getApiKey();
@@ -209,30 +305,36 @@ class GeminiService {
 
     final prompt =
         '''
-    Analyze this meal plan and extract a consolidated shopping list.
+    Analyze this meal plan and extract a consolidated shopping list with cost estimation.
     Plan: ${jsonEncode(simplePlan)}
 
     Rules:
-    1. STRICTLY CONSOLIDATE DUPLICATES. List each ingredient EXACTLY ONCE. 
-       - Sum quantities (e.g., "4 cans" + "3 cans" = "7 cans", "1 cup" + "0.5 cup" = "1.5 cups").
-       - If units differ, use the most appropriate common unit or combined string (e.g. "1 bag + 2 cups").
+    1. STRICTLY CONSOLIDATE DUPLICATES (sum quantities).
     2. Categorize items (Produce, Meat, Dairy, Pantry, Frozen, Bakery, Other).
-    3. Return valid JSON only.
-
-    Format:
-    [
-      {
-        "name": "Item Name",
-        "category": "Category",
-        "qty": 1, 
-        "unit": "unit or descriptive string if inferred" 
-      }
-    ]
+    3. Identify "Staples" that user likely has (Salt, Pepper, Oil, etc.) - DO NOT put them in "ingredients", put them in "staplesToCheck".
+    4. Estimate the total cost range for the "ingredients" list in USD (e.g. "\$80 - \$100").
+    
+    Return valid JSON only structure:
+    {
+      "ingredients": [
+        {
+          "name": "Item Name",
+          "category": "Category",
+          "qty": 1, 
+          "unit": "unit" 
+        }
+      ],
+      "staplesToCheck": ["Salt", "Olive Oil"],
+      "estimatedCost": "\$80 - \$120"
+    }
     ''';
 
-    return _generateListWithFallback(apiKey, prompt);
+    return _generateMapWithFallback(apiKey, prompt);
   }
 
+  /// Generates a weekly summary "newsletter" text.
+  ///
+  /// Uses [summaryData] (tasks completed, rewards, etc.) to create an engaging summary.
   Future<String> generateWeeklySummary({
     required Map<String, dynamic> summaryData,
   }) async {

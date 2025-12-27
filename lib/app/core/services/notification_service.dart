@@ -4,16 +4,24 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Service responsible for scheduling and showing local notifications.
+///
+/// This service handles:
+/// - Immediate local notifications.
+/// - Scheduled notifications (reminders).
+/// - Specific logic for Task and Event reminders.
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger();
   bool _initialized = false;
 
-  /// Initialize notification service
+  /// Initialize notification service.
+  ///
   /// [requestPermissions] - If true, requests permission immediately. If false, only checks status.
   /// Set to false during app startup to avoid premature permission dialogs on iOS.
   Future<bool> initialize({bool requestPermissions = true}) async {
@@ -22,31 +30,33 @@ class NotificationService {
     try {
       // Check current permission status first
       var status = await Permission.notification.status;
-      
+
       // Only request permission if explicitly requested and not already granted
-      if (requestPermissions && !status.isGranted && !status.isPermanentlyDenied) {
+      if (requestPermissions &&
+          !status.isGranted &&
+          !status.isPermanentlyDenied) {
         status = await Permission.notification.request();
-        
+
         // Re-check after a brief delay (iOS sometimes takes a moment)
         if (!status.isGranted) {
           await Future.delayed(const Duration(milliseconds: 500));
           status = await Permission.notification.status;
         }
-      } else if (!requestPermissions) {
-      }
-      
+      } else if (!requestPermissions) {}
+
       if (!status.isGranted) {
         // Don't return false - we can still initialize the service
         // Permission will be requested when user actually schedules a notification
-      } else {
-      }
+      } else {}
 
       // Initialize timezone
       tz.initializeTimeZones();
 
       // Android initialization settings
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-      
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
+
       // iOS initialization settings
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -83,7 +93,13 @@ class NotificationService {
     // Handle navigation based on payload if needed
   }
 
-  /// Schedule a notification for a specific date/time
+  /// Schedule a notification for a specific date/time.
+  ///
+  /// [id] - Unique notification ID.
+  /// [title] - Notification title.
+  /// [body] - Notification body.
+  /// [scheduledDate] - Date and time to show the notification.
+  /// [payload] - Optional data payload.
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -94,13 +110,15 @@ class NotificationService {
     // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
       final initialized = await initialize(requestPermissions: false);
-      if (!initialized) {        return;
+      if (!initialized) {
+        return;
       }
     }
 
     // Check if we have permission before trying to schedule
     final hasPermission = await Permission.notification.isGranted;
-    if (!hasPermission) {      return;
+    if (!hasPermission) {
+      return;
     }
 
     try {
@@ -113,18 +131,24 @@ class NotificationService {
           android: AndroidNotificationDetails(
             'task_reminders',
             'Task Reminders',
-            channelDescription: 'Notifications for task due dates and assignments',
+            channelDescription:
+                'Notifications for task due dates and assignments',
             importance: Importance.high,
             priority: Priority.high,
           ),
           iOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
     } catch (e, stackTrace) {
-      _logger.e('Schedule notification error: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Schedule notification error: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Don't rethrow - notification scheduling failure shouldn't block task operations
     }
   }
@@ -139,13 +163,15 @@ class NotificationService {
     // Initialize without requesting permissions (permissions should be requested separately)
     if (!_initialized) {
       final initialized = await initialize(requestPermissions: false);
-      if (!initialized) {        return;
+      if (!initialized) {
+        return;
       }
     }
 
     // Check if we have permission before trying to show
     final hasPermission = await Permission.notification.isGranted;
-    if (!hasPermission) {      return;
+    if (!hasPermission) {
+      return;
     }
 
     try {
@@ -157,7 +183,8 @@ class NotificationService {
           android: AndroidNotificationDetails(
             'task_notifications',
             'Task Notifications',
-            channelDescription: 'Notifications for task assignments and updates',
+            channelDescription:
+                'Notifications for task assignments and updates',
             importance: Importance.high,
             priority: Priority.high,
           ),
@@ -166,7 +193,11 @@ class NotificationService {
         payload: payload,
       );
     } catch (e, stackTrace) {
-      _logger.e('Show notification error: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Show notification error: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Don't rethrow - notification showing failure shouldn't block operations
     }
   }
@@ -189,15 +220,19 @@ class NotificationService {
     }
   }
 
-  /// Schedule task due date reminder
+  /// Schedule task due date reminder.
+  ///
+  /// Schedules a notification [reminderMinutesBefore] minutes before the [dueDate].
   Future<void> scheduleTaskDueReminder({
     required String taskId,
     required String taskTitle,
     required DateTime dueDate,
     int reminderMinutesBefore = 60, // Default: 1 hour before
   }) async {
-    final reminderTime = dueDate.subtract(Duration(minutes: reminderMinutesBefore));
-    
+    final reminderTime = dueDate.subtract(
+      Duration(minutes: reminderMinutesBefore),
+    );
+
     // Only schedule if reminder time is in the future
     if (reminderTime.isAfter(DateTime.now())) {
       await scheduleNotification(
@@ -217,8 +252,10 @@ class NotificationService {
     required DateTime startTime,
     int reminderMinutesBefore = 30, // Default: 30 minutes before
   }) async {
-    final reminderTime = startTime.subtract(Duration(minutes: reminderMinutesBefore));
-    
+    final reminderTime = startTime.subtract(
+      Duration(minutes: reminderMinutesBefore),
+    );
+
     // Only schedule if reminder time is in the future
     if (reminderTime.isAfter(DateTime.now())) {
       await scheduleNotification(
@@ -265,4 +302,3 @@ class NotificationService {
     return (eventId.hashCode.abs() % 1000000) + 1000000;
   }
 }
-

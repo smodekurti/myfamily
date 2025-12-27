@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/extensions/user_extensions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,13 @@ import 'package:intl/intl.dart';
 import '../../../../common/widgets/modern_header.dart';
 import '../../../../common/widgets/modern_card.dart';
 
+/// Page for managing family settings.
+///
+/// Features:
+/// - Edit Family Name/Address.
+/// - View/Regenerate Invite Codes (Adult/Child).
+/// - Manage Family Members (Remove members).
+/// - Leave or Delete Family (creator only).
 class FamilySettingsPage extends ConsumerStatefulWidget {
   const FamilySettingsPage({super.key});
 
@@ -41,6 +49,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     }
   }
 
+  /// Save changes to family details (name, address).
   Future<void> _saveFamily() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -88,6 +97,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     }
   }
 
+  /// Regenerate invite code.
+  ///
+  /// [isAdult] - If true, regenerates adult code. Else regenerates child code.
   Future<void> _regenerateInviteCode(bool isAdult) async {
     final currentFamily = ref.read(currentFamilyProvider);
     if (currentFamily == null) return;
@@ -126,6 +138,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     }
   }
 
+  /// Remove a member from the family.
+  ///
+  /// Shows a confirmation dialog before proceeding.
   Future<void> _removeMember(String memberId, String memberName) async {
     final currentFamily = ref.read(currentFamilyProvider);
     if (currentFamily == null) return;
@@ -186,6 +201,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     }
   }
 
+  /// Leave the current family.
+  ///
+  /// Shows confirmation. If confirmed, removes user from family and navigates to selection.
   Future<void> _leaveFamily() async {
     final currentFamily = ref.read(currentFamilyProvider);
     final currentUser = ref.read(currentUserProvider);
@@ -241,6 +259,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     }
   }
 
+  /// Delete the family (Creator only).
+  ///
+  /// PERMANENT ACTION. Deletes all family data. Defaults to [AppConstants.routeFamilySelection] on success.
   Future<void> _deleteFamily() async {
     final currentFamily = ref.read(currentFamilyProvider);
     if (currentFamily == null) return;
@@ -799,52 +820,117 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     return Container(
       padding: ResponsiveHelper.padding(all: 12),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-        borderRadius: ResponsiveHelper.borderRadius(12),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-          width: ResponsiveHelper.w(1),
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (code != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.qr_code,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  tooltip: 'Show QR Code',
+                  onPressed: () => _showQRCodeDialog(context, label, code),
+                ),
+            ],
+          ),
+          SizedBox(height: ResponsiveHelper.h(8)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
               children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                Expanded(
+                  child: Text(
+                    code ?? 'Not generated',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
-                SizedBox(height: ResponsiveHelper.h(4)),
-                Text(
-                  code ?? 'Not generated',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
+                if (code != null)
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 20),
+                    onPressed: onCopy,
+                    tooltip: 'Copy code',
                   ),
-                ),
+                if (canRegenerate)
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    onPressed: onRegenerate,
+                    tooltip: 'Regenerate code',
+                  ),
               ],
             ),
           ),
-          if (code != null)
-            IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: onCopy,
-              tooltip: 'Copy code',
+        ],
+      ),
+    );
+  }
+
+  void _showQRCodeDialog(BuildContext context, String label, String code) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(label),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 200,
+              height: 200,
+              padding: const EdgeInsets.all(12),
+              color: Colors.white,
+              child: QrImageView(
+                data: code,
+                version: QrVersions.auto,
+                size: 200.0,
+                backgroundColor: Colors.white,
+              ),
             ),
-          if (canRegenerate)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: onRegenerate,
-              tooltip: 'Regenerate code',
+            const SizedBox(height: 16),
+            Text(
+              code,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
             ),
+            const SizedBox(height: 8),
+            const Text('Scan this code to join'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );

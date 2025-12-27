@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
 import '../constants/app_constants.dart';
 import '../extensions/user_extensions.dart';
+import '../theme/app_theme.dart';
 import '../../common/widgets/avatar_widget.dart';
 import '../../common/responsive/responsive_helper.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
@@ -47,17 +48,37 @@ import '../../data/models/meal_plan_model.dart';
 import '../../data/models/recipe_model.dart';
 import '../../features/onboarding/presentation/pages/walkthrough_page.dart';
 
+/// Router notifier to handle state changes without recreating the router
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen<RouterState>(routerStateProvider, (previous, next) {
+      debugPrint('RouterNotifier: State changed from $previous to $next');
+      notifyListeners();
+    });
+  }
+}
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  return RouterNotifier(ref);
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final routerState = ref.watch(routerStateProvider);
-  final authRepo = ref.watch(authRepositoryProvider);
+  final notifier = ref.read(routerNotifierProvider);
+  final authRepo = ref.read(
+    authRepositoryProvider,
+  ); // Use read to ensure stability
 
   return GoRouter(
+    refreshListenable: notifier, // React to state changes
     initialLocation: AppConstants.routeSplash,
     redirect: (context, state) {
-      // Allow splash screen to show
-      if (state.matchedLocation == AppConstants.routeSplash) {
-        return null;
-      }
+      // Get current state dynamically without triggering rebuilds
+      final routerState = ref.read(routerStateProvider);
+      debugPrint(
+        'Router Redirect: Current State: $routerState, Location: ${state.matchedLocation}',
+      );
 
       switch (routerState) {
         case RouterState.unauthenticated:
@@ -177,6 +198,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                   AppConstants.routeGroceryTemplatesManage ||
               state.matchedLocation.startsWith(AppConstants.routeRewards) ||
               state.matchedLocation.startsWith(AppConstants.routeRecipes) ||
+              state.matchedLocation.startsWith(
+                AppConstants.routeGroceryTemplateCreate,
+              ) ||
               state.matchedLocation.startsWith(AppConstants.routeMealPlanner)) {
             return null;
           }
@@ -186,73 +210,85 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
-      GoRoute(
-        path: '/bio-auth',
-        builder: (context, state) => BioAuthScreen(
-          onAuthenticated: () {
-            ref.read(biometricLockedProvider.notifier).state = false;
-          },
-        ),
-      ),
-      // Splash route
-      GoRoute(
-        path: AppConstants.routeSplash,
-        name: 'splash',
-        builder: (context, state) => const SplashPage(),
-      ),
+      ShellRoute(
+        builder: (context, state, child) {
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: child,
+          );
+        },
+        routes: [
+          GoRoute(
+            path: '/bio-auth',
+            builder: (context, state) => BioAuthScreen(
+              onAuthenticated: () {
+                ref.read(biometricLockedProvider.notifier).state = false;
+              },
+            ),
+          ),
+          // Splash route
+          GoRoute(
+            path: AppConstants.routeSplash,
+            name: 'splash',
+            builder: (context, state) => const SplashPage(),
+          ),
 
-      // Auth routes
-      GoRoute(
-        path: AppConstants.routeWelcome,
-        name: 'welcome',
-        builder: (context, state) => const WelcomePage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeAuth,
-        name: 'auth',
-        builder: (context, state) => const SignInPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeSignUp,
-        name: 'sign-up',
-        builder: (context, state) => const SignUpPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeConsent,
-        name: 'consent',
-        builder: (context, state) => const ConsentPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeWalkthrough,
-        name: 'walkthrough',
-        builder: (context, state) => const WalkthroughPage(),
-      ),
+          // Auth routes
+          GoRoute(
+            path: AppConstants.routeWelcome,
+            name: 'welcome',
+            builder: (context, state) => const WelcomePage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeAuth,
+            name: 'auth',
+            builder: (context, state) => const SignInPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeSignUp,
+            name: 'sign-up',
+            builder: (context, state) => const SignUpPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeConsent,
+            name: 'consent',
+            builder: (context, state) => const ConsentPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeWalkthrough,
+            name: 'walkthrough',
+            builder: (context, state) => const WalkthroughPage(),
+          ),
 
-      // Get Started / Family setup routes
-      GoRoute(
-        path: AppConstants.routeGetStarted,
-        name: 'get-started',
-        builder: (context, state) => const GetStartedPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeFamilySelection,
-        name: 'family-selection',
-        builder: (context, state) => const FamilySelectionPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeFamilySetup,
-        name: 'family-setup',
-        builder: (context, state) => const FamilySetupPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeCreateFamily,
-        name: 'create-family',
-        builder: (context, state) => const CreateFamilyPage(),
-      ),
-      GoRoute(
-        path: AppConstants.routeJoinFamily,
-        name: 'join-family',
-        builder: (context, state) => const JoinFamilyPage(),
+          // Get Started / Family setup routes
+          GoRoute(
+            path: AppConstants.routeGetStarted,
+            name: 'get-started',
+            builder: (context, state) => const GetStartedPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeFamilySelection,
+            name: 'family-selection',
+            builder: (context, state) => const FamilySelectionPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeFamilySetup,
+            name: 'family-setup',
+            builder: (context, state) => const FamilySetupPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeCreateFamily,
+            name: 'create-family',
+            builder: (context, state) => const CreateFamilyPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeJoinFamily,
+            name: 'join-family',
+            builder: (context, state) => const JoinFamilyPage(),
+          ),
+        ],
       ),
 
       // Main app routes with bottom navigation
@@ -275,28 +311,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               return TasksPage(filter: filter);
             },
           ),
-          GoRoute(
-            path: AppConstants.routeCreateTask,
-            name: 'create-task',
-            builder: (context, state) {
-              final category = state.uri.queryParameters['category'];
-              return CreateTaskPage(initialCategory: category);
-            },
-          ),
-          GoRoute(
-            path: AppConstants.routeEditTask,
-            name: 'edit-task',
-            builder: (context, state) {
-              final taskJson = state.extra as Map<String, dynamic>?;
-              if (taskJson == null) {
-                // If no task provided, go back
-                return const TasksPage();
-              }
-              // Convert JSON to TaskModel
-              final task = TaskModelHelpers.fromSupabase(taskJson);
-              return EditTaskPage(task: task);
-            },
-          ),
+
           GoRoute(
             path: AppConstants.routeGroceries,
             name: 'groceries',
@@ -316,24 +331,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'grocery-list-select',
             builder: (context, state) => const GroceryListSelectPage(),
           ),
-          GoRoute(
-            path: '/grocery-template/create',
-            name: 'grocery-template-create',
-            builder: (context, state) => const GroceryTemplateCreatePage(),
-          ),
-          GoRoute(
-            path: '/grocery-template/:templateId',
-            name: 'grocery-template-detail',
-            builder: (context, state) {
-              final templateId = state.pathParameters['templateId']!;
-              return GroceryTemplateDetailPage(templateId: templateId);
-            },
-          ),
-          GoRoute(
-            path: AppConstants.routeGroceryTemplatesManage,
-            name: 'grocery-templates-manage',
-            builder: (context, state) => const GroceryTemplatesManagePage(),
-          ),
+
           GoRoute(
             path: AppConstants.routeCalendar,
             name: 'calendar',
@@ -344,11 +342,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'profile',
             builder: (context, state) => const ProfilePage(),
           ),
-          GoRoute(
-            path: AppConstants.routeEditProfile,
-            name: 'edit-profile',
-            builder: (context, state) => const EditProfilePage(),
-          ),
+
           GoRoute(
             path: AppConstants.routeFamilySettings,
             name: 'family-settings',
@@ -383,63 +377,156 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppConstants.routeRewards,
             name: 'rewards',
             builder: (context, state) => const RewardsPage(),
-            routes: [
-              GoRoute(
-                path: 'create',
-                name: 'create-reward',
-                builder: (context, state) => const CreateRewardPage(),
-              ),
-            ],
+            routes: [],
           ),
           GoRoute(
             path: AppConstants.routeRecipes,
             name: 'recipes',
             builder: (context, state) => const RecipesPage(),
-            routes: [
-              GoRoute(
-                path: 'create',
-                name: 'create-recipe',
-                builder: (context, state) => const CreateRecipePage(),
-              ),
-              GoRoute(
-                path: 'edit',
-                name: 'edit-recipe',
-                builder: (context, state) {
-                  final recipe = state.extra as RecipeModel?;
-                  return CreateRecipePage(existingRecipe: recipe);
-                },
-              ),
-            ],
+            routes: [],
           ),
           GoRoute(
             path: AppConstants.routeMealPlanner,
             name: 'meal-planner',
             builder: (context, state) => const MealPlannerPage(),
-            routes: [
-              GoRoute(
-                path:
-                    '${AppConstants.routeMealSlotEdit}/:date/:mealType/:familyId/:planId',
-                name: 'edit-meal-slot',
-                builder: (context, state) {
-                  final dateStr = state.pathParameters['date']!;
-                  final date = DateTime.parse(dateStr);
-                  final mealType = state.pathParameters['mealType']!;
-                  final familyId = state.pathParameters['familyId']!;
-                  final planId = state.pathParameters['planId']!;
-                  final existingEntry = state.extra as MealPlanEntryModel?;
-
-                  return MealSlotEditPage(
-                    date: date,
-                    mealType: mealType,
-                    familyId: familyId,
-                    planId: planId,
-                    existingEntry: existingEntry,
-                  );
-                },
-              ),
-            ],
+            routes: [],
           ),
         ],
+      ),
+
+      // Full screen routes (outside shell)
+      // Full screen routes (outside shell) - Individual routes wrapped with TextScaler.noScaling
+      GoRoute(
+        path: AppConstants.routeCreateTask,
+        name: 'create-task',
+        builder: (context, state) {
+          final category = state.uri.queryParameters['category'];
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: CreateTaskPage(initialCategory: category),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeEditTask,
+        name: 'edit-task',
+        builder: (context, state) {
+          final taskJson = state.extra as Map<String, dynamic>?;
+          if (taskJson == null) {
+            return const TasksPage();
+          }
+          final task = TaskModelHelpers.fromSupabase(taskJson);
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: EditTaskPage(task: task),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeGroceryTemplateCreate,
+        name: 'grocery-template-create',
+        builder: (context, state) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: const GroceryTemplateCreatePage(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeGroceryTemplatesManage,
+        name: 'grocery-templates-manage',
+        builder: (context, state) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: const GroceryTemplatesManagePage(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeEditProfile,
+        name: 'edit-profile',
+        builder: (context, state) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: const EditProfilePage(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeCreateRecipe,
+        name: 'create-recipe',
+        builder: (context, state) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: const CreateRecipePage(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeEditRecipe,
+        name: 'edit-recipe',
+        builder: (context, state) {
+          final recipe = state.extra as RecipeModel?;
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: CreateRecipePage(existingRecipe: recipe),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeCreateReward,
+        name: 'create-reward',
+        builder: (context, state) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: const CreateRewardPage(),
+        ),
+      ),
+      GoRoute(
+        path:
+            '${AppConstants.routeMealSlotEdit}/:date/:mealType/:familyId/:planId',
+        name: 'edit-meal-slot',
+        builder: (context, state) {
+          final dateStr = state.pathParameters['date']!;
+          final date = DateTime.parse(dateStr);
+          final mealType = state.pathParameters['mealType']!;
+          final familyId = state.pathParameters['familyId']!;
+          final planId = state.pathParameters['planId']!;
+          final existingEntry = state.extra as MealPlanEntryModel?;
+
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: MealSlotEditPage(
+              date: date,
+              mealType: mealType,
+              familyId: familyId,
+              planId: planId,
+              existingEntry: existingEntry,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/grocery-template/:templateId',
+        name: 'grocery-template-detail',
+        builder: (context, state) {
+          final templateId = state.pathParameters['templateId']!;
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: GroceryTemplateDetailPage(templateId: templateId),
+          );
+        },
       ),
     ],
   );
@@ -480,6 +567,8 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      resizeToAvoidBottomInset:
+          false, // Prevent double-resizing with inner Scaffolds
       extendBody: true, // Allow body to extend behind bottom nav
       body: Stack(
         children: [
@@ -496,6 +585,7 @@ class MainShell extends ConsumerWidget {
                     MediaQuery.of(context).viewPadding.bottom +
                     ResponsiveHelper.h(100),
               ),
+              textScaler: TextScaler.noScaling,
             ),
             child: child,
           ),

@@ -91,6 +91,11 @@ class RolePermissionService {
         return false;
       }
 
+      // Parents and admins have full access by default
+      if (role == 'admin' || role == 'parent') {
+        return true;
+      }
+
       // Map action to permission key
       final permissionKey = _actionToPermissionKey(action);
       if (permissionKey == null) {

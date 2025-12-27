@@ -65,9 +65,10 @@ class _MealSlotEditPageState extends ConsumerState<MealSlotEditPage>
     try {
       final isRecipeMode = _tabController.index == 0;
 
+      final planId = widget.planId == 'auto' ? '' : widget.planId;
       final entry = MealPlanEntryModel(
         id: widget.existingEntry?.id ?? '', // Empty ID means create new
-        planId: widget.planId,
+        planId: planId,
         mealDate: widget.date,
         mealType: widget.mealType.toLowerCase(),
         recipeId: isRecipeMode ? _selectedRecipeId : null,
@@ -75,9 +76,13 @@ class _MealSlotEditPageState extends ConsumerState<MealSlotEditPage>
         isCompleted: widget.existingEntry?.isCompleted ?? false,
       );
 
-      await ref.read(mealPlanRepositoryProvider).saveMealEntry(entry);
+      await ref
+          .read(mealPlanRepositoryProvider)
+          .saveEntryForFamily(widget.familyId, entry);
 
-      // Refresh the plan
+      // Refresh providers
+      // Invalidate all rolling views to be safe since we don't know the exact window start the user is viewing
+      ref.invalidate(rollingMealPlanEntriesProvider);
       ref.invalidate(currentWeekMealPlanProvider(widget.familyId));
 
       if (mounted) {
@@ -260,7 +265,7 @@ class _MealSlotEditPageState extends ConsumerState<MealSlotEditPage>
           ),
 
           // Custom Note Tab
-          Padding(
+          SingleChildScrollView(
             padding: ResponsiveHelper.padding(all: 16),
             child: Column(
               children: [
