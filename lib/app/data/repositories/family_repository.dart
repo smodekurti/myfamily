@@ -5,13 +5,25 @@ import '../models/family_model.dart';
 import 'points_history_repository.dart';
 import '../../core/services/role_permission_service.dart';
 
+/// Repository for managing Family data.
+///
+/// This repository handles:
+/// - Family creation and updates.
+/// - Member management (joining, leaving, assigning roles).
+/// - Invitation code generation and validation.
+/// - Points and rewards transactions within the family.
 class FamilyRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
   final PointsHistoryRepository _pointsHistoryRepo = PointsHistoryRepository();
 
-  /// Create a new family
+  /// Create a new family group.
+  ///
+  /// [name] - Family name.
+  /// [createdBy] - UID of the creator (who becomes 'parent').
+  /// [address] - Optional physical address.
+  /// [creatorAge] & [creatorBirthdate] - Optional updates for the creator's profile.
   Future<FamilyModel> createFamily({
     required String name,
     required String createdBy,
@@ -22,13 +34,13 @@ class FamilyRepository {
     try {
       final familyId = _uuid.v4();
       final now = DateTime.now();
-      
+
       // Generate adult invite code
       final inviteCode = _generateInviteCode('ADULT');
-      
+
       // Generate parent-specific invite code
       final parentInviteCode = _generateInviteCode('PARENT');
-      
+
       final family = FamilyModel(
         id: familyId,
         name: name,
@@ -39,7 +51,7 @@ class FamilyRepository {
         createdAt: now,
         updatedAt: now,
       );
-      
+
       // Store parent invite code separately (not in model yet)
       final familyData = family.toJson();
       familyData['parent_invite_code'] = parentInviteCode;
@@ -49,18 +61,16 @@ class FamilyRepository {
 
       // Update user profile with age and birthdate if provided
       if (creatorAge != null || creatorBirthdate != null) {
-        final updates = <String, dynamic>{
-          'updated_at': now.toIso8601String(),
-        };
-        
+        final updates = <String, dynamic>{'updated_at': now.toIso8601String()};
+
         if (creatorAge != null) {
           updates['age'] = creatorAge;
         }
-        
+
         if (creatorBirthdate != null) {
           updates['birthdate'] = creatorBirthdate.toIso8601String();
         }
-        
+
         await _supabase.from('users').update(updates).eq('id', createdBy);
       }
 
@@ -84,7 +94,7 @@ class FamilyRepository {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = DateTime.now().millisecondsSinceEpoch;
     final code = StringBuffer();
-    
+
     // Add role prefix
     switch (role.toUpperCase()) {
       case 'ADULT':
@@ -99,21 +109,28 @@ class FamilyRepository {
       default:
         code.write('A'); // Default to adult
     }
-    
+
     // Generate 5 more characters
     for (int i = 0; i < 5; i++) {
       code.write(chars[(random + i) % chars.length]);
     }
-    
+
     return code.toString();
   }
 
-  /// Join a family by invite code
-  /// Returns the family model and a flag indicating if role selection is needed
+  /// Join a family using an [inviteCode].
+  ///
+  /// [userId] - UID of the joining user.
+  /// [selectedRole] - Optional role if required (e.g. when parent slots are full).
+  ///
+  /// Returns a Map with:
+  /// - `family`: [FamilyModel] instance.
+  /// - `needsRoleSelection`: `true` if role ambiguity exists.
   Future<Map<String, dynamic>> joinFamilyByCode({
     required String inviteCode,
     required String userId,
-    String? selectedRole, // Optional: role selected by user when parent slots are full
+    String?
+    selectedRole, // Optional: role selected by user when parent slots are full
   }) async {
     try {
       String? roleToAssign;
@@ -122,7 +139,8 @@ class FamilyRepository {
       // Determine role based on invite code prefix
       if (inviteCode.startsWith('P')) {
         // Parent-specific invite code - will check parent count after finding family
-        roleToAssign = selectedRole ?? 'parent'; // Default to parent, will validate below
+        roleToAssign =
+            selectedRole ?? 'parent'; // Default to parent, will validate below
       } else if (inviteCode.startsWith('A')) {
         // Adult invite code - check parent count
         // Will determine role after finding family
@@ -131,25 +149,13 @@ class FamilyRepository {
         roleToAssign = 'child';
       }
 
-      // Try to find family by different invite code types
+      // Try to find family using the secure RPC function
+      // This bypasses RLS policies that prevent non-members from searching families
       var response = await _supabase
-          .from('families')
-          .select()
-          .eq('invite_code', inviteCode)
-          .maybeSingle();
-
-      // If not found, try parent invite code
-      response ??= await _supabase
-          .from('families')
-          .select()
-          .eq('parent_invite_code', inviteCode)
-          .maybeSingle();
-
-      // If not found, try child invite code
-      response ??= await _supabase
-          .from('families')
-          .select()
-          .eq('child_invite_code', inviteCode)
+          .rpc(
+            'find_family_by_invite_code',
+            params: {'invite_code_param': inviteCode},
+          )
           .maybeSingle();
 
       if (response == null) {
@@ -160,27 +166,21 @@ class FamilyRepository {
 
       // Check if user is already a member
       if (family.members.contains(userId)) {
-        return {
-          'family': family,
-          'needsRoleSelection': false,
-        };
+        return {'family': family, 'needsRoleSelection': false};
       }
 
       // For adult invite codes, determine role based on parent count
       if (inviteCode.startsWith('A')) {
         final roleService = RolePermissionService();
         final parentCount = await roleService.getParentCount(family.id);
-        
+
         if (parentCount < 2) {
           roleToAssign = 'parent';
         } else {
           // Parent slots are full, need role selection
           if (selectedRole == null) {
             needsRoleSelection = true;
-            return {
-              'family': family,
-              'needsRoleSelection': true,
-            };
+            return {'family': family, 'needsRoleSelection': true};
           } else {
             roleToAssign = selectedRole;
           }
@@ -191,13 +191,10 @@ class FamilyRepository {
       if (inviteCode.startsWith('P')) {
         final roleService = RolePermissionService();
         final canAddParent = await roleService.canAddParent(family.id);
-        
+
         if (!canAddParent && selectedRole == null) {
           needsRoleSelection = true;
-          return {
-            'family': family,
-            'needsRoleSelection': true,
-          };
+          return {'family': family, 'needsRoleSelection': true};
         } else {
           roleToAssign = selectedRole ?? 'parent';
         }
@@ -216,18 +213,17 @@ class FamilyRepository {
 
       // Update family members list (handled by database trigger or manually)
       final updatedMembers = [...family.members, userId];
-      await _supabase.from('families').update({
-        'members': updatedMembers,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', family.id);
+      await _supabase
+          .from('families')
+          .update({
+            'members': updatedMembers,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', family.id);
 
-      
       // Return updated family
       final updatedFamily = await getFamily(family.id);
-      return {
-        'family': updatedFamily ?? family,
-        'needsRoleSelection': false,
-      };
+      return {'family': updatedFamily ?? family, 'needsRoleSelection': false};
     } catch (e) {
       _logger.e('Join family error: $e');
       rethrow;
@@ -242,9 +238,9 @@ class FamilyRepository {
           .select()
           .eq('id', familyId)
           .maybeSingle();
-      
+
       if (response == null) return null;
-      
+
       return FamilyModel.fromJson(response);
     } catch (e) {
       _logger.e('Get family error: $e');
@@ -284,68 +280,140 @@ class FamilyRepository {
 
       // Now fetch the families
       // Build OR query for multiple family IDs
-      PostgrestFilterBuilder query = _supabase
-          .from('families')
-          .select();
-      
+      PostgrestFilterBuilder query = _supabase.from('families').select();
+
       // Add OR conditions for each family ID
       if (familyIds.isNotEmpty) {
-        final orConditions = familyIds
-            .map((id) => 'id.eq.$id')
-            .join(',');
+        final orConditions = familyIds.map((id) => 'id.eq.$id').join(',');
         query = query.or(orConditions);
       }
-      
+
       final response = await query.order('created_at', ascending: false);
-      
+
       final familiesList = response as List;
 
-      return familiesList
-          .map((json) => FamilyModel.fromJson(json))
-          .toList();
+      return familiesList.map((json) => FamilyModel.fromJson(json)).toList();
     } catch (e, stackTrace) {
-      _logger.e('Get user families error: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Get user families error: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return [];
     }
   }
 
   /// Stream families for user
   Stream<List<FamilyModel>> streamUserFamilies(String userId) {
-    // Stream family_members first to get family IDs the user belongs to
-    return _supabase
-        .from('family_members')
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .asyncMap((memberData) async {
-          if (memberData.isEmpty) {
+    try {
+      // Stream family_members first to get family IDs the user belongs to
+      return _supabase
+          .from('family_members')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .asyncMap((memberData) async {
+            try {
+              _logger.d(
+                'Stream user families: received ${memberData.length} family_members for user $userId',
+              );
+
+              if (memberData.isEmpty) {
+                _logger.d('No family_members found for user $userId');
+                return <FamilyModel>[];
+              }
+
+              final familyIds = memberData
+                  .map((json) {
+                    try {
+                      return json['family_id'] as String;
+                    } catch (e) {
+                      _logger.w(
+                        'Failed to parse family_id from member data: $json',
+                        error: e,
+                      );
+                      return null;
+                    }
+                  })
+                  .whereType<String>()
+                  .toSet()
+                  .toList();
+
+              if (familyIds.isEmpty) {
+                _logger.w('No valid family IDs extracted from member data');
+                return <FamilyModel>[];
+              }
+
+              _logger.d('Fetching ${familyIds.length} families: $familyIds');
+
+              // Now fetch the families
+              // Build OR query for multiple family IDs
+              PostgrestFilterBuilder query = _supabase
+                  .from('families')
+                  .select();
+
+              // Add OR conditions for each family ID
+              if (familyIds.isNotEmpty) {
+                final orConditions = familyIds
+                    .map((id) => 'id.eq.$id')
+                    .join(',');
+                query = query.or(orConditions);
+              }
+
+              final response = await query.order(
+                'created_at',
+                ascending: false,
+              );
+
+              final familiesList = response as List;
+              final families = familiesList
+                  .map((json) {
+                    try {
+                      return FamilyModel.fromJson(json);
+                    } catch (e, stackTrace) {
+                      _logger.e(
+                        'Failed to parse family from JSON: $json',
+                        error: e,
+                        stackTrace: stackTrace,
+                      );
+                      return null;
+                    }
+                  })
+                  .whereType<FamilyModel>()
+                  .toList();
+
+              _logger.d(
+                'Successfully fetched ${families.length} families for user $userId',
+              );
+              return families;
+            } catch (e, stackTrace) {
+              _logger.e(
+                'Error in streamUserFamilies asyncMap for user $userId: $e',
+                error: e,
+                stackTrace: stackTrace,
+              );
+              // Return empty list on error to prevent stream from breaking
+              // Fallback to non-streaming method will be handled by provider
+              return <FamilyModel>[];
+            }
+          })
+          .handleError((error, stackTrace) {
+            _logger.e(
+              'Stream error in streamUserFamilies for user $userId: $error',
+              error: error,
+              stackTrace: stackTrace,
+            );
+            // Return empty list to prevent stream from breaking
             return <FamilyModel>[];
-          }
-
-          final familyIds = memberData
-              .map((json) => json['family_id'] as String)
-              .toSet()
-              .toList();
-
-          // Now fetch the families
-          // Build OR query for multiple family IDs
-          PostgrestFilterBuilder query = _supabase
-              .from('families')
-              .select();
-          
-          // Add OR conditions for each family ID
-          if (familyIds.isNotEmpty) {
-            final orConditions = familyIds
-                .map((id) => 'id.eq.$id')
-                .join(',');
-            query = query.or(orConditions);
-          }
-          
-          final response = await query.order('created_at', ascending: false);
-
-          return (response as List)
-              .map((json) => FamilyModel.fromJson(json))
-              .toList();
-        });
+          });
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Failed to create stream for user families: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // Return a stream that emits empty list and completes
+      return Stream.value(<FamilyModel>[]);
+    }
   }
 
   /// Update family
@@ -362,10 +430,10 @@ class FamilyRepository {
 
       if (name != null) updates['name'] = name;
       if (address != null) updates['address'] = address;
-      if (themePreference != null) updates['theme_preference'] = themePreference;
+      if (themePreference != null)
+        updates['theme_preference'] = themePreference;
 
       await _supabase.from('families').update(updates).eq('id', familyId);
-      
     } catch (e) {
       _logger.e('Update family error: $e');
       rethrow;
@@ -398,20 +466,26 @@ class FamilyRepository {
       // Update family members array (if you're storing it redundantly)
       final family = await getFamily(familyId);
       if (family != null) {
-        final updatedMembers = family.members.where((id) => id != userId).toList();
-        await _supabase.from('families').update({
-          'members': updatedMembers,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', familyId);
+        final updatedMembers = family.members
+            .where((id) => id != userId)
+            .toList();
+        await _supabase
+            .from('families')
+            .update({
+              'members': updatedMembers,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', familyId);
       }
-
     } catch (e) {
       _logger.e('Leave family error: $e');
       rethrow;
     }
   }
 
-  /// Add family member
+  /// Add a user to a family with a specific role.
+  ///
+  /// Inserts a record into the `family_members` table.
   Future<void> addFamilyMember({
     required String familyId,
     required String uid,
@@ -427,7 +501,6 @@ class FamilyRepository {
       };
 
       await _supabase.from('family_members').insert(member);
-
     } catch (e) {
       _logger.e('Add family member error: $e');
       rethrow;
@@ -448,14 +521,14 @@ class FamilyRepository {
           .maybeSingle();
 
       if (response == null) return null;
-      
+
       // Fetch user data to get displayName and photoURL
       final userResponse = await _supabase
           .from('users')
           .select('display_name, avatar_url')
           .eq('id', uid)
           .maybeSingle();
-      
+
       // Construct FamilyMemberModel manually (database uses user_id, not uid)
       return FamilyMemberModel(
         uid: uid,
@@ -463,9 +536,16 @@ class FamilyRepository {
         photoURL: userResponse?['avatar_url'] as String?,
         role: response['role'] as String? ?? 'member',
         points: response['points'] as int? ?? 0,
-        notificationTokens: (response['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-        joinedAt: response['joined_at'] != null ? DateTime.parse(response['joined_at'] as String) : null,
-        updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at'] as String) : null,
+        notificationTokens:
+            (response['notification_tokens'] as List<dynamic>?)
+                ?.cast<String>() ??
+            [],
+        joinedAt: response['joined_at'] != null
+            ? DateTime.parse(response['joined_at'] as String)
+            : null,
+        updatedAt: response['updated_at'] != null
+            ? DateTime.parse(response['updated_at'] as String)
+            : null,
       );
     } catch (e) {
       _logger.e('Get family member error: $e');
@@ -478,36 +558,41 @@ class FamilyRepository {
     required String familyId,
     required String uid,
   }) {
-    return _supabase
-        .from('family_members')
-        .stream(primaryKey: ['id'])
-        .asyncMap((data) async {
-          final filtered = data.where((item) => 
-            item['family_id'] == familyId && item['user_id'] == uid
-          );
-          if (filtered.isEmpty) return null;
-          
-          final json = filtered.first;
-          
-          // Fetch user data to get displayName and photoURL
-          final userResponse = await _supabase
-              .from('users')
-              .select('display_name, avatar_url')
-              .eq('id', uid)
-              .maybeSingle();
-          
-          // Construct FamilyMemberModel manually (database uses user_id, not uid)
-          return FamilyMemberModel(
-            uid: uid,
-            displayName: userResponse?['display_name'] as String? ?? 'User',
-            photoURL: userResponse?['avatar_url'] as String?,
-            role: json['role'] as String? ?? 'member',
-            points: json['points'] as int? ?? 0,
-            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-          );
-        });
+    return _supabase.from('family_members').stream(primaryKey: ['id']).asyncMap(
+      (data) async {
+        final filtered = data.where(
+          (item) => item['family_id'] == familyId && item['user_id'] == uid,
+        );
+        if (filtered.isEmpty) return null;
+
+        final json = filtered.first;
+
+        // Fetch user data to get displayName and photoURL
+        final userResponse = await _supabase
+            .from('users')
+            .select('display_name, avatar_url')
+            .eq('id', uid)
+            .maybeSingle();
+
+        // Construct FamilyMemberModel manually (database uses user_id, not uid)
+        return FamilyMemberModel(
+          uid: uid,
+          displayName: userResponse?['display_name'] as String? ?? 'User',
+          photoURL: userResponse?['avatar_url'] as String?,
+          role: json['role'] as String? ?? 'member',
+          points: json['points'] as int? ?? 0,
+          notificationTokens:
+              (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ??
+              [],
+          joinedAt: json['joined_at'] != null
+              ? DateTime.parse(json['joined_at'] as String)
+              : null,
+          updatedAt: json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'] as String)
+              : null,
+        );
+      },
+    );
   }
 
   /// Get all family members
@@ -518,45 +603,61 @@ class FamilyRepository {
           .from('family_members')
           .select()
           .eq('family_id', familyId);
-          // Note: Order by points requires the column to exist. Run add_family_members_points_column.sql migration first.
-          // .order('points', ascending: false)
+      // Note: Order by points requires the column to exist. Run add_family_members_points_column.sql migration first.
+      // .order('points', ascending: false)
 
       // Fetch user data for all members in parallel
-      final members = await Future.wait((response as List).map((json) async {
-        try {
-          final userId = json['user_id'] as String;
-          final userResponse = await _supabase
-              .from('users')
-              .select('display_name, avatar_url')
-              .eq('id', userId)
-              .maybeSingle();
-          
-          return FamilyMemberModel(
-            uid: userId,
-            displayName: userResponse?['display_name'] as String? ?? 'User',
-            photoURL: userResponse?['avatar_url'] as String?,
-            role: json['role'] as String? ?? 'member',
-            points: json['points'] as int? ?? 0,
-            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-          );
-        } catch (e) {
-          _logger.e('Error fetching user data for ${json['user_id']}: $e');
-          // Return member with minimal data if user fetch fails
-          return FamilyMemberModel(
-            uid: json['user_id'] as String,
-            displayName: 'User',
-            photoURL: null,
-            role: json['role'] as String? ?? 'member',
-            points: json['points'] as int? ?? 0,
-            notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-            joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-            updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-          );
-        }
-      }));
-      
+      final members = await Future.wait(
+        (response as List).map((json) async {
+          try {
+            final userId = json['user_id'] as String;
+            final userResponse = await _supabase
+                .from('users')
+                .select('display_name, avatar_url')
+                .eq('id', userId)
+                .maybeSingle();
+
+            return FamilyMemberModel(
+              uid: userId,
+              displayName: userResponse?['display_name'] as String? ?? 'User',
+              photoURL: userResponse?['avatar_url'] as String?,
+              role: json['role'] as String? ?? 'member',
+              points: json['points'] as int? ?? 0,
+              notificationTokens:
+                  (json['notification_tokens'] as List<dynamic>?)
+                      ?.cast<String>() ??
+                  [],
+              joinedAt: json['joined_at'] != null
+                  ? DateTime.parse(json['joined_at'] as String)
+                  : null,
+              updatedAt: json['updated_at'] != null
+                  ? DateTime.parse(json['updated_at'] as String)
+                  : null,
+            );
+          } catch (e) {
+            _logger.e('Error fetching user data for ${json['user_id']}: $e');
+            // Return member with minimal data if user fetch fails
+            return FamilyMemberModel(
+              uid: json['user_id'] as String,
+              displayName: 'User',
+              photoURL: null,
+              role: json['role'] as String? ?? 'member',
+              points: json['points'] as int? ?? 0,
+              notificationTokens:
+                  (json['notification_tokens'] as List<dynamic>?)
+                      ?.cast<String>() ??
+                  [],
+              joinedAt: json['joined_at'] != null
+                  ? DateTime.parse(json['joined_at'] as String)
+                  : null,
+              updatedAt: json['updated_at'] != null
+                  ? DateTime.parse(json['updated_at'] as String)
+                  : null,
+            );
+          }
+        }),
+      );
+
       // Sort by points (descending)
       members.sort((a, b) => b.points.compareTo(a.points));
       return members;
@@ -576,41 +677,55 @@ class FamilyRepository {
         // .order('points', ascending: false)
         .asyncMap((data) async {
           // Fetch user data for all members in parallel
-          final members = await Future.wait(data.map((json) async {
-            try {
-              final userId = json['user_id'] as String;
-              final userResponse = await _supabase
-                  .from('users')
-                  .select('display_name, avatar_url')
-                  .eq('id', userId)
-                  .maybeSingle();
-              
-              final avatarUrl = userResponse?['avatar_url'] as String?;
-              
-              return FamilyMemberModel(
-                uid: userId,
-                displayName: userResponse?['display_name'] as String? ?? 'User',
-                photoURL: avatarUrl,
-                role: json['role'] as String? ?? 'member',
-                points: json['points'] as int? ?? 0,
-                notificationTokens: (json['notification_tokens'] as List<dynamic>?)?.cast<String>() ?? [],
-                joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-                updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-              );
-            } catch (e) {
-              _logger.e('Error fetching user data for member: $e');
-              return FamilyMemberModel(
-                uid: json['user_id'] as String,
-                displayName: 'User',
-                photoURL: null,
-                role: json['role'] as String? ?? 'member',
-                points: json['points'] as int? ?? 0,
-                notificationTokens: [],
-                joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at'] as String) : null,
-                updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-              );
-            }
-          }));
+          final members = await Future.wait(
+            data.map((json) async {
+              try {
+                final userId = json['user_id'] as String;
+                final userResponse = await _supabase
+                    .from('users')
+                    .select('display_name, avatar_url')
+                    .eq('id', userId)
+                    .maybeSingle();
+
+                final avatarUrl = userResponse?['avatar_url'] as String?;
+
+                return FamilyMemberModel(
+                  uid: userId,
+                  displayName:
+                      userResponse?['display_name'] as String? ?? 'User',
+                  photoURL: avatarUrl,
+                  role: json['role'] as String? ?? 'member',
+                  points: json['points'] as int? ?? 0,
+                  notificationTokens:
+                      (json['notification_tokens'] as List<dynamic>?)
+                          ?.cast<String>() ??
+                      [],
+                  joinedAt: json['joined_at'] != null
+                      ? DateTime.parse(json['joined_at'] as String)
+                      : null,
+                  updatedAt: json['updated_at'] != null
+                      ? DateTime.parse(json['updated_at'] as String)
+                      : null,
+                );
+              } catch (e) {
+                _logger.e('Error fetching user data for member: $e');
+                return FamilyMemberModel(
+                  uid: json['user_id'] as String,
+                  displayName: 'User',
+                  photoURL: null,
+                  role: json['role'] as String? ?? 'member',
+                  points: json['points'] as int? ?? 0,
+                  notificationTokens: [],
+                  joinedAt: json['joined_at'] != null
+                      ? DateTime.parse(json['joined_at'] as String)
+                      : null,
+                  updatedAt: json['updated_at'] != null
+                      ? DateTime.parse(json['updated_at'] as String)
+                      : null,
+                );
+              }
+            }),
+          );
           // Sort by points (descending) in memory
           members.sort((a, b) => b.points.compareTo(a.points));
           return members;
@@ -639,14 +754,15 @@ class FamilyRepository {
           .update(updates)
           .eq('family_id', familyId)
           .eq('user_id', uid);
-
     } catch (e) {
       _logger.e('Update family member error: $e');
       rethrow;
     }
   }
 
-  /// Award points to a family member
+  /// Awards points to a family member for a task or reason.
+  ///
+  /// Updates the member's point balance and logs the transaction history.
   Future<void> awardPointsToMember({
     required String familyId,
     required String userId,
@@ -684,7 +800,6 @@ class FamilyRepository {
             .eq('family_id', familyId)
             .eq('user_id', userId);
 
-        
         // Log points transaction
         await _pointsHistoryRepo.logPointsTransaction(
           familyId: familyId,
@@ -695,7 +810,9 @@ class FamilyRepository {
           taskTitle: taskTitle,
         );
       } catch (e) {
-        _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
+        _logger.e(
+          'Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e',
+        );
         // Don't rethrow - allow the app to continue functioning
         // Points will be awarded once the migration is run
       }
@@ -730,7 +847,9 @@ class FamilyRepository {
         // If points column doesn't exist, log warning and use 0        currentPoints = 0;
       }
 
-      final newPoints = (currentPoints - points).clamp(0, double.infinity).toInt(); // Don't go below 0
+      final newPoints = (currentPoints - points)
+          .clamp(0, double.infinity)
+          .toInt(); // Don't go below 0
 
       // Update points - handle case where column might not exist yet
       try {
@@ -743,7 +862,6 @@ class FamilyRepository {
             .eq('family_id', familyId)
             .eq('user_id', userId);
 
-        
         // Log points transaction (negative points)
         await _pointsHistoryRepo.logPointsTransaction(
           familyId: familyId,
@@ -754,7 +872,9 @@ class FamilyRepository {
           taskTitle: taskTitle,
         );
       } catch (e) {
-        _logger.e('Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e');
+        _logger.e(
+          'Failed to update points. Please run add_family_members_points_column.sql migration. Error: $e',
+        );
         // Don't rethrow - allow the app to continue functioning
         // Points will be updated once the migration is run
       }
@@ -775,7 +895,6 @@ class FamilyRepository {
           .delete()
           .eq('family_id', familyId)
           .eq('user_id', uid);
-
     } catch (e) {
       _logger.e('Remove family member error: $e');
       rethrow;
@@ -785,20 +904,12 @@ class FamilyRepository {
   /// Check if invite code exists (adult or child)
   Future<bool> inviteCodeExists(String inviteCode) async {
     try {
-      // Check adult invite code
-      var response = await _supabase
-          .from('families')
-          .select('id')
-          .eq('invite_code', inviteCode)
-          .maybeSingle();
-
-      if (response != null) return true;
-
-      // Check child invite code
-      response = await _supabase
-          .from('families')
-          .select('id')
-          .eq('child_invite_code', inviteCode)
+      // Check if code exists globally using secure RPC
+      final response = await _supabase
+          .rpc(
+            'find_family_by_invite_code',
+            params: {'invite_code_param': inviteCode},
+          )
           .maybeSingle();
 
       return response != null;
@@ -811,16 +922,10 @@ class FamilyRepository {
   /// Generate invite code for existing family that doesn't have one
   Future<String?> generateInviteCodeForFamily(String familyId) async {
     try {
-      // Check if family already has invite code
-      final family = await getFamily(familyId);
-      if (family?.inviteCode != null && family!.inviteCode!.isNotEmpty) {
-        return family.inviteCode;
-      }
-
       // Generate new adult invite code
       String inviteCode;
       bool exists = true;
-      
+
       // Ensure unique invite code
       do {
         inviteCode = _generateInviteCode('ADULT');
@@ -849,7 +954,7 @@ class FamilyRepository {
       // Generate new child invite code
       String inviteCode;
       bool exists = true;
-      
+
       // Ensure unique invite code
       do {
         inviteCode = _generateInviteCode('CHILD');
@@ -884,7 +989,7 @@ class FamilyRepository {
             .select('parent_invite_code')
             .eq('id', familyId)
             .maybeSingle();
-        
+
         if (response != null && response['parent_invite_code'] != null) {
           return response['parent_invite_code'] as String;
         }
@@ -893,7 +998,7 @@ class FamilyRepository {
       // Generate new parent invite code
       String inviteCode;
       bool exists = true;
-      
+
       // Ensure unique invite code
       do {
         inviteCode = _generateInviteCode('PARENT');

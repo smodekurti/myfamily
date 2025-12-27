@@ -368,7 +368,13 @@ class GroceryListRepository {
           'list_id': listId,
           'name': item['name'],
           'category': item['category'] ?? 'Other',
-          'qty': item['qty'] ?? 1,
+          'qty': (item['qty'] is int)
+              ? item['qty']
+              : (item['qty'] is double)
+              ? (item['qty'] as double).ceil()
+              : (item['qty'] is String)
+              ? (double.tryParse(item['qty']) ?? 1).ceil()
+              : 1,
           'unit': item['unit'],
           'checked': false,
           'source': 'magic_plan', // Track source

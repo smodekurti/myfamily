@@ -77,9 +77,37 @@ class FamilySelectionPage extends ConsumerWidget {
                     data: (families) {
                       if (families.isEmpty) {
                         return Center(
-                          child: Text(
-                            'No families found',
-                            style: Theme.of(context).textTheme.bodyLarge,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.family_restroom_outlined,
+                                size: ResponsiveHelper.iconSize(64),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                              SizedBox(height: ResponsiveHelper.h(16)),
+                              Text(
+                                'No families found',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              SizedBox(height: ResponsiveHelper.h(8)),
+                              Text(
+                                'If you recently joined a family, try refreshing.',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: ResponsiveHelper.h(24)),
+                              FilledButton.icon(
+                                onPressed: () {
+                                  // Force refresh by invalidating the provider
+                                  ref.invalidate(userFamiliesProvider(currentUser.id));
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Refresh'),
+                              ),
+                            ],
                           ),
                         );
                       }

@@ -34,13 +34,7 @@ class _GroceryTemplatesManagePageState
             children: [
               ModernHeader(
                 title: 'Shopping Templates',
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.menu_rounded,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
+                showBackButton: true,
                 actions: [
                   Padding(
                     padding: ResponsiveHelper.padding(right: 8),
@@ -81,13 +75,7 @@ class _GroceryTemplatesManagePageState
           children: [
             ModernHeader(
               title: 'Shopping Templates',
-              leading: IconButton(
-                icon: Icon(
-                  Icons.menu_rounded,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
+              showBackButton: true,
               actions: [
                 IconButton(
                   icon: Icon(
@@ -95,7 +83,7 @@ class _GroceryTemplatesManagePageState
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: () {
-                    context.push('/grocery-template/create');
+                    context.push(AppConstants.routeGroceryTemplateCreate);
                   },
                   tooltip: 'Create Template',
                 ),
@@ -202,7 +190,7 @@ class _GroceryTemplatesManagePageState
             SizedBox(height: ResponsiveHelper.h(32)),
             ElevatedButton.icon(
               onPressed: () {
-                context.push('/grocery-template/create');
+                context.push(AppConstants.routeGroceryTemplateCreate);
               },
               icon: const Icon(Icons.add),
               label: const Text('Create Your First Template'),

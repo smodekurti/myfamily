@@ -12,6 +12,7 @@ import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/services/gemini_service.dart';
 import '../../../../data/models/meal_plan_model.dart';
+import '../widgets/meal_planner_voting_dialog.dart';
 
 class MealPlannerPage extends ConsumerStatefulWidget {
   const MealPlannerPage({super.key});
@@ -27,69 +28,78 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
+    // Reset selected week to current week when entering page
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(selectedWeekDateProvider.notifier).state = DateTime.now();
+    });
   }
 
   Future<void> _showApiKeyDialog() async {
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Gemini API Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'To use Magic Plan, you need a free Google Gemini API Key. The key is stored securely on your device.',
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Don\'t have a key?',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () async {
-                final Uri url = Uri.parse(
-                  'https://aistudio.google.com/app/apikey',
-                );
-                if (!await launchUrl(url)) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not launch URL')),
-                    );
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: AlertDialog(
+          title: const Text('Enter Gemini API Key'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'To use Magic Plan, you need a free Google Gemini API Key. The key is stored securely on your device.',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Don\'t have a key?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final Uri url = Uri.parse(
+                    'https://aistudio.google.com/app/apikey',
+                  );
+                  if (!await launchUrl(url)) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not launch URL')),
+                      );
+                    }
                   }
-                }
-              },
-              child: const Text(
-                'Get a free API Key here ↗',
-                style: TextStyle(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
+                },
+                child: const Text(
+                  'Get a free API Key here ↗',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Paste API Key',
-                hintText: 'AIzaSy...',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Paste API Key',
+                  hintText: 'AIzaSy...',
+                  border: OutlineInputBorder(),
+                ),
               ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save Key'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save Key'),
-          ),
-        ],
       ),
     );
 
@@ -111,8 +121,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     if (!mounted) return;
 
     // Show Preferences Dialog
-    final selectedTags = await _showPreferencesDialog();
-    if (selectedTags == null) return; // User cancelled
+    final result = await _showPreferencesDialog();
+    if (result == null) return; // User cancelled
 
     // Show loading
     showDialog(
@@ -125,7 +135,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     try {
       final plan = await gemini.generateMealPlan(
         days: 7,
-        dietaryTags: selectedTags,
+        dietaryTags: result.tags,
+        cuisines: result.cuisines,
       );
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
@@ -141,7 +152,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
-  Future<List<String>?> _showPreferencesDialog([
+  Future<({List<String> tags, List<String> cuisines})?> _showPreferencesDialog([
     List<String>? initialSelection,
   ]) async {
     final List<String> options = [
@@ -155,54 +166,101 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       'Low-Carb',
     ];
 
-    // Default selection
-    List<String> selected = List.from(initialSelection ?? []);
+    final List<String> cuisineOptions = [
+      'Italian',
+      'Mexican',
+      'Indian',
+      'Chinese',
+      'American',
+      'Mediterranean',
+      'Thai',
+      'Japanese',
+      'French',
+      'Greek',
+    ];
 
-    return await showDialog<List<String>>(
+    // Default selection
+    List<String> selectedTags = List.from(initialSelection ?? []);
+    List<String> selectedCuisines = [];
+
+    return await showDialog<({List<String> tags, List<String> cuisines})>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Magic Plan Options'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Select dietary requirements and preferences:'),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: options.map((option) {
-                    final isSelected = selected.contains(option);
-                    return FilterChip(
-                      label: Text(option),
-                      selected: isSelected,
-                      onSelected: (bool value) {
-                        setState(() {
-                          if (value) {
-                            selected.add(option);
-                          } else {
-                            selected.remove(option);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: AppTheme.globalTextScale),
+            child: AlertDialog(
+              title: const Text('Magic Plan Options'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Select dietary requirements:'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: options.map((option) {
+                        final isSelected = selectedTags.contains(option);
+                        return FilterChip(
+                          label: Text(option),
+                          selected: isSelected,
+                          onSelected: (bool value) {
+                            setState(() {
+                              if (value) {
+                                selectedTags.add(option);
+                              } else {
+                                selectedTags.remove(option);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Preferred Cuisines:'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: cuisineOptions.map((option) {
+                        final isSelected = selectedCuisines.contains(option);
+                        return FilterChip(
+                          label: Text(option),
+                          selected: isSelected,
+                          onSelected: (bool value) {
+                            setState(() {
+                              if (value) {
+                                selectedCuisines.add(option);
+                              } else {
+                                selectedCuisines.remove(option);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(context, (
+                    tags: selectedTags,
+                    cuisines: selectedCuisines,
+                  )),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Generate'),
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, null),
-                child: const Text('Cancel'),
-              ),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(context, selected),
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Generate'),
-              ),
-            ],
           );
         },
       ),
@@ -212,51 +270,57 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
   void _showPlanPreview(List<Map<String, dynamic>> generatedPlan) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Magic Plan Preview'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: generatedPlan.length,
-            itemBuilder: (context, index) {
-              final day = generatedPlan[index];
-              final meals = (day['meals'] as List).cast<Map<String, dynamic>>();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Day ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  ...meals.map(
-                    (meal) => ListTile(
-                      title: Text(meal['name']),
-                      subtitle: Text(
-                        '${meal['type']} - ${meal['description']}',
-                      ),
-                      dense: true,
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: AlertDialog(
+          title: const Text('Magic Plan Preview'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: generatedPlan.length,
+              itemBuilder: (context, index) {
+                final day = generatedPlan[index];
+                final meals = (day['meals'] as List)
+                    .cast<Map<String, dynamic>>();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Day ${index + 1}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const Divider(),
-                ],
-              );
-            },
+                    ...meals.map(
+                      (meal) => ListTile(
+                        title: Text(meal['name']),
+                        subtitle: Text(
+                          '${meal['type']} - ${meal['description']}',
+                        ),
+                        dense: true,
+                      ),
+                    ),
+                    const Divider(),
+                  ],
+                );
+              },
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _saveGeneratedPlan(generatedPlan);
+              },
+              child: const Text('Apply Plan'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _saveGeneratedPlan(generatedPlan);
-            },
-            child: const Text('Apply Plan'),
-          ),
-        ],
       ),
     );
   }
@@ -264,34 +328,56 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
   Future<void> _showMagicPlanOptions() async {
     final option = await showDialog<String>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Magic Plan 🪄'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'week'),
-            child: const ListTile(
-              leading: Icon(Icons.date_range),
-              title: Text('Plan Entire Week'),
-              subtitle: Text('Generate meals for the next 7 days'),
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: SimpleDialog(
+          title: const Text('Magic Plan 🪄'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'week'),
+              child: const ListTile(
+                leading: Icon(Icons.date_range),
+                title: Text('Plan Entire Week'),
+                subtitle: Text('Generate meals for the next 7 days'),
+              ),
             ),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'day'),
-            child: const ListTile(
-              leading: Icon(Icons.today),
-              title: Text('Plan Selected Day'),
-              subtitle: Text('Generate meals just for this day'),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'day'),
+              child: const ListTile(
+                leading: Icon(Icons.today),
+                title: Text('Plan Selected Day'),
+                subtitle: Text('Generate meals just for this day'),
+              ),
             ),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'meal'),
-            child: const ListTile(
-              leading: Icon(Icons.restaurant),
-              title: Text('Plan Single Meal'),
-              subtitle: Text('Generate one specific meal'),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'meal'),
+              child: const ListTile(
+                leading: Icon(Icons.restaurant),
+                title: Text('Plan Single Meal'),
+                subtitle: Text('Generate one specific meal'),
+              ),
             ),
-          ),
-        ],
+            const Divider(),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'clear_week'),
+              child: const ListTile(
+                leading: Icon(Icons.delete_sweep, color: Colors.orange),
+                title: Text('Clear Current Week'),
+                subtitle: Text('Remove all meals for this week'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'clear_day'),
+              child: const ListTile(
+                leading: Icon(Icons.delete_outline, color: Colors.orange),
+                title: Text('Clear Selected Day'),
+                subtitle: Text('Remove meals for this day only'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -303,6 +389,116 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       await _generateDayPlan();
     } else if (option == 'meal') {
       await _generateSingleMeal();
+    } else if (option == 'clear_week') {
+      await _clearWeekPlan();
+    } else if (option == 'clear_day') {
+      await _clearDayPlan();
+    }
+  }
+
+  Future<void> _clearWeekPlan() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: AlertDialog(
+          title: const Text('Clear Week?'),
+          content: const Text(
+            'This will remove all planned meals for the current week. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Clear All'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentFamilyId == null) return;
+
+    final plan = ref.read(currentWeekMealPlanProvider(currentFamilyId)).value;
+    if (plan == null) return;
+
+    try {
+      await ref.read(mealPlanRepositoryProvider).clearPlanEntries(plan.id);
+      _refreshPlanData(currentFamilyId);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Weekly plan cleared')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to clear: $e')));
+      }
+    }
+  }
+
+  Future<void> _clearDayPlan() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: AlertDialog(
+          title: const Text('Clear Day?'),
+          content: Text(
+            'This will remove all meals planned for ${DateFormat('EEEE, MMM d').format(_selectedDate)}.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Clear Day'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final currentFamilyId = ref.read(currentFamilyIdProvider);
+    if (currentFamilyId == null) return;
+
+    final plan = ref.read(currentWeekMealPlanProvider(currentFamilyId)).value;
+    if (plan == null) return;
+
+    try {
+      await ref
+          .read(mealPlanRepositoryProvider)
+          .clearDayEntries(plan.id, _selectedDate);
+      _refreshPlanData(currentFamilyId);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Day plan cleared')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to clear: $e')));
+      }
     }
   }
 
@@ -316,24 +512,69 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         (currentUser.userMetadata?['dietary_preferences'] as List?)
             ?.cast<String>() ??
         [];
-    final selectedTags = await _showPreferencesDialog(currentPrefs);
-    if (selectedTags == null) return;
+    final result = await _showPreferencesDialog(currentPrefs);
+    if (result == null) return;
+
+    // Check for existing entries and ask to clear
+    final currentPlan = ref
+        .read(currentWeekMealPlanProvider(currentFamilyId))
+        .value;
+    bool shouldClear = false;
+
+    if (currentPlan != null && (currentPlan.entries?.isNotEmpty ?? false)) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: AppTheme.globalTextScale),
+          child: AlertDialog(
+            title: const Text('Existing Plan Found'),
+            content: const Text(
+              'You already have meals planned for this week. Do you want to clear them before generating a new plan, or add to them?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'cancel'),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'append'),
+                child: const Text('Keep & Add'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, 'clear'),
+                child: const Text('Clear & Generate'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (choice == 'cancel' || choice == null) return;
+      shouldClear = choice == 'clear';
+    }
 
     // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Designing your weekly menu...'),
-              ],
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Designing your weekly menu...'),
+                ],
+              ),
             ),
           ),
         ),
@@ -355,58 +596,94 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       // Generate plan for 7 days
       final planData = await geminiService.generateMealPlan(
         days: 7,
-        dietaryTags: selectedTags,
+        dietaryTags: result.tags,
+        cuisines: result.cuisines,
       );
 
       // Save to database
       final planRepo = ref.read(mealPlanRepositoryProvider);
-      final now = DateTime.now();
 
-      // Create or update plan
-      // For simplicity, we'll create a new plan starting today if one doesn't exist for this week
-      // Or we could update the existing one.
-      // Let's use the current week's plan ID if available, or create new.
-      final currentPlanAsync = ref.read(
-        currentWeekMealPlanProvider(currentFamilyId),
+      // Use selected date as start, or now if selected is in past/today?
+      // User request implies "from current day/time".
+      // So regardless of _selectedDate navigation, "Magic Plan" usually means "Plan for me from NOW".
+      // But if I navigated to next week, maybe I want to plan NEXT week.
+      // Let's assume: If selected date is today or future, use selected. If selected is past, maybe defaulting to today is safer?
+      // For now, let's respect _selectedDate as the "Anchor".
+      // User said "from current day/time" explicitly. So let's align with "Today" if we are viewing "Today".
+      // But if I am viewing next week, I probably want to plan next week.
+
+      // Hybrid approach:
+      // If _selectedDate is effectively today (same day), use Now.
+      // If _selectedDate is future, use Start of that day.
+      final isToday = DateUtils.isSameDay(_selectedDate, DateTime.now());
+      final startGenerationDate = isToday ? DateTime.now() : _selectedDate;
+      // Normalize startGenerationDate to start of day for the loop calc, but keep time for filtering
+      final startOfDay = DateTime(
+        startGenerationDate.year,
+        startGenerationDate.month,
+        startGenerationDate.day,
       );
-      // We can't easily get the value from AsyncValue here without listening.
-      // So detailed logic: fetch current plan for start date.
-      // For this MVP, let's just create entries linked to the family.
-      // We need a plan ID.
-      String planId;
-      final existingPlan =
-          currentPlanAsync.value; // Might be null if not loaded
-      if (existingPlan == null) {
-        // Create new
-        final created = await ref
-            .read(mealPlanRepositoryProvider)
-            .getOrCreateWeeklyPlan(currentFamilyId, DateTime.now());
-        planId = created.id;
-      } else {
-        planId = existingPlan.id;
+
+      // Clear if requested
+      if (shouldClear) {
+        // Smart clear: clear range from startGenerationDate to +7 days
+        // We don't have a clearRange method yet, but we can iterate or add one.
+        // For MVP, if they said "Clear", let's clear the overlap.
+        // Actually, let's skip complex clear logic for now and rely on "Overwrite" behavior of save,
+        // OR just clear the plan entries if we can find them.
+        // Since we are moving to rolling, "Clear Week" concept is fuzzy.
+        // Let's rely on the user's manual clear for now or simple overwrite.
+        // Note: saveMealEntry updates if ID exists, or creates new. We don't have IDs for new gen.
+        // So we should properly clear range if we want to avoid duplicates if we didn't match IDs.
+        // But finding existing IDs to update is hard without fetching.
+        // Let's fetch existing entries for the range first!
+        final existing = await planRepo.getEntriesForDateRange(
+          currentFamilyId,
+          startOfDay,
+          startOfDay.add(const Duration(days: 7)),
+        );
+        for (final e in existing) {
+          await planRepo.deleteMealEntry(e.id);
+        }
       }
+
       for (int i = 0; i < planData.length; i++) {
         final dayData = planData[i];
-        final date = now.add(Duration(days: i));
+        final date = startOfDay.add(Duration(days: i));
         final meals = dayData['meals'] as List;
 
         for (final meal in meals) {
           final type = (meal['type'] as String).toLowerCase();
+
+          // Smart Skip Logic:
+          // If this is Day 0 (Today), and the meal type is "past", skip it.
+          // Simple heuristic:
+          // Breakfast < 11AM
+          // Lunch < 3PM
+          // Dinner < 9PM
+          if (i == 0 && isToday) {
+            final now = DateTime.now();
+            if (type == 'breakfast' && now.hour >= 11) continue;
+            if (type == 'lunch' && now.hour >= 15) continue;
+            if (type == 'dinner' && now.hour >= 21)
+              continue; // Unlikely but good safety
+          }
+
           final entry = MealPlanEntryModel(
             id: '', // New entry
-            planId: planId,
+            planId: '', // Let repo resolve
             mealDate: date,
             mealType: type,
             customNote: '${meal['name']}: ${meal['description']}',
             isCompleted: false,
           );
-          await planRepo.saveMealEntry(entry);
+          await planRepo.saveEntryForFamily(currentFamilyId, entry);
         }
       }
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
-        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        _refreshPlanData(currentFamilyId);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Weekly plan generated!')));
@@ -431,24 +708,29 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         (currentUser.userMetadata?['dietary_preferences'] as List?)
             ?.cast<String>() ??
         [];
-    final selectedTags = await _showPreferencesDialog(currentPrefs);
-    if (selectedTags == null) return;
+    final result = await _showPreferencesDialog(currentPrefs);
+    if (result == null) return;
 
     // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Planning your day...'),
-              ],
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppTheme.globalTextScale),
+        child: const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Planning your day...'),
+                ],
+              ),
             ),
           ),
         ),
@@ -470,7 +752,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       // Generate for 1 day
       final planData = await geminiService.generateMealPlan(
         days: 1,
-        dietaryTags: selectedTags,
+        dietaryTags: result.tags,
+        cuisines: result.cuisines,
       );
 
       if (planData.isEmpty) throw Exception('No plan generated');
@@ -540,12 +823,12 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           recipeId: null,
         );
 
-        await planRepo.saveMealEntry(entry);
+        await planRepo.saveEntryForFamily(currentFamilyId, entry);
       }
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        _refreshPlanData(currentFamilyId);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Day plan updated!')));
@@ -620,8 +903,6 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
               .where((e) => DateUtils.isSameDay(e.mealDate, _selectedDate))
               .toList();
           break;
-        default:
-          scopedEntries = [];
       }
 
       if (scopedEntries.isEmpty) {
@@ -658,26 +939,109 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         });
       }
 
-      final ingredients = await geminiService.extractIngredientsFromPlan(
-        planData,
-      );
+      final result = await geminiService.extractIngredientsFromPlan(planData);
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
 
-        if (ingredients.isEmpty) {
+        final ingredientList = (result['ingredients'] as List)
+            .cast<Map<String, dynamic>>();
+        final estimatedCost = result['estimatedCost'] as String?;
+        final staplesToCheck =
+            (result['staplesToCheck'] as List?)?.cast<String>() ?? [];
+
+        if (ingredientList.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No ingredients could be extracted.')),
           );
           return;
         }
 
+        // Show Smart Grocery Summary Dialog
+        final shouldProceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Smart Shopping List'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (estimatedCost != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.attach_money, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Estimated Cost: $estimatedCost',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (staplesToCheck.isNotEmpty) ...[
+                  const Text(
+                    'Check your pantry for staples:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: staplesToCheck
+                        .map(
+                          (s) => Chip(
+                            label: Text(s),
+                            backgroundColor: Colors.amber.withOpacity(0.2),
+                            avatar: const Icon(
+                              Icons.warning_amber,
+                              size: 16,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Text(
+                  'Ready to add ${ingredientList.length} items to your list?',
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Create List'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldProceed != true) return;
+
         // Ask where to add
         // Determine default list name
         final timestamp = DateTime.now();
         final listName =
             'Meal Plan Shopping (${timestamp.month}/${timestamp.day})';
-        await _showAddToListDialog(ingredients, listName);
+        await _showAddToListDialog(
+          ingredientList,
+          listName,
+        ); // Pass just the list as before
       }
     } catch (e) {
       if (mounted) {
@@ -765,7 +1129,28 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              _addItemsToNewList(ingredients, listName);
+
+              // Robustly parse items
+              final cleanItems = ingredients.map((item) {
+                var qty = 1;
+                if (item['qty'] is int) {
+                  qty = item['qty'] as int;
+                } else if (item['qty'] is double) {
+                  qty = (item['qty'] as double).ceil();
+                } else if (item['qty'] is String) {
+                  final parsed = double.tryParse(item['qty']);
+                  if (parsed != null) qty = parsed.ceil();
+                }
+
+                return {
+                  'name': item['name'] ?? 'Unknown Item',
+                  'category': item['category'] ?? 'Other',
+                  'qty': qty,
+                  'unit': item['unit'] ?? '',
+                };
+              }).toList();
+
+              _addItemsToNewList(cleanItems, listName);
             },
             child: const Text('Add to List'),
           ),
@@ -869,8 +1254,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         (currentUser.userMetadata?['dietary_preferences'] as List?)
             ?.cast<String>() ??
         [];
-    final selectedTags = await _showPreferencesDialog(currentPrefs);
-    if (selectedTags == null) return;
+    final result = await _showPreferencesDialog(currentPrefs);
+    if (result == null) return;
 
     showDialog(
       context: context,
@@ -906,7 +1291,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
 
       final mealData = await geminiService.generateSingleMeal(
         mealType: type,
-        dietaryTags: selectedTags,
+        dietaryTags: result.tags,
+        cuisines: result.cuisines,
       );
 
       final planRepo = ref.read(mealPlanRepositoryProvider);
@@ -950,11 +1336,11 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         recipeId: null,
       );
 
-      await planRepo.saveMealEntry(entry);
+      await planRepo.saveEntryForFamily(currentFamilyId, entry);
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ref.invalidate(currentWeekMealPlanProvider(currentFamilyId));
+        _refreshPlanData(currentFamilyId);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Meal updated!')));
@@ -1024,7 +1410,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close loading
-        ref.invalidate(currentWeekMealPlanProvider(familyId));
+        _refreshPlanData(familyId);
       }
     } catch (e) {
       if (mounted) {
@@ -1036,12 +1422,38 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     }
   }
 
+  void _refreshPlanData(String familyId) {
+    ref.invalidate(currentWeekMealPlanProvider(familyId));
+    final viewStartDate = ref.read(selectedWeekDateProvider);
+    final startDate = DateTime(
+      viewStartDate.year,
+      viewStartDate.month,
+      viewStartDate.day,
+    );
+    ref.invalidate(rollingMealPlanEntriesProvider((familyId, startDate)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentFamilyId = ref.watch(currentFamilyIdProvider);
     final currentUser = ref.watch(currentUserProvider);
-    final planAsync = ref.watch(
-      currentWeekMealPlanProvider(currentFamilyId ?? ''),
+
+    // Decoupled logic:
+    // View Window Start = selectedWeekDateProvider (Controlled by arrows)
+    // Selected Date = _selectedDate (Controlled by tapping)
+
+    // 1. Get the start of the Rolling Window
+    final viewStartDate = ref.watch(selectedWeekDateProvider);
+    // Normalize to start of day for the provider param
+    final startDate = DateTime(
+      viewStartDate.year,
+      viewStartDate.month,
+      viewStartDate.day,
+    );
+
+    // Watch the rolling entries using the view window start
+    final entriesAsync = ref.watch(
+      rollingMealPlanEntriesProvider((currentFamilyId ?? '', startDate)),
     );
 
     return Scaffold(
@@ -1058,7 +1470,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           IconButton(
             icon: const Icon(Icons.shopping_cart_checkout),
             tooltip: 'Create Shopping List',
-            onPressed: _handleAddToShoppingList,
+            onPressed: () => _handleAddToShoppingList(),
           ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
@@ -1083,120 +1495,169 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
           ),
         ],
       ),
-      body: planAsync.when(
-        data: (plan) {
-          // Normalize dates
+      body: entriesAsync.when(
+        data: (entries) {
+          // Normalize dates for display
           final today = DateTime.now();
-          final startDate = plan.startDate;
           final days = List.generate(
             7,
             (index) => startDate.add(Duration(days: index)),
           );
 
-          // Get entries for selected date
-          final selectedDayEntries =
-              plan.entries
-                  ?.where((e) => DateUtils.isSameDay(e.mealDate, _selectedDate))
-                  .toList() ??
-              [];
+          // Get entries for selected date for the details view
+          // Filter entries where mealDate matches _selectedDate
+          final selectedDayEntries = entries
+              .where((e) => DateUtils.isSameDay(e.mealDate, _selectedDate))
+              .toList();
 
-          return Column(
-            children: [
-              // Month/Year Header
-              Padding(
-                padding: ResponsiveHelper.padding(
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  bottom: 8,
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(
+                currentWeekMealPlanProvider(currentFamilyId ?? ''),
+              );
+              ref.invalidate(
+                rollingMealPlanEntriesProvider((
+                  currentFamilyId ?? '',
+                  startDate,
+                )),
+              );
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height,
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Text(
-                      _getMonthRangeText(days.first, days.last),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    // Month/Year Header
+                    Padding(
+                      padding: ResponsiveHelper.padding(
+                        top: 16,
+                        left: 16,
+                        right: 16,
+                        bottom: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () {
+                              final current = ref.read(
+                                selectedWeekDateProvider,
+                              );
+                              final newDate = current.subtract(
+                                const Duration(days: 7),
+                              );
+                              ref
+                                      .read(selectedWeekDateProvider.notifier)
+                                      .state =
+                                  newDate;
+                              setState(() {
+                                _selectedDate = newDate;
+                              });
+                            },
+                          ),
+                          Text(
+                            _getMonthRangeText(days.first, days.last),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () {
+                              final current = ref.read(
+                                selectedWeekDateProvider,
+                              );
+                              final newDate = current.add(
+                                const Duration(days: 7),
+                              );
+                              ref
+                                      .read(selectedWeekDateProvider.notifier)
+                                      .state =
+                                  newDate;
+                              setState(() {
+                                _selectedDate = newDate;
+                              });
+                            },
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () =>
+                                context.push(AppConstants.routeRecipes),
+                            icon: Icon(
+                              Icons.restaurant_menu,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            tooltip: 'My Recipes',
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () => context.push(AppConstants.routeRecipes),
-                      icon: Icon(
-                        Icons.restaurant_menu,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      label: Text(
-                        'My Recipes',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+
+                    // Horizontal Date Strip
+                    _buildDateStrip(days, today),
+
+                    const Divider(height: 1),
+
+                    // Main Content
+                    // Main Content
+                    Padding(
+                      padding: ResponsiveHelper.padding(all: 16),
+                      child: Column(
+                        children: [
+                          _buildSectionHeader('Planned Meals'),
+                          SizedBox(height: 16.h),
+                          _buildMealCard(
+                            context,
+                            'Breakfast',
+                            Icons.wb_sunny_outlined,
+                            Colors.orange,
+                            selectedDayEntries,
+                            '', // Resolved by date/entry
+                            currentFamilyId ?? '',
+                            _selectedDate,
+                          ),
+                          SizedBox(height: 16.h),
+                          _buildMealCard(
+                            context,
+                            'Lunch',
+                            Icons.restaurant,
+                            Colors.green,
+                            selectedDayEntries,
+                            '',
+                            currentFamilyId ?? '',
+                            _selectedDate,
+                          ),
+                          SizedBox(height: 16.h),
+                          _buildMealCard(
+                            context,
+                            'Dinner',
+                            Icons.dinner_dining,
+                            Colors.indigo,
+                            selectedDayEntries,
+                            '',
+                            currentFamilyId ?? '',
+                            _selectedDate,
+                          ),
+                          SizedBox(height: 16.h),
+                          _buildMealCard(
+                            context,
+                            'Snack',
+                            Icons.local_cafe_outlined,
+                            Colors.teal,
+                            selectedDayEntries,
+                            '',
+                            currentFamilyId ?? '',
+                            _selectedDate,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Horizontal Date Strip
-              _buildDateStrip(days, today),
-
-              const Divider(height: 1),
-
-              // Main Content
-              Expanded(
-                child: ListView(
-                  padding: ResponsiveHelper.padding(all: 16),
-                  children: [
-                    _buildSectionHeader('Planned Meals'),
-                    SizedBox(height: 16.h),
-                    _buildMealCard(
-                      context,
-                      'Breakfast',
-                      Icons.wb_sunny_outlined,
-                      Colors.orange,
-                      selectedDayEntries,
-                      plan.id,
-                      plan.familyId,
-                      _selectedDate,
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildMealCard(
-                      context,
-                      'Lunch',
-                      Icons.restaurant,
-                      Colors.green,
-                      selectedDayEntries,
-                      plan.id,
-                      plan.familyId,
-                      _selectedDate,
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildMealCard(
-                      context,
-                      'Dinner',
-                      Icons.dinner_dining,
-                      Colors.indigo,
-                      selectedDayEntries,
-                      plan.id,
-                      plan.familyId,
-                      _selectedDate,
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildMealCard(
-                      context,
-                      'Snack',
-                      Icons.local_cafe_outlined,
-                      Colors.teal,
-                      selectedDayEntries,
-                      plan.id,
-                      plan.familyId,
-                      _selectedDate,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -1560,8 +2021,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
     // 1. Get Preferences (Optional: reuse last or ask)
     // For speed, let's just ask quickly or use defaults.
     // Let's re-use the preference dialog but maybe simpler title?
-    final tags = await _showPreferencesDialog(); // Reuse dialog
-    if (tags == null) return;
+    final prefs = await _showPreferencesDialog(); // Reuse dialog
+    if (prefs == null) return;
 
     // 2. Show Loading
     if (!mounted) return;
@@ -1576,7 +2037,8 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
       final gemini = ref.read(geminiServiceProvider);
       final meal = await gemini.generateSingleMeal(
         mealType: mealType,
-        dietaryTags: tags,
+        dietaryTags: prefs.tags,
+        cuisines: prefs.cuisines,
       );
 
       final familyId = ref.read(currentFamilyIdProvider);
@@ -1593,8 +2055,20 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         recipeId: null, // Clear recipe link on regen
       );
 
-      await ref.read(mealPlanRepositoryProvider).saveMealEntry(entry);
-      ref.invalidate(currentWeekMealPlanProvider(familyId));
+      // Save with smart plan resolution
+      await ref
+          .read(mealPlanRepositoryProvider)
+          .saveEntryForFamily(familyId, entry);
+
+      // Invalidate the rolling view. We assume the view is based on the selected date.
+      final selectedDate = ref.read(selectedWeekDateProvider);
+      // Normalize to start of day as done in build
+      final startDate = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      );
+      ref.invalidate(rollingMealPlanEntriesProvider((familyId, startDate)));
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Close Loading
@@ -1656,8 +2130,14 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            context.go(
-              '${AppConstants.routeMealPlanner}/${AppConstants.routeMealSlotEdit}/$date/$mealType/$familyId/$planId',
+            context.pushNamed(
+              'edit-meal-slot',
+              pathParameters: {
+                'date': date.toString(),
+                'mealType': mealType,
+                'familyId': familyId,
+                'planId': planId.isEmpty ? 'auto' : planId,
+              },
               extra: entry,
             );
           },
@@ -1672,15 +2152,15 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                   children: [
                     // Icon/Image
                     Container(
-                      width: 50.w,
-                      height: 50.w,
+                      width: 40.w,
+                      height: 40.w,
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: Icon(icon, color: color, size: 24.sp),
+                      child: Icon(icon, color: color, size: 20.sp),
                     ),
-                    SizedBox(width: 16.w),
+                    SizedBox(width: 12.w),
 
                     // Content
                     Expanded(
@@ -1689,23 +2169,24 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                         children: [
                           Text(
                             mealType,
-                            style: Theme.of(context).textTheme.bodyMedium
+                            style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
                                 ),
                           ),
-                          SizedBox(height: 4.h),
+                          SizedBox(height: 2.h),
                           Text(
                             isPlanned
                                 ? (entry.recipeTitle as String? ??
                                       entry.customNote as String? ??
                                       'Custom Meal')
                                 : 'Not planned',
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   fontWeight: isPlanned
-                                      ? FontWeight.bold
+                                      ? FontWeight.w600
                                       : FontWeight.normal,
                                   color: isPlanned
                                       ? null
@@ -1713,23 +2194,28 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                                   fontStyle: isPlanned
                                       ? FontStyle.normal
                                       : FontStyle.italic,
+                                  height: 1.2,
                                 ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (isPlanned && entry.recipeTitle != null) ...[
-                            SizedBox(height: 4.h),
-                            // Could add tags or time here if fetched
+                            SizedBox(height: 2.h),
                             Row(
                               children: [
                                 Icon(
                                   Icons.schedule,
-                                  size: 12.sp,
+                                  size: 10.sp,
                                   color: Colors.grey,
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  '30 min', // Placeholder or fetch from recipe
+                                  '30 min', // Placeholder
                                   style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: Colors.grey),
+                                      ?.copyWith(
+                                        color: Colors.grey,
+                                        fontSize: 10.sp,
+                                      ),
                                 ),
                               ],
                             ),
@@ -1738,34 +2224,96 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                       ),
                     ),
 
-                    // Actions
-                    IconButton(
-                      icon: const Icon(Icons.auto_awesome, size: 20),
-                      tooltip: isPlanned ? 'Regenerate Meal' : 'Generate Meal',
-                      onPressed: () => _regenerateSingleMeal(
-                        date,
-                        mealType,
-                        planId,
-                        entry?.id,
+                    // Action Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: Colors.grey,
+                        size: 20.sp,
                       ),
-                    ),
+                      onSelected: (value) {
+                        if (value == 'vote') {
+                          // Use saved preferences directly for seamless experience
+                          final currentUser = ref.read(currentUserProvider);
+                          final dietaryTags =
+                              (currentUser?.userMetadata?['dietary_preferences']
+                                      as List?)
+                                  ?.cast<String>() ??
+                              [];
 
-                    if (isPlanned)
-                      IconButton(
-                        icon: const Icon(Icons.menu_book),
-                        tooltip: 'View Recipe',
-                        onPressed: () {
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => MealPlannerVotingDialog(
+                                mealType: mealType,
+                                date: date,
+                                dietaryTags: dietaryTags,
+                                cuisines: const [],
+                                onSessionCreated: (session) {
+                                  // TODO: Save session
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Voting started!'),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          }
+                        } else if (value == 'generate') {
+                          _regenerateSingleMeal(
+                            date,
+                            mealType,
+                            planId,
+                            entry?.id,
+                          );
+                        } else if (value == 'view') {
                           _showRecipeDialog(
                             entry.recipeTitle as String? ??
                                 entry.customNote as String? ??
                                 'Meal',
                             entry.customNote as String?,
-                            entry, // Pass the entry object for linking
+                            entry,
                           );
-                        },
-                      ),
-
-                    Icon(Icons.chevron_right, color: Colors.grey, size: 24.sp),
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'vote',
+                          child: Row(
+                            children: const [
+                              Icon(Icons.how_to_vote_outlined, size: 20),
+                              SizedBox(width: 8),
+                              Text('Start Vote'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'generate',
+                          child: Row(
+                            children: [
+                              Icon(
+                                isPlanned ? Icons.refresh : Icons.auto_awesome,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(isPlanned ? 'Regenerate' : 'Generate'),
+                            ],
+                          ),
+                        ),
+                        if (isPlanned)
+                          PopupMenuItem(
+                            value: 'view',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.menu_book_outlined, size: 20),
+                                SizedBox(width: 8),
+                                Text('View Recipe'),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ],

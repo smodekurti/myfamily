@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
@@ -26,6 +27,32 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
     super.dispose();
   }
 
+  Future<void> _scanQRCode() async {
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Scan QR Code')),
+          body: MobileScanner(
+            onDetect: (capture) {
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                if (barcode.rawValue != null) {
+                  Navigator.of(context).pop(barcode.rawValue);
+                  break;
+                }
+              }
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      _codeController.text = result;
+      // Auto-submit after scan? maybe optional. For now just populate.
+    }
+  }
+
   Future<void> _joinFamily({String? selectedRole}) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -43,37 +70,37 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
         userId: currentUser.id,
         selectedRole: selectedRole,
       );
-      
+
       final family = result['family'] as FamilyModel?;
       final needsRoleSelection = result['needsRoleSelection'] as bool? ?? false;
-      
+
       // If role selection is needed, show dialog
       if (needsRoleSelection && family != null) {
         setState(() => _isLoading = false);
-        
+
         final role = await RoleSelectionDialog.show(context, family.name);
-        
+
         if (role != null && mounted) {
           // Retry join with selected role
           await _joinFamily(selectedRole: role);
         }
         return;
       }
-      
+
       if (family != null) {
-      // Invalidate the user families provider to force a refresh
-      ref.invalidate(userFamiliesProvider(currentUser.id));
-      
+        // Invalidate the user families provider to force a refresh
+        ref.invalidate(userFamiliesProvider(currentUser.id));
+
         // Invalidate family members provider to refresh the members list
         ref.invalidate(familyMembersProvider(family.id));
-        
+
         // Invalidate family provider to refresh family data
         ref.invalidate(familyProvider(family.id));
-        
+
         // Wait for the streams to update
-      await Future.delayed(const Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
       }
-      
+
       if (mounted) {
         context.go(AppConstants.routeHome);
       }
@@ -117,13 +144,15 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: ResponsiveHelper.h(40)),
-                    
+
                     // Illustration
                     Container(
                       width: ResponsiveHelper.w(150),
                       height: ResponsiveHelper.h(150),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
                         borderRadius: ResponsiveHelper.borderRadius(75),
                       ),
                       child: Icon(
@@ -133,39 +162,46 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       ),
                     ),
                     SizedBox(height: ResponsiveHelper.h(40)),
-                    
+
                     // Title
                     Text(
                       'Join a Family',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: ResponsiveHelper.h(16)),
-                    
+
                     Text(
                       'Enter the family code shared by a family member to join their family hub.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: ResponsiveHelper.h(40)),
-                    
+
                     // Family code field
                     TextFormField(
                       controller: _codeController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Enter Family Code',
                         hintText: 'e.g., 223319',
-                        prefixIcon: Icon(Icons.vpn_key),
+                        prefixIcon: const Icon(Icons.vpn_key),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner),
+                          tooltip: 'Scan QR Code',
+                          onPressed: _scanQRCode,
+                        ),
                       ),
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter the family code';
@@ -177,17 +213,22 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       },
                       onChanged: (value) {
                         // Auto-format the code (remove spaces, convert to uppercase)
-                        final formatted = value.replaceAll(' ', '').toUpperCase();
+                        final formatted = value
+                            .replaceAll(' ', '')
+                            .toUpperCase();
                         if (formatted != value) {
-                          _codeController.value = _codeController.value.copyWith(
-                            text: formatted,
-                            selection: TextSelection.collapsed(offset: formatted.length),
-                          );
+                          _codeController.value = _codeController.value
+                              .copyWith(
+                                text: formatted,
+                                selection: TextSelection.collapsed(
+                                  offset: formatted.length,
+                                ),
+                              );
                         }
                       },
                     ),
                     SizedBox(height: ResponsiveHelper.h(32)),
-                    
+
                     // Join Family button
                     SizedBox(
                       width: double.infinity,
@@ -195,8 +236,12 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _joinFamily,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: ResponsiveHelper.borderRadius(12),
                           ),
@@ -207,16 +252,19 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                               )
                             : Text(
                                 'Join Family',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                       ),
                     ),
-                    
+
                     SizedBox(height: ResponsiveHelper.h(32)),
-                    
+
                     // Create family link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -224,29 +272,34 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       children: [
                         Flexible(
                           child: Text(
-                          "Don't have a family code? ",
-                          style: Theme.of(context).textTheme.bodyMedium,
+                            "Don't have a family code? ",
+                            style: Theme.of(context).textTheme.bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         TextButton(
-                          onPressed: () => context.go(AppConstants.routeCreateFamily),
+                          onPressed: () =>
+                              context.go(AppConstants.routeCreateFamily),
                           style: TextButton.styleFrom(
-                            padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
+                            padding: ResponsiveHelper.padding(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: Text(
                             'Create one',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                       ],
                     ),
-                    
+
                     SizedBox(height: ResponsiveHelper.h(40)),
                   ],
                 ),

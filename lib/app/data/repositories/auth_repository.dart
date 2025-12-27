@@ -5,6 +5,12 @@ import 'package:logger/logger.dart';
 import '../models/user_model.dart';
 import '../../core/services/avatar_url_service.dart';
 
+/// Repository responsible for Authentication management.
+///
+/// This repository handles:
+/// - User Sign In/Up (Email, Google, Apple).
+/// - Session management.
+/// - User Profile management (creation, updates).
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final Logger _logger = Logger();
@@ -24,7 +30,10 @@ class AuthRepository {
   /// Get current user stream
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  /// Sign in with email and password
+  /// Sign in with email and password.
+  ///
+  /// Returns [AuthResponse] if successful.
+  /// Throws [AuthException] on specific auth errors.
   Future<AuthResponse?> signInWithEmailAndPassword({
     required String email,
     required String password,
@@ -49,7 +58,9 @@ class AuthRepository {
     }
   }
 
-  /// Create account with email and password
+  /// Create a new account with email and password.
+  ///
+  /// Also initializes the user profile upon successful sign-up.
   Future<AuthResponse?> createUserWithEmailAndPassword({
     required String email,
     required String password,
@@ -78,33 +89,34 @@ class AuthRepository {
     }
   }
 
-  /// Sign in with Google using native Google Sign-In SDK
-  /// This provides a native UI experience on both iOS and Android
+  /// Sign in with Google using native Google Sign-In SDK.
+  ///
+  /// Provides native UI experience on iOS and Android.
+  /// Returns [AuthResponse] or `null` if cancelled by user.
   Future<AuthResponse?> signInWithGoogle() async {
-    print('DEBUG: AuthRepository.signInWithGoogle started');
+    _logger.d('AuthRepository.signInWithGoogle started');
     try {
       // Initialize and sign in with native Google Sign-In SDK
-      print('DEBUG: Calling _googleSignIn.signIn()');
+      _logger.d('Calling _googleSignIn.signIn()');
       final googleUser = await _googleSignIn.signIn().catchError((error) {
         _logger.e('GoogleSignIn.signIn() error: $error');
-        print('DEBUG: _googleSignIn.signIn() error: $error');
         throw Exception('Failed to open Google Sign-In: $error');
       });
 
-      print('DEBUG: _googleSignIn.signIn() returned: $googleUser');
+      _logger.d('_googleSignIn.signIn() returned: $googleUser');
 
       if (googleUser == null) {
-        print('DEBUG: Google user is null (cancelled by user)');
+        _logger.d('Google user is null (cancelled by user)');
         return null;
       }
 
       // Get the authentication details
-      print('DEBUG: Getting authentication details');
+      _logger.d('Getting authentication details');
       final googleAuth = await googleUser.authentication;
-      print(
-        'DEBUG: Got authentication details. ID Token present: ${googleAuth.idToken != null}',
+      _logger.d(
+        'Got authentication details. ID Token present: ${googleAuth.idToken != null}',
       );
-      print('DEBUG: Access Token present: ${googleAuth.accessToken != null}');
+      _logger.d('Access Token present: ${googleAuth.accessToken != null}');
 
       if (googleAuth.idToken == null) {
         throw Exception('No ID token received from Google');
@@ -112,14 +124,14 @@ class AuthRepository {
 
       // Sign in to Supabase with the Google ID token
       // Note: For native iOS/Android sign-in, "Skip nonce checks" must be enabled in Supabase
-      print('DEBUG: Calling _supabase.auth.signInWithIdToken');
+      _logger.d('Calling _supabase.auth.signInWithIdToken');
       final response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
         accessToken: googleAuth.accessToken,
       );
-      print(
-        'DEBUG: _supabase.auth.signInWithIdToken returned. User: ${response.user?.id}',
+      _logger.d(
+        '_supabase.auth.signInWithIdToken returned. User: ${response.user?.id}',
       );
 
       if (response.user != null) {
@@ -131,8 +143,6 @@ class AuthRepository {
       _logger.e('=== Google Sign-In Failed ===');
       _logger.e('Error: $e');
       _logger.e('Stack trace: $stackTrace');
-      print('DEBUG: Google Sign-In Exception: $e');
-      print('DEBUG: Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -223,6 +233,10 @@ class AuthRepository {
     return metadata?['walkthrough_completed'] == true;
   }
 
+  /// Update user profile (Display Name, Photo URL).
+  ///
+  /// Updates both Auth metadata and the `users` table in the database.
+  /// [photoURL] is cleaned to ensure valid paths.
   Future<UserResponse> updateUserProfile({
     String? displayName,
     String? photoURL,

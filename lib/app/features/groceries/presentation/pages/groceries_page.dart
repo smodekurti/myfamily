@@ -128,12 +128,14 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
         });
       }
 
-      final ingredients = await geminiService.extractIngredientsFromPlan(
-        planData,
-      );
+      final result = await geminiService.extractIngredientsFromPlan(planData);
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
+
+        final ingredients =
+            (result['ingredients'] as List?)?.cast<Map<String, dynamic>>() ??
+            [];
 
         if (ingredients.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -311,67 +313,84 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: ResponsiveHelper.padding(horizontal: 24),
-        child: ModernCard(
-          padding: ResponsiveHelper.padding(all: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: ResponsiveHelper.padding(all: 24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.shopping_basket_outlined,
-                  size: ResponsiveHelper.iconSize(64),
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.h(24)),
-              Text(
-                'No Grocery Lists',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.h(12)),
-              Text(
-                'Create a new list or import from a template to get started',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: ResponsiveHelper.h(32)),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showCreateListDialog(context),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create New List'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: ResponsiveHelper.padding(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: ResponsiveHelper.borderRadius(12),
-                    ),
-                    elevation: 0,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: ResponsiveHelper.padding(horizontal: 24, vertical: 24),
+                child: ModernCard(
+                  padding: ResponsiveHelper.padding(all: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: ResponsiveHelper.padding(all: 24),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.shopping_basket_outlined,
+                          size: ResponsiveHelper.iconSize(64),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(24)),
+                      Text(
+                        'No Grocery Lists',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(12)),
+                      Text(
+                        'Create a new list or import from a template to get started',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: ResponsiveHelper.h(32)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showCreateListDialog(context),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Create New List'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary,
+                            padding: ResponsiveHelper.padding(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: ResponsiveHelper.borderRadius(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

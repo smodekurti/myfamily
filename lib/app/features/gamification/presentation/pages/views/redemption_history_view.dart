@@ -73,33 +73,39 @@ class _RedemptionHistoryViewState extends ConsumerState<RedemptionHistoryView> {
           return const Center(child: Text('No redemption history'));
         }
 
-        return ListView(
-          padding: EdgeInsets.all(16.r),
-          children: [
-            if (pending.isNotEmpty) ...[
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(familyRedemptionsProvider(familyId));
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: ListView(
+            padding: EdgeInsets.all(16.r),
+            children: [
+              if (pending.isNotEmpty) ...[
+                Text(
+                  'Pending Approval',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                ...pending.map(
+                  (r) => _RedemptionTile(redemption: r, isParent: true),
+                ),
+                SizedBox(height: 24.h),
+              ],
               Text(
-                'Pending Approval',
+                'History',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8.h),
-              ...pending.map(
+              ...history.map(
                 (r) => _RedemptionTile(redemption: r, isParent: true),
               ),
-              SizedBox(height: 24.h),
             ],
-            Text(
-              'History',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.h),
-            ...history.map(
-              (r) => _RedemptionTile(redemption: r, isParent: true),
-            ),
-          ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -120,16 +126,22 @@ class _RedemptionHistoryViewState extends ConsumerState<RedemptionHistoryView> {
           );
         }
 
-        return ListView.separated(
-          padding: EdgeInsets.all(16.r),
-          itemCount: redemptions.length,
-          separatorBuilder: (_, __) => SizedBox(height: 8.h),
-          itemBuilder: (context, index) {
-            return _RedemptionTile(
-              redemption: redemptions[index],
-              isParent: false,
-            );
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(userRedemptionsFamilyProvider((familyId, userId)));
+            await Future.delayed(const Duration(milliseconds: 500));
           },
+          child: ListView.separated(
+            padding: EdgeInsets.all(16.r),
+            itemCount: redemptions.length,
+            separatorBuilder: (_, __) => SizedBox(height: 8.h),
+            itemBuilder: (context, index) {
+              return _RedemptionTile(
+                redemption: redemptions[index],
+                isParent: false,
+              );
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

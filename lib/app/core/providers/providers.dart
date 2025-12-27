@@ -41,6 +41,10 @@ final _taskRepositoryInstance = TaskRepository();
 final _familyRepositoryInstance = FamilyRepository();
 
 /// Repository providers
+///
+/// Use these providers to access repository instances.
+
+/// Authorized Authentication Repository provider.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
@@ -137,6 +141,10 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
   return authRepo.authStateChanges;
 });
 
+/// Provides the currently authenticated user.
+///
+/// Returns [User] if logged in, `null` otherwise.
+/// Watches [authStateProvider] to update immediately on auth changes.
 final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.when(
@@ -152,17 +160,27 @@ final userProfileProvider = StreamProvider.family((ref, String uid) {
 });
 
 /// Family providers
+///
+/// Providers for accessing family-related data.
+
+/// Streams the list of families the user belongs to.
 final userFamiliesProvider = StreamProvider.family((ref, String userId) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final familyRepo = ref.watch(familyRepositoryProvider);
   return familyRepo.streamUserFamilies(userId);
 });
 
 final familyProvider = StreamProvider.family((ref, String familyId) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final familyRepo = ref.watch(familyRepositoryProvider);
   return familyRepo.streamFamily(familyId);
 });
 
 final familyMembersProvider = StreamProvider.family((ref, String familyId) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   // Use the singleton instance directly to avoid any provider evaluation issues
   return _familyRepositoryInstance.streamFamilyMembers(familyId);
 });
@@ -171,6 +189,8 @@ final familyMemberProvider = StreamProvider.family((
   ref,
   (String familyId, String uid) params,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final familyRepo = ref.watch(familyRepositoryProvider);
   return familyRepo.streamFamilyMember(familyId: params.$1, uid: params.$2);
 });
@@ -196,6 +216,9 @@ final generateChildInviteCodeProvider = FutureProvider.family<String?, String>((
   return familyRepo.generateChildInviteCodeForFamily(familyId);
 });
 
+/// Provides the currently selected [FamilyModel].
+///
+/// Returns `null` if no family is selected or while loading.
 final currentFamilyProvider = Provider((ref) {
   final familyId = ref.watch(currentFamilyIdProvider);
 
@@ -293,6 +316,8 @@ final familyTasksProvider = StreamProvider.family<List<TaskModel>, String>((
   ref,
   familyId,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   // Get current user for role-based filtering
   final currentUser = ref.watch(currentUserProvider);
   final userId = currentUser?.id;
@@ -305,6 +330,8 @@ final userTasksProvider = StreamProvider.family<List<TaskModel>, String>((
   ref,
   userId,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final currentFamily = ref.watch(currentFamilyProvider);
 
   if (currentFamily == null) {
@@ -327,6 +354,10 @@ final tasksDueTodayProvider = StreamProvider.family<List<TaskModel>, String>((
   // This will automatically update when tasks change in Supabase
   // The stream will emit whenever tasks are created, updated, or deleted
   // Use the singleton instance directly to avoid any provider evaluation issues
+  /// Streams tasks due today for the given [familyId].
+  ///
+  /// Filters tasks based on [TaskModel.dueDate].
+  /// Returns only tasks that are NOT completed.
   return _taskRepositoryInstance
       .streamTasksForFamily(familyId, userId: userId)
       .map((tasks) {
@@ -352,7 +383,10 @@ final taskStatsProvider = FutureProvider.family<Map<String, int>, String>((
   return taskRepo.getTaskStats(familyId);
 });
 
-/// Task actions provider
+/// Task actions provider.
+///
+/// Exposes [TaskActions] class to perform side-effects (create, update, delete)
+/// without cluttering the UI code with repository calls.
 final taskActionsProvider = Provider<TaskActions>((ref) {
   final taskRepo = ref.watch(taskRepositoryProvider);
   return TaskActions(taskRepo);
@@ -429,6 +463,8 @@ class TaskActions {
 /// Announcement providers
 final familyAnnouncementsProvider =
     StreamProvider.family<List<AnnouncementModel>, String>((ref, familyId) {
+      // Watch auth state to ensure stream is rebuilt on token refresh
+      ref.watch(authStateProvider);
       final announcementRepo = ref.watch(announcementRepositoryProvider);
       // Get current user for role-based filtering
       final currentUser = ref.watch(currentUserProvider);
@@ -444,6 +480,8 @@ final familyEventsProvider = StreamProvider.family<List<EventModel>, String>((
   ref,
   familyId,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final calendarRepo = ref.watch(calendarRepositoryProvider);
   // Get current user for role-based filtering
   final currentUser = ref.watch(currentUserProvider);
@@ -616,12 +654,16 @@ final familyRewardsProvider = StreamProvider.family<List<RewardModel>, String>((
   ref,
   familyId,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final rewardRepo = ref.watch(rewardRepositoryProvider);
   return rewardRepo.streamRewards(familyId);
 });
 
 final familyRedemptionsProvider =
     StreamProvider.family<List<RewardRedemptionModel>, String>((ref, familyId) {
+      // Watch auth state to ensure stream is rebuilt on token refresh
+      ref.watch(authStateProvider);
       final rewardRepo = ref.watch(rewardRepositoryProvider);
       // This stream currently performs async mapping which might be heavy,
       // but acceptable for the expected volume of requests.
@@ -649,6 +691,8 @@ final userRedemptionsFamilyProvider =
       List<RewardRedemptionModel>,
       (String familyId, String userId)
     >((ref, params) {
+      // Watch auth state to ensure stream is rebuilt on token refresh
+      ref.watch(authStateProvider);
       final rewardRepo = ref.watch(rewardRepositoryProvider);
       return rewardRepo.streamUserRedemptions(params.$2, params.$1);
     });
@@ -669,27 +713,51 @@ final familyRecipesProvider = StreamProvider.family<List<RecipeModel>, String>((
   ref,
   familyId,
 ) {
+  // Watch auth state to ensure stream is rebuilt on token refresh
+  ref.watch(authStateProvider);
   final repository = ref.watch(recipeRepositoryProvider);
   return repository.streamRecipes(familyId);
 });
 
+/// Holds the currently selected date for the meal planner view
+/// Defaults to DateTime.now()
+final selectedWeekDateProvider = StateProvider<DateTime>(
+  (ref) => DateTime.now(),
+);
+
+/// Provides the [MealPlanModel] for the currently selected week.
+///
+/// Calculates the start of the week (Sunday) based on [selectedWeekDateProvider].
+/// If a plan doesn't exist for that week, it creates an empty one.
 final currentWeekMealPlanProvider =
     FutureProvider.family<MealPlanModel, String>((ref, familyId) async {
       final repository = ref.watch(mealPlanRepositoryProvider);
-      // Calculate start of current week (Sunday)
-      final now = DateTime.now();
+      final selectedDate = ref.watch(selectedWeekDateProvider);
+
+      // Calculate start of week (Sunday) based on selected date
       // DateTime.weekday: Mon=1, ..., Sun=7
-      // To get Sunday: subtract (weekday % 7) days.
-      // e.g. Sunday(7) % 7 = 0 -> subtract 0 days. Correct.
-      // e.g. Monday(1) % 7 = 1 -> subtract 1 day (back to Sunday). Correct.
-      final daysToSubtract = now.weekday % 7;
-      final startOfWeek = now.subtract(Duration(days: daysToSubtract));
+      final daysToSubtract = selectedDate.weekday % 7;
+      final startOfWeek = selectedDate.subtract(Duration(days: daysToSubtract));
       final normalizedStart = DateTime(
         startOfWeek.year,
         startOfWeek.month,
         startOfWeek.day,
       );
       return repository.getOrCreateWeeklyPlan(familyId, normalizedStart);
+    });
+
+final rollingMealPlanEntriesProvider =
+    FutureProvider.family<
+      List<MealPlanEntryModel>,
+      (String familyId, DateTime start)
+    >((ref, params) async {
+      final repository = ref.watch(mealPlanRepositoryProvider);
+      final end = params.$2.add(const Duration(days: 6));
+
+      // Set time to end of day to ensuring full range coverage
+      final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+
+      return repository.getEntriesForDateRange(params.$1, params.$2, endOfDay);
     });
 
 final familyDataServiceProvider = Provider<FamilyDataService>((ref) {

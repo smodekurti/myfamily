@@ -31,27 +31,33 @@ class LocationService {
     try {
       // First, check and request permission if needed
       var permission = await Permission.location.status;
-      
-      if (permission.isDenied) {        // Request permission proactively
+
+      if (permission.isDenied) {
+        // Request permission proactively
         permission = await Permission.location.request();
-        
-        if (permission.isDenied) {          return null;
+
+        if (permission.isDenied) {
+          return null;
         }
       }
 
-      if (permission.isPermanentlyDenied) {        // Open app settings so user can enable permission
-        await openAppSettings();
+      if (permission.isPermanentlyDenied) {
+        // Do not open app settings automatically as it disrupts user experience
+        // Just return null so we fall back to default location
         return null;
       }
 
-      if (!permission.isGranted) {        return null;
+      if (!permission.isGranted) {
+        return null;
       }
 
       // Check if location services are enabled
       final serviceEnabled = await isLocationServiceEnabled();
-      if (!serviceEnabled) {        // Prompt user to enable location services
+      if (!serviceEnabled) {
+        // Prompt user to enable location services
         final enabled = await Geolocator.openLocationSettings();
-        if (!enabled) {          // Try to get last known position as fallback
+        if (!enabled) {
+          // Try to get last known position as fallback
           return await _getLastKnownPosition();
         }
         // Wait a moment for location services to initialize
@@ -62,17 +68,24 @@ class LocationService {
       // Lower accuracy works better on emulators and devices with poor GPS signal
       try {
         final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low, // Lower accuracy for faster results
+          desiredAccuracy:
+              LocationAccuracy.low, // Lower accuracy for faster results
           timeLimit: const Duration(seconds: 10), // Reduced timeout
         );
         return position;
-      } on TimeoutException {        // Fallback to last known position if current position times out
+      } on TimeoutException {
+        // Fallback to last known position if current position times out
         return await _getLastKnownPosition();
-      } catch (e) {        // Fallback to last known position on any error
+      } catch (e) {
+        // Fallback to last known position on any error
         return await _getLastKnownPosition();
       }
     } catch (e, stackTrace) {
-      _logger.e('Get current location error: $e', error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Get current location error: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Final fallback to last known position
       return await _getLastKnownPosition();
     }
@@ -82,11 +95,12 @@ class LocationService {
   Future<Position?> _getLastKnownPosition() async {
     try {
       final position = await Geolocator.getLastKnownPosition();
-      if (position != null) {        return position;
-      }      return null;
-    } catch (e) {      return null;
+      if (position != null) {
+        return position;
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 }
-
-

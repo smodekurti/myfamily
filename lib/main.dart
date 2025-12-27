@@ -10,7 +10,6 @@ import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/router/app_router.dart';
 import 'app/core/providers/providers.dart';
-import 'app/common/responsive/responsive_helper.dart';
 
 void main() async {
   // Run app in a zone to intercept print() calls and filter Supabase INFO messages
@@ -163,14 +162,8 @@ class _MyFamilyAppState extends ConsumerState<MyFamilyApp> {
               themeMode: themeMode,
               routerConfig: router,
               builder: (context, child) {
-                // Initialize responsive helper with context
-                // This is safe here because ScreenUtilInit provides the necessary MediaQuery
-                return MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.noScaling),
-                  child: child!,
-                );
+                // Return child directly to avoid Navigator key duplication issues
+                return child!;
               },
             );
           },

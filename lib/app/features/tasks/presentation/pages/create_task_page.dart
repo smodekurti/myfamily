@@ -15,11 +15,8 @@ import 'package:intl/intl.dart';
 
 class CreateTaskPage extends ConsumerStatefulWidget {
   final String? initialCategory;
-  
-  const CreateTaskPage({
-    super.key,
-    this.initialCategory,
-  });
+
+  const CreateTaskPage({super.key, this.initialCategory});
 
   @override
   ConsumerState<CreateTaskPage> createState() => _CreateTaskPageState();
@@ -29,7 +26,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
-  
+
   String? _selectedAssignee;
   late String _selectedCategory;
   String _selectedPriority = 'medium';
@@ -46,7 +43,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     super.initState();
     _selectedCategory = widget.initialCategory ?? 'chore';
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -95,11 +92,12 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   Future<void> _selectDueDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
+      initialDate:
+          _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (picked != null) {
       setState(() {
         _selectedDueDate = picked;
@@ -154,16 +152,18 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       setState(() {
         _selectedGroceryListId = result;
       });
-      
+
       // Navigate to the shopping list page so user can add items
       if (mounted) {
         // Invalidate the standalone lists provider so the new list appears in selection
         ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
-        
+
         // Show a message and navigate to the list page
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Shopping list created! Add items and return to save the task.'),
+            content: const Text(
+              'Shopping list created! Add items and return to save the task.',
+            ),
             backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
@@ -175,10 +175,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             ),
           ),
         );
-        
+
         // Navigate to the shopping list page
         await context.push('/grocery-list/$result');
-        
+
         // After returning from the list page, refresh the standalone lists
         ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
       }
@@ -187,7 +187,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
       if (mounted) {
@@ -200,7 +200,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       }
       return;
     }
-    
+
     // Auto-assign to current user if no assignee selected
     final assignee = _selectedAssignee ?? currentUser.id;
 
@@ -209,33 +209,32 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     try {
       final currentUser = ref.read(currentUserProvider);
       final currentFamily = ref.read(currentFamilyProvider);
-      
+
       if (currentUser == null || currentFamily == null) {
         throw Exception('User not authenticated or no family selected');
       }
 
       final taskActions = ref.read(taskActionsProvider);
-      
+
       // Get default points for the selected category
       final category = TaskCategories.getById(_selectedCategory);
       final defaultPoints = category?.defaultPoints ?? 10;
-      
+
       // Build categoryData with recurrence info
       Map<String, dynamic>? categoryData;
       if (_recurrenceType != 'none') {
-        categoryData = {
-          'recurrenceType': _recurrenceType,
-        };
+        categoryData = {'recurrenceType': _recurrenceType};
         if (_recurrenceEndDate != null) {
-          categoryData['recurrenceEndDate'] = _recurrenceEndDate!.toIso8601String();
+          categoryData['recurrenceEndDate'] = _recurrenceEndDate!
+              .toIso8601String();
         }
       }
-      
+
       // Create task (don't set groceryListId in categoryData yet - we'll set it after linking the list)
       final task = await taskActions.createTask(
         title: _titleController.text.trim(),
-        description: _notesController.text.trim().isEmpty 
-            ? null 
+        description: _notesController.text.trim().isEmpty
+            ? null
             : _notesController.text.trim(),
         assignedTo: assignee,
         createdBy: currentUser.id,
@@ -253,7 +252,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       String? groceryListId;
       if (_selectedCategory == 'grocery') {
         final groceryListRepo = ref.read(groceryListRepositoryProvider);
-        
+
         if (_selectedGroceryListId != null) {
           // User selected an existing list - just link it to this task
           await groceryListRepo.updateListTaskId(
@@ -270,17 +269,25 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             templateId: _templateIdToImport,
           );
           groceryListId = groceryList.id;
-          
+
           // Import items from template (skip duplicates)
           final templateRepo = ref.read(groceryTemplateRepositoryProvider);
-          final templateItems = await templateRepo.getTemplateItems(_templateIdToImport!);
-          final existingItems = await groceryListRepo.getListItems(groceryList.id);
+          final templateItems = await templateRepo.getTemplateItems(
+            _templateIdToImport!,
+          );
+          final existingItems = await groceryListRepo.getListItems(
+            groceryList.id,
+          );
           final existingItemKeys = existingItems
-              .map((item) => '${item.name.toLowerCase()}_${item.category.toLowerCase()}')
+              .map(
+                (item) =>
+                    '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+              )
               .toSet();
-          
+
           for (final templateItem in templateItems) {
-            final key = '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
+            final key =
+                '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
             if (!existingItemKeys.contains(key)) {
               await groceryListRepo.addItem(
                 listId: groceryList.id,
@@ -292,7 +299,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               );
             }
           }
-          
+
           // Link the list to this task
           await groceryListRepo.updateListTaskId(
             listId: groceryListId,
@@ -306,41 +313,43 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             createdBy: currentUser.id,
           );
           groceryListId = groceryList.id;
-          
+
           // Link the list to this task
           await groceryListRepo.updateListTaskId(
             listId: groceryListId,
             taskId: task.id,
           );
         }
-        
+
         // Update task with grocery list ID in categoryData (merge with existing categoryData)
-        final updatedCategoryData = Map<String, dynamic>.from(task.categoryData ?? categoryData ?? {});
+        final updatedCategoryData = Map<String, dynamic>.from(
+          task.categoryData ?? categoryData ?? {},
+        );
         updatedCategoryData['groceryListId'] = groceryListId;
         await taskActions.updateTask(
           taskId: task.id,
           categoryData: updatedCategoryData,
         );
       }
-      
+
       // Refresh the tasks list to show the new task immediately
       ref.invalidate(familyTasksProvider(currentFamily.id));
       ref.invalidate(tasksDueTodayProvider(currentFamily.id));
-      
+
       // Invalidate grocery list providers to ensure the list appears in Shopping tab immediately
       if (_selectedCategory == 'grocery' && groceryListId != null) {
         // Small delay to ensure database writes complete before invalidating
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         // Invalidate the all lists provider so Shopping tab updates immediately
         ref.invalidate(allGroceryListsProvider(currentFamily.id));
         ref.invalidate(standaloneGroceryListsProvider(currentFamily.id));
-        
+
         // Also invalidate specific list providers
         ref.invalidate(groceryListProvider(groceryListId));
         ref.invalidate(groceryListItemsProvider(groceryListId));
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -370,10 +379,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
   Future<void> _saveAsTemplate(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final currentUser = ref.read(currentUserProvider);
     final currentFamily = ref.read(currentFamilyProvider);
-    
+
     if (currentUser == null || currentFamily == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -422,7 +431,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       border: OutlineInputBorder(
                         borderRadius: ResponsiveHelper.borderRadius(12),
                       ),
-                      contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                      contentPadding: ResponsiveHelper.padding(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -435,7 +447,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   Text(
                     'This will save the current task configuration as a reusable template.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -444,11 +458,15 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(false),
+              onPressed: isLoading
+                  ? null
+                  : () => Navigator.of(dialogContext).pop(false),
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ),
@@ -470,8 +488,14 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               : _notesController.text.trim(),
                           category: _selectedCategory,
                           priority: _selectedPriority,
-                          points: TaskCategories.getById(_selectedCategory)?.defaultPoints ?? 10,
-                          recurrenceType: _recurrenceType != 'none' ? _recurrenceType : null,
+                          points:
+                              TaskCategories.getById(
+                                _selectedCategory,
+                              )?.defaultPoints ??
+                              10,
+                          recurrenceType: _recurrenceType != 'none'
+                              ? _recurrenceType
+                              : null,
                           recurrenceEndDate: _recurrenceEndDate,
                           createdBy: currentUser.id,
                         );
@@ -480,19 +504,29 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           Navigator.of(dialogContext).pop(true);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('Template saved successfully!'),
-                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              content: const Text(
+                                'Template saved successfully!',
+                              ),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                             ),
                           );
                           // Invalidate templates provider
-                          ref.invalidate(taskTemplatesProvider(currentFamily.id));
+                          ref.invalidate(
+                            taskTemplatesProvider(currentFamily.id),
+                          );
                         }
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Failed to save template: ${e.toString()}'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              content: Text(
+                                'Failed to save template: ${e.toString()}',
+                              ),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
                             ),
                           );
                         }
@@ -529,87 +563,87 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   @override
   Widget build(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
-    final familyMembers = currentFamily != null 
+    final familyMembers = currentFamily != null
         ? ref.watch(familyMembersProvider(currentFamily.id))
         : const AsyncValue.data(<FamilyMemberModel>[]);
 
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.5), // Blurred background
-      body: Center(
-        child: Container(
-          margin: ResponsiveHelper.padding(horizontal: 16),
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveHelper.w(400),
-            maxHeight: MediaQuery.of(context).size.height * 0.9,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: ResponsiveHelper.borderRadius(20),
-          ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-              mainAxisSize: MainAxisSize.min,
-                children: [
-                // Header
-                _buildHeader(context),
-                
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: ResponsiveHelper.padding(all: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Template selector (if any templates exist)
-                        _buildTemplateSelector(context),
-                        if (_selectedTemplateId != null) SizedBox(height: ResponsiveHelper.h(16)),
-                        
-                        // Chore Name
-                        _buildChoreNameField(),
-                  SizedBox(height: ResponsiveHelper.h(24)),
-                  
-                        // Category selector
-                        _buildCategorySelector(),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Assign To
-                        _buildAssignToSection(context, familyMembers),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Priority
-                        _buildPrioritySelector(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Due Date
-                        _buildDueDateField(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Recurrence
-                        _buildRecurrenceSelector(context),
-                        SizedBox(height: ResponsiveHelper.h(24)),
-                        
-                        // Shopping List (only if grocery category and no template pre-selected)
-                        if (_selectedCategory == 'grocery' && _templateIdToImport == null) ...[
-                          _buildShoppingListSection(context),
-                          SizedBox(height: ResponsiveHelper.h(24)),
-                        ],
-                        
-                        // Show template info if template is pre-selected
-                        if (_selectedCategory == 'grocery' && _templateIdToImport != null) ...[
-                          _buildTemplateInfoSection(context),
-                          SizedBox(height: ResponsiveHelper.h(24)),
-                        ],
-                        
-                        // Notes
-                        _buildNotesField(),
-                      ],
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: ResponsiveHelper.padding(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Template selector (if any templates exist)
+                            _buildTemplateSelector(context),
+                            if (_selectedTemplateId != null)
+                              SizedBox(height: ResponsiveHelper.h(16)),
+
+                            // Chore Name
+                            _buildChoreNameField(),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Category selector
+                            _buildCategorySelector(),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Assign To
+                            _buildAssignToSection(context, familyMembers),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Priority
+                            _buildPrioritySelector(context),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Due Date
+                            _buildDueDateField(context),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Recurrence
+                            _buildRecurrenceSelector(context),
+                            SizedBox(height: ResponsiveHelper.h(24)),
+
+                            // Shopping List (only if grocery category and no template pre-selected)
+                            if (_selectedCategory == 'grocery' &&
+                                _templateIdToImport == null) ...[
+                              _buildShoppingListSection(context),
+                              SizedBox(height: ResponsiveHelper.h(24)),
+                            ],
+
+                            // Show template info if template is pre-selected
+                            if (_selectedCategory == 'grocery' &&
+                                _templateIdToImport != null) ...[
+                              _buildTemplateInfoSection(context),
+                              SizedBox(height: ResponsiveHelper.h(24)),
+                            ],
+
+                            // Notes
+                            _buildNotesField(),
+                            SizedBox(
+                              height: ResponsiveHelper.h(32),
+                            ), // Bottom padding
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -635,9 +669,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           Expanded(
             child: Text(
               'New Chore',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ),
@@ -685,27 +719,30 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Chore Name',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
+        TextFormField(
+          controller: _titleController,
+          decoration: InputDecoration(
             hintText: 'e.g., Weekly Groceries',
-                      border: OutlineInputBorder(
-                        borderRadius: ResponsiveHelper.borderRadius(12),
-                      ),
-            contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
+            border: OutlineInputBorder(
+              borderRadius: ResponsiveHelper.borderRadius(12),
+            ),
+            contentPadding: ResponsiveHelper.padding(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
               return 'Please enter a chore name';
-                      }
-                      return null;
-                    },
-                  ),
+            }
+            return null;
+          },
+        ),
       ],
     );
   }
@@ -731,12 +768,12 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Category',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(12)),
-        
+
         // Priority categories (most common)
         Wrap(
           spacing: ResponsiveHelper.w(8),
@@ -750,9 +787,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   Icon(
                     category.icon,
                     size: ResponsiveHelper.iconSize(16),
-                    color: isSelected
-                        ? Colors.white
-                        : category.color,
+                    color: isSelected ? Colors.white : category.color,
                   ),
                   SizedBox(width: ResponsiveHelper.w(6)),
                   Text(category.name),
@@ -776,13 +811,15 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               side: BorderSide(
-                color: isSelected ? category.color : category.color.withOpacity(0.3),
+                color: isSelected
+                    ? category.color
+                    : category.color.withOpacity(0.3),
                 width: isSelected ? 2 : 1,
               ),
             );
           }).toList(),
         ),
-        
+
         // Show "More Categories" expandable section if there are other categories
         if (otherCategories.isNotEmpty) ...[
           SizedBox(height: ResponsiveHelper.h(12)),
@@ -808,9 +845,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         Icon(
                           category.icon,
                           size: ResponsiveHelper.iconSize(16),
-                          color: isSelected
-                              ? Colors.white
-                              : category.color,
+                          color: isSelected ? Colors.white : category.color,
                         ),
                         SizedBox(width: ResponsiveHelper.w(6)),
                         Text(category.name),
@@ -831,10 +866,14 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     selectedColor: category.color,
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : category.color,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     side: BorderSide(
-                      color: isSelected ? category.color : category.color.withOpacity(0.3),
+                      color: isSelected
+                          ? category.color
+                          : category.color.withOpacity(0.3),
                       width: isSelected ? 2 : 1,
                     ),
                   );
@@ -857,9 +896,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Assign To',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(12)),
         familyMembers.when(
@@ -872,7 +911,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   if (currentUser == null) {
                     return const Text('No user available');
                   }
-                  
+
                   // Auto-select current user if not already selected
                   if (_selectedAssignee == null) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -883,10 +922,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       }
                     });
                   }
-                  
+
                   final avatarUrl = currentUser.avatarUrl;
                   final displayName = currentUser.displayNameOrEmail;
-                  
+
                   return GestureDetector(
                     onTap: () {
                       setState(() {
@@ -894,7 +933,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       });
                     },
                     child: Column(
-                            children: [
+                      children: [
                         Container(
                           width: ResponsiveHelper.w(60),
                           height: ResponsiveHelper.h(60),
@@ -909,22 +948,24 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                             avatarPath: avatarUrl,
                             radius: ResponsiveHelper.r(28),
                             displayName: displayName,
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
                             textColor: Theme.of(context).colorScheme.onPrimary,
                           ),
-                                ),
+                        ),
                         SizedBox(height: ResponsiveHelper.h(4)),
                         Text(
                           displayName ?? 'You',
                           style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        );
+                        ),
+                      ],
+                    ),
+                  );
                 },
               );
             }
-            
+
             // Show all members for selection (1 or more)
             // Auto-select first member if none selected
             if (_selectedAssignee == null && members.isNotEmpty) {
@@ -936,7 +977,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 }
               });
             }
-            
+
             return Wrap(
               spacing: ResponsiveHelper.w(16),
               runSpacing: ResponsiveHelper.h(12),
@@ -958,7 +999,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           border: Border.all(
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.2),
                             width: ResponsiveHelper.w(isSelected ? 3 : 2),
                           ),
                         ),
@@ -966,7 +1009,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           avatarPath: member.photoURL,
                           radius: ResponsiveHelper.r(28),
                           displayName: member.displayName,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           textColor: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
@@ -974,9 +1019,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       Text(
                         member.displayName,
                         style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                 );
               }).toList(),
             );
@@ -997,7 +1042,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     ),
                   );
                 }
-                
+
                 // Auto-select current user if not already selected
                 if (_selectedAssignee == null) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1008,10 +1053,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     }
                   });
                 }
-                
+
                 final avatarUrl = currentUser.avatarUrl;
                 final displayName = currentUser.displayNameOrEmail;
-                
+
                 return GestureDetector(
                   onTap: () {
                     setState(() {
@@ -1034,7 +1079,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           avatarPath: avatarUrl,
                           radius: ResponsiveHelper.r(28),
                           displayName: displayName,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           textColor: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
@@ -1067,7 +1114,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
       }
     }
-    
+
     IconData getPriorityIcon(String priority) {
       switch (priority) {
         case 'high':
@@ -1080,7 +1127,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           return Icons.circle;
       }
     }
-    
+
     String getPriorityLabel(String priority) {
       switch (priority) {
         case 'high':
@@ -1093,14 +1140,14 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           return 'Med';
       }
     }
-    
+
     return Row(
       children: [
         Text(
           'Priority:',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(width: ResponsiveHelper.w(12)),
         Expanded(
@@ -1126,12 +1173,17 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       },
                       borderRadius: ResponsiveHelper.borderRadius(8),
                       child: Container(
-                        padding: ResponsiveHelper.padding(vertical: 8, horizontal: 4),
+                        padding: ResponsiveHelper.padding(
+                          vertical: 8,
+                          horizontal: 4,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: isSelected
                                 ? priorityColor
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.2),
                             width: ResponsiveHelper.w(isSelected ? 2 : 1),
                           ),
                           borderRadius: ResponsiveHelper.borderRadius(8),
@@ -1144,18 +1196,26 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               size: ResponsiveHelper.iconSize(16),
                               color: isSelected
                                   ? priorityColor
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                             SizedBox(width: ResponsiveHelper.w(4)),
                             Text(
                               getPriorityLabel(priority),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isSelected
-                                    ? priorityColor
-                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                fontSize: ResponsiveHelper.sp(11),
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: isSelected
+                                        ? priorityColor
+                                        : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    fontSize: ResponsiveHelper.sp(11),
+                                  ),
                             ),
                           ],
                         ),
@@ -1177,9 +1237,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Due Date',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
         InkWell(
@@ -1192,8 +1252,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               ),
               borderRadius: ResponsiveHelper.borderRadius(12),
             ),
-                        child: Row(
-                          children: [
+            child: Row(
+              children: [
                 Expanded(
                   child: Text(
                     _selectedDueDate == null
@@ -1202,14 +1262,16 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ),
-                            Icon(
+                Icon(
                   Icons.calendar_today,
                   size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
-                          ],
-                        ),
-                      ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -1221,9 +1283,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Repeat',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
         Wrap(
@@ -1241,20 +1303,22 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           SizedBox(height: ResponsiveHelper.h(16)),
           Text(
             'Repeat Until',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           SizedBox(height: ResponsiveHelper.h(8)),
           InkWell(
             onTap: () async {
               final DateTime? picked = await showDatePicker(
                 context: context,
-                initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 30)),
+                initialDate:
+                    _recurrenceEndDate ??
+                    DateTime.now().add(const Duration(days: 30)),
                 firstDate: DateTime.now(),
                 lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
               );
-              
+
               if (picked != null) {
                 setState(() {
                   _recurrenceEndDate = picked;
@@ -1265,7 +1329,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.2),
                 ),
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
@@ -1275,14 +1341,18 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     child: Text(
                       _recurrenceEndDate == null
                           ? 'No end date'
-                          : DateFormat('MM/dd/yyyy').format(_recurrenceEndDate!),
+                          : DateFormat(
+                              'MM/dd/yyyy',
+                            ).format(_recurrenceEndDate!),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
                   Icon(
                     Icons.calendar_today,
                     size: ResponsiveHelper.iconSize(20),
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ],
               ),
@@ -1293,7 +1363,11 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     );
   }
 
-  Widget _buildRecurrenceChip(BuildContext context, String value, String label) {
+  Widget _buildRecurrenceChip(
+    BuildContext context,
+    String value,
+    String label,
+  ) {
     final isSelected = _recurrenceType == value;
     return ActionChip(
       label: Text(label),
@@ -1325,8 +1399,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       builder: (context, ref, child) {
         // If a list is selected, show its name
         if (_selectedGroceryListId != null) {
-          final listAsync = ref.watch(groceryListProvider(_selectedGroceryListId!));
-          
+          final listAsync = ref.watch(
+            groceryListProvider(_selectedGroceryListId!),
+          );
+
           return listAsync.when(
             data: (list) {
               if (list == null) {
@@ -1353,11 +1429,13 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           width: ResponsiveHelper.w(2),
                         ),
                         borderRadius: ResponsiveHelper.borderRadius(12),
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
                       ),
-                        child: Row(
-                          children: [
-                            Icon(
+                      child: Row(
+                        children: [
+                          Icon(
                             Icons.shopping_cart,
                             color: Theme.of(context).colorScheme.primary,
                             size: ResponsiveHelper.iconSize(24),
@@ -1369,33 +1447,42 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               children: [
                                 Text(
                                   list.name,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                                 SizedBox(height: ResponsiveHelper.h(4)),
                                 Text(
                                   'Tap to change',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                ),
+                              ],
                             ),
                           ),
                           IconButton(
                             icon: Icon(
                               Icons.close,
                               size: ResponsiveHelper.iconSize(20),
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
                             ),
                             onPressed: () {
-                      setState(() {
+                              setState(() {
                                 _selectedGroceryListId = null;
-                      });
-                    },
-                  ),
+                              });
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -1407,25 +1494,25 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             error: (_, __) => _buildAttachButton(context),
           );
         }
-        
+
         return _buildAttachButton(context);
       },
     );
   }
-  
+
   Widget _buildAttachButton(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Shopping List',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
         // Create New List Button
-                  InkWell(
+        InkWell(
           onTap: () => _createNewShoppingList(context),
           child: Container(
             padding: ResponsiveHelper.padding(all: 16),
@@ -1435,7 +1522,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 style: BorderStyle.solid,
                 width: ResponsiveHelper.w(2),
               ),
-                          borderRadius: ResponsiveHelper.borderRadius(12),
+              borderRadius: ResponsiveHelper.borderRadius(12),
               color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
             ),
             child: Row(
@@ -1461,7 +1548,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       Text(
                         'Start a fresh shopping list',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -1490,10 +1579,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               borderRadius: ResponsiveHelper.borderRadius(12),
             ),
             child: Row(
-                    children: [
-                      Icon(
+              children: [
+                Icon(
                   Icons.shopping_cart,
-                        color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   size: ResponsiveHelper.iconSize(24),
                 ),
                 SizedBox(width: ResponsiveHelper.w(12)),
@@ -1512,7 +1601,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                       Text(
                         'Use an existing shopping list',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -1534,12 +1625,12 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     return Consumer(
       builder: (context, ref, child) {
         if (_templateIdToImport == null) return const SizedBox.shrink();
-        
+
         final currentFamily = ref.watch(currentFamilyProvider);
         final templates = currentFamily != null
             ? ref.watch(groceryTemplatesProvider(currentFamily.id))
             : const AsyncValue.data(<GroceryTemplateModel>[]);
-        
+
         return templates.when(
           data: (templateList) {
             final template = templateList.firstWhere(
@@ -1551,12 +1642,12 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 createdBy: '',
               ),
             );
-            
+
             // Map template name to icon
             IconData icon;
             Color iconColor;
-            
-            if (template.name.toLowerCase().contains('weekly') || 
+
+            if (template.name.toLowerCase().contains('weekly') ||
                 template.name.toLowerCase().contains('grocery')) {
               icon = Icons.shopping_bag;
               iconColor = Theme.of(context).colorScheme.primary;
@@ -1567,21 +1658,23 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               icon = Icons.shopping_cart;
               iconColor = Theme.of(context).colorScheme.primary;
             }
-            
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Template',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
-                      Container(
+                Container(
                   padding: ResponsiveHelper.padding(all: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.primary,
                       width: ResponsiveHelper.w(2),
@@ -1602,26 +1695,34 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           children: [
                             Text(
                               template.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                             SizedBox(height: ResponsiveHelper.h(4)),
                             Text(
                               'Items will be imported from this template',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                       ),
                       IconButton(
                         icon: Icon(
                           Icons.close,
                           size: ResponsiveHelper.iconSize(20),
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         onPressed: () {
                           setState(() {
@@ -1649,9 +1750,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       children: [
         Text(
           'Notes',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveHelper.h(8)),
         TextFormField(
@@ -1684,9 +1785,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           children: [
             Text(
               'Use Template (Optional)',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: ResponsiveHelper.h(8)),
             Container(
@@ -1697,7 +1798,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 itemBuilder: (context, index) {
                   final template = templates[index];
                   final isSelected = _selectedTemplateId == template.id;
-                  
+
                   return GestureDetector(
                     onTap: () {
                       setState(() {
@@ -1727,13 +1828,21 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         border: Border.all(
                           color: isSelected
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                          width: isSelected ? ResponsiveHelper.w(2) : ResponsiveHelper.w(1),
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.2),
+                          width: isSelected
+                              ? ResponsiveHelper.w(2)
+                              : ResponsiveHelper.w(1),
                         ),
                         borderRadius: ResponsiveHelper.borderRadius(12),
                         color: isSelected
-                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
-                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                       ),
                       padding: ResponsiveHelper.padding(all: 12),
                       child: Column(
@@ -1745,17 +1854,20 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                             size: ResponsiveHelper.iconSize(24),
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                           SizedBox(height: ResponsiveHelper.h(8)),
                           Text(
                             template.name,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.onSurface,
+                                ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1792,7 +1904,8 @@ class _CreateShoppingListDialog extends StatefulWidget {
   });
 
   @override
-  State<_CreateShoppingListDialog> createState() => _CreateShoppingListDialogState();
+  State<_CreateShoppingListDialog> createState() =>
+      _CreateShoppingListDialogState();
 }
 
 class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
@@ -1817,14 +1930,14 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
-                        shape: RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: ResponsiveHelper.borderRadius(16),
       ),
       title: Text(
         'Create New Shopping List',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
       content: SizedBox(
         width: ResponsiveHelper.w(400),
@@ -1838,9 +1951,9 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                 // List Name
                 Text(
                   'List Name',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 TextFormField(
@@ -1848,9 +1961,12 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                   decoration: InputDecoration(
                     hintText: 'e.g., Weekly Shopping',
                     border: OutlineInputBorder(
-                          borderRadius: ResponsiveHelper.borderRadius(12),
-                        ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                      borderRadius: ResponsiveHelper.borderRadius(12),
+                    ),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1913,21 +2029,29 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                     );
 
                     // If template selected, import items (do NOT copy notes, skip duplicates)
-                    if (_selectedTemplateId != null && _selectedTemplateId!.isNotEmpty) {
-                      final templateItems = await widget.templateRepo.getTemplateItems(_selectedTemplateId!);
-                      
+                    if (_selectedTemplateId != null &&
+                        _selectedTemplateId!.isNotEmpty) {
+                      final templateItems = await widget.templateRepo
+                          .getTemplateItems(_selectedTemplateId!);
+
                       // Get existing items to check for duplicates
-                      final existingItems = await widget.listRepo.getListItems(newList.id);
+                      final existingItems = await widget.listRepo.getListItems(
+                        newList.id,
+                      );
                       final existingItemKeys = existingItems
-                          .map((item) => '${item.name.toLowerCase()}_${item.category.toLowerCase()}')
+                          .map(
+                            (item) =>
+                                '${item.name.toLowerCase()}_${item.category.toLowerCase()}',
+                          )
                           .toSet();
-                      
+
                       // Filter out duplicates
                       final itemsToImport = templateItems.where((templateItem) {
-                        final key = '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
+                        final key =
+                            '${templateItem.name.toLowerCase()}_${templateItem.category.toLowerCase()}';
                         return !existingItemKeys.contains(key);
                       }).toList();
-                      
+
                       // Add each new item to the list
                       for (final templateItem in itemsToImport) {
                         await widget.listRepo.addItem(
@@ -1949,7 +2073,9 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Failed to create list: ${e.toString().replaceAll('Exception: ', '')}'),
+                          content: Text(
+                            'Failed to create list: ${e.toString().replaceAll('Exception: ', '')}',
+                          ),
                           backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
@@ -1962,18 +2088,18 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.primary,
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              width: ResponsiveHelper.w(20),
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  width: ResponsiveHelper.w(20),
                   height: ResponsiveHelper.h(20),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              ),
-                            )
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                )
               : const Text('Create'),
         ),
       ],
@@ -1986,19 +2112,18 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
         if (templates.isEmpty) {
           return const SizedBox.shrink();
         }
-        
+
         return Container(
-          constraints: BoxConstraints(
-            maxHeight: ResponsiveHelper.h(200),
-          ),
+          constraints: BoxConstraints(maxHeight: ResponsiveHelper.h(200)),
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: templates.length,
-            separatorBuilder: (context, index) => SizedBox(height: ResponsiveHelper.h(8)),
+            separatorBuilder: (context, index) =>
+                SizedBox(height: ResponsiveHelper.h(8)),
             itemBuilder: (context, index) {
               final template = templates[index];
               final isSelected = _selectedTemplateId == template.id;
-              
+
               return InkWell(
                 onTap: () {
                   setState(() {
@@ -2010,13 +2135,18 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                        : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        : Theme.of(context).colorScheme.surfaceContainerHighest
+                              .withOpacity(0.3),
                     borderRadius: ResponsiveHelper.borderRadius(8),
                     border: Border.all(
                       color: isSelected
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                      width: isSelected ? ResponsiveHelper.w(2) : ResponsiveHelper.w(1),
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.1),
+                      width: isSelected
+                          ? ResponsiveHelper.w(2)
+                          : ResponsiveHelper.w(1),
                     ),
                   ),
                   child: Row(
@@ -2025,24 +2155,29 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                         isSelected ? Icons.check_circle : Icons.circle_outlined,
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.5),
                         size: ResponsiveHelper.iconSize(20),
                       ),
                       SizedBox(width: ResponsiveHelper.w(12)),
                       Expanded(
                         child: Text(
                           template.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.onSurface,
+                              ),
                         ),
                       ),
-                ],
-              ),
-            ),
+                    ],
+                  ),
+                ),
               );
             },
           ),

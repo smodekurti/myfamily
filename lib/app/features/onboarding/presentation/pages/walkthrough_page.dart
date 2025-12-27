@@ -228,7 +228,7 @@ class _WalkthroughPageState extends ConsumerState<WalkthroughPage> {
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: isLastPage
-                              ? ResponsiveHelper.w(160)
+                              ? ResponsiveHelper.w(180)
                               : ResponsiveHelper.w(120),
                           height: ResponsiveHelper.h(50),
                           child: ElevatedButton(

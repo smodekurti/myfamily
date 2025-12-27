@@ -10,6 +10,7 @@ import '../../../../core/utils/grocery_category_mapper.dart';
 import '../../../../data/models/grocery_template_model.dart';
 
 import '../../../../data/models/task_model.dart';
+import '../../../../data/models/family_model.dart';
 import '../../../../data/repositories/grocery_template_repository.dart';
 import '../../../../common/widgets/modern_header.dart';
 import '../../../../common/widgets/modern_card.dart';
@@ -149,7 +150,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                         borderRadius: ResponsiveHelper.borderRadius(12),
                       ),
                       onSelected: (value) {
-                        if (value == 'save_as_template') {
+                        if (value == 'create_task') {
+                          _createListTask(context, list!);
+                        } else if (value == 'save_as_template') {
                           _saveListAsTemplate(context);
                         } else if (value == 'edit_name') {
                           _editListName(context);
@@ -158,6 +161,27 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                         }
                       },
                       itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'create_task',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: ResponsiveHelper.iconSize(20),
+                              ),
+                              SizedBox(width: ResponsiveHelper.w(12)),
+                              Text(
+                                'Create Task',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         PopupMenuItem(
                           value: 'edit_name',
                           child: Row(
@@ -2193,6 +2217,259 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       }
     }
   }
+
+  Future<void> _createListTask(
+    BuildContext context,
+    GroceryListModel list,
+  ) async {
+    final currentUser = ref.read(currentUserProvider);
+    final currentFamily = ref.read(currentFamilyProvider);
+
+    if (currentUser == null || currentFamily == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('User not authenticated'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Get family members for assignee dropdown
+    final memberRepo = ref.read(familyRepositoryProvider);
+    final members = await memberRepo.getFamilyMembers(currentFamily.id);
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => _CreateListTaskDialog(
+        listName: list.name,
+        members: members,
+        currentUserId: currentUser.id,
+        onCreate: (title, assigneeId, dueDate) async {
+          try {
+            // 1. Create the task
+            final taskRepo = ref.read(taskRepositoryProvider);
+            final task = await taskRepo.createTask(
+              title: title,
+              familyId: currentFamily.id,
+              createdBy: currentUser.id,
+              assignedTo: assigneeId,
+              dueDate: dueDate,
+              category: 'grocery',
+              categoryData: {'groceryListId': list.id},
+              priority: 'medium',
+              status: 'pending',
+              points: 10,
+            );
+
+            // 2. Link list to task
+            final listRepo = ref.read(groceryListRepositoryProvider);
+            await listRepo.updateListTaskId(listId: list.id, taskId: task.id);
+
+            // 3. Refresh providers
+            if (mounted) {
+              ref.invalidate(familyTasksProvider(currentFamily.id));
+              ref.invalidate(groceryListProvider(list.id));
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Grocery task created successfully!'),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+              );
+            }
+            return true;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to create task: $e'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+            return false;
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _CreateListTaskDialog extends StatefulWidget {
+  final String listName;
+  final List<FamilyMemberModel> members;
+  final String currentUserId;
+  final Future<bool> Function(
+    String title,
+    String assigneeId,
+    DateTime? dueDate,
+  )
+  onCreate;
+
+  const _CreateListTaskDialog({
+    required this.listName,
+    required this.members,
+    required this.currentUserId,
+    required this.onCreate,
+  });
+
+  @override
+  State<_CreateListTaskDialog> createState() => _CreateListTaskDialogState();
+}
+
+class _CreateListTaskDialogState extends State<_CreateListTaskDialog> {
+  late TextEditingController _titleController;
+  late String _selectedAssignee;
+  DateTime? _selectedDueDate;
+  bool _isLoading = false;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(
+      text: 'Shop for ${widget.listName}',
+    );
+    _selectedAssignee = widget.currentUserId;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveHelper.borderRadius(16),
+      ),
+      title: const Text('Create Grocery Task'),
+      content: SizedBox(
+        width: ResponsiveHelper.w(400),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Task Title',
+                  border: OutlineInputBorder(
+                    borderRadius: ResponsiveHelper.borderRadius(12),
+                  ),
+                ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Please enter a title' : null,
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              DropdownButtonFormField<String>(
+                value: _selectedAssignee,
+                decoration: InputDecoration(
+                  labelText: 'Assign To',
+                  border: OutlineInputBorder(
+                    borderRadius: ResponsiveHelper.borderRadius(12),
+                  ),
+                ),
+                items: widget.members.map((member) {
+                  return DropdownMenuItem(
+                    value: member.uid, // Assuming userId is the key
+                    child: Row(
+                      children: [
+                        // We could add avatars here if available
+                        Text(member.displayName),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedAssignee = value);
+                  }
+                },
+              ),
+              SizedBox(height: ResponsiveHelper.h(16)),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now().add(const Duration(days: 1)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDueDate = picked);
+                  }
+                },
+                borderRadius: ResponsiveHelper.borderRadius(12),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Due Date',
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveHelper.borderRadius(12),
+                    ),
+                    suffixIcon: _selectedDueDate != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () =>
+                                setState(() => _selectedDueDate = null),
+                          )
+                        : const Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    _selectedDueDate == null
+                        ? 'No due date'
+                        : '${_selectedDueDate!.month}/${_selectedDueDate!.day}/${_selectedDueDate!.year}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  if (!_formKey.currentState!.validate()) return;
+                  setState(() => _isLoading = true);
+                  final success = await widget.onCreate(
+                    _titleController.text.trim(),
+                    _selectedAssignee,
+                    _selectedDueDate,
+                  );
+                  if (mounted && success) {
+                    Navigator.pop(context);
+                  } else if (mounted) {
+                    setState(() => _isLoading = false);
+                  }
+                },
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Create Task'),
+        ),
+      ],
+    );
+  }
 }
 
 // Standalone dialog widget for saving a list as a template
@@ -2560,20 +2837,44 @@ class _AddItemDialogState extends State<_AddItemDialog> {
   void initState() {
     super.initState();
     final initialName = widget.item?.name ?? widget.initialName ?? '';
-    _nameController = TextEditingController(text: initialName);
-    _notesController = TextEditingController(text: widget.item?.notes ?? '');
-    _qtyController = TextEditingController(
-      text: widget.item?.qty.toString() ?? '1',
-    );
-    _unitController = TextEditingController(text: widget.item?.unit ?? '');
 
-    // Auto-categorize if editing existing item or if initial name is provided
     if (widget.item != null) {
-      _selectedCategory = widget.item!.category;
-    } else if (initialName.isNotEmpty) {
-      _selectedCategory = GroceryCategoryMapper.categorizeItem(initialName);
+      _nameController = TextEditingController(text: widget.item!.name);
+      _qtyController = TextEditingController(text: widget.item!.qty.toString());
+      _unitController = TextEditingController(text: widget.item!.unit ?? '');
+      _notesController = TextEditingController(text: widget.item!.notes ?? '');
+
+      // Normalize category (handle mixed case legacy data)
+      final category = widget.item!.category.toLowerCase();
+      const validCategories = [
+        'produce',
+        'dairy',
+        'meat',
+        'bakery',
+        'frozen',
+        'pantry',
+        'beverages',
+        'household',
+        'health',
+        'other',
+      ];
+
+      if (validCategories.contains(category)) {
+        _selectedCategory = category;
+      } else {
+        _selectedCategory = 'other';
+      }
     } else {
-      _selectedCategory = 'other';
+      _nameController = TextEditingController(text: initialName);
+      _notesController = TextEditingController(text: '');
+      _qtyController = TextEditingController(text: '1');
+      _unitController = TextEditingController(text: '');
+
+      if (initialName.isNotEmpty) {
+        _selectedCategory = GroceryCategoryMapper.categorizeItem(initialName);
+      } else {
+        _selectedCategory = 'other';
+      }
     }
 
     // Listen to name changes and auto-categorize (only when adding new items)

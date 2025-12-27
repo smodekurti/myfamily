@@ -1,0 +1,446 @@
+Analyzing myfamily...                                           
+
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/common/widgets/modern_card.dart:36:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/common/widgets/modern_card.dart:41:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/common/widgets/modern_header.dart:51:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/common/widgets/modern_header.dart:74:62 • deprecated_member_use
+   info • Unnecessary braces in a string interpolation • lib/app/core/services/family_notification_service.dart:393:16 • unnecessary_brace_in_string_interps
+   info • 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/app/core/services/location_service.dart:71:11 • deprecated_member_use
+   info • 'timeLimit' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/app/core/services/location_service.dart:73:11 • deprecated_member_use
+   info • Unnecessary braces in a string interpolation • lib/app/core/services/notification_service.dart:206:37 • unnecessary_brace_in_string_interps
+   info • Unnecessary braces in a string interpolation • lib/app/core/services/notification_service.dart:227:38 • unnecessary_brace_in_string_interps
+   info • Empty catch block • lib/app/core/services/push_notification_service.dart:319:21 • empty_catches
+   info • Empty catch block • lib/app/core/services/push_notification_service.dart:401:21 • empty_catches
+   info • Empty catch block • lib/app/core/services/push_notification_service.dart:423:21 • empty_catches
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/core/theme/app_theme.dart:179:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/core/theme/app_theme.dart:194:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/core/theme/app_theme.dart:225:26 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/core/theme/app_theme.dart:246:26 • deprecated_member_use
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:10:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:13:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:14:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:16:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:17:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/event_model.dart:18:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:11:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:13:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:14:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:15:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:17:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:18:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:19:6 • invalid_annotation_target
+warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/app/data/models/family_model.dart:20:6 • invalid_annotation_target
+   info • Empty catch block • lib/app/data/repositories/announcement_repository.dart:56:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/announcement_repository.dart:157:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/announcement_repository.dart:224:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/calendar_repository.dart:68:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/calendar_repository.dart:81:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/calendar_repository.dart:159:21 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/calendar_repository.dart:175:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/calendar_repository.dart:229:19 • empty_catches
+warning • The value of the local variable 'needsRoleSelection' isn't used • lib/app/data/repositories/family_repository.dart:120:12 • unused_local_variable
+   info • Empty catch block • lib/app/data/repositories/grocery_list_repository.dart:59:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_list_repository.dart:116:19 • empty_catches
+   info • Statements in an if should be enclosed in a block • lib/app/data/repositories/grocery_list_repository.dart:361:9 • curly_braces_in_flow_control_structures
+   info • Empty catch block • lib/app/data/repositories/grocery_list_repository.dart:721:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_list_repository.dart:876:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_template_repository.dart:70:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_template_repository.dart:245:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_template_repository.dart:301:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/grocery_template_repository.dart:337:19 • empty_catches
+warning • Unused import: '../../core/services/role_permission_service.dart' • lib/app/data/repositories/meal_plan_repository.dart:3:8 • unused_import
+warning • The value of the field '_roleService' isn't used • lib/app/data/repositories/recipe_repository.dart:10:31 • unused_field
+warning • The value of the field '_familyRepository' isn't used • lib/app/data/repositories/recipe_repository.dart:11:26 • unused_field
+   info • Empty catch block • lib/app/data/repositories/task_repository.dart:119:21 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_repository.dart:300:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_repository.dart:351:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_repository.dart:638:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_template_repository.dart:83:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_template_repository.dart:179:19 • empty_catches
+   info • Empty catch block • lib/app/data/repositories/task_template_repository.dart:213:21 • empty_catches
+warning • The '!' will have no effect because the receiver can't be null • lib/app/data/repositories/weather_repository.dart:61:22 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/app/data/repositories/weather_repository.dart:62:23 • unnecessary_non_null_assertion
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:297:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:395:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:440:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:471:71 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:502:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:551:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/consent_page.dart:578:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/auth/presentation/pages/welcome_page.dart:46:68 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/app/features/calendar/presentation/pages/calendar_page.dart:73:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/app/features/calendar/presentation/pages/calendar_page.dart:78:9 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:175:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:327:64 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/calendar/presentation/pages/calendar_page.dart:332:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:339:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:350:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:358:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:516:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:520:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:578:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:583:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:611:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:792:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:800:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:904:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:973:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:981:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:989:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:998:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:1029:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:1077:45 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1208:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1211:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1279:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1282:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1328:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1335:13 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/calendar/presentation/pages/calendar_page.dart:1680:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:1727:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:1729:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:1763:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1822:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:1826:36 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/calendar/presentation/pages/calendar_page.dart:2110:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/calendar/presentation/pages/calendar_page.dart:2160:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:2208:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/calendar/presentation/pages/calendar_page.dart:2212:36 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/create_family_page.dart:352:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/create_family_page.dart:361:76 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/family/presentation/pages/create_family_page.dart:382:56 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/create_family_page.dart:395:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:466:52 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/family/presentation/pages/family_settings_page.dart:507:49 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/family/presentation/pages/family_settings_page.dart:542:49 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:600:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:661:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:704:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:804:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:807:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_settings_page.dart:822:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_setup_page.dart:45:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/family_setup_page.dart:91:68 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/family/presentation/pages/join_family_page.dart:54:53 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/join_family_page.dart:126:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/pages/join_family_page.dart:150:72 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/widgets/role_selection_dialog.dart:41:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/widgets/role_selection_dialog.dart:130:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/widgets/role_selection_dialog.dart:139:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/widgets/role_selection_dialog.dart:163:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/family/presentation/widgets/role_selection_dialog.dart:171:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:110:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:204:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:218:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:231:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:244:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/achievements_page.dart:247:49 • deprecated_member_use
+warning • Unused import: '../../../../core/services/role_permission_service.dart' • lib/app/features/gamification/presentation/pages/create_reward_page.dart:7:8 • unused_import
+   info • Statements in an if should be enclosed in a block • lib/app/features/gamification/presentation/pages/create_reward_page.dart:132:21 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/create_reward_page.dart:155:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/leaderboard_page.dart:136:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/leaderboard_page.dart:280:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/leaderboard_page.dart:331:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/points_history_page.dart:100:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/points_history_page.dart:109:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/points_history_page.dart:119:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/points_history_page.dart:256:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/views/available_rewards_view.dart:277:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/views/redemption_history_view.dart:158:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/gamification/presentation/pages/views/redemption_history_view.dart:192:32 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/gamification/presentation/pages/views/redemption_history_view.dart:227:9 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:328:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:351:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:445:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:473:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:500:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:738:64 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:778:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:781:41 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:912:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:971:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:976:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:981:53 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1020:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1023:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1033:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1042:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1055:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1076:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1082:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1099:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1145:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/groceries_page.dart:1225:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:1242:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/groceries_page.dart:1246:36 • use_build_context_synchronously
+   info • The private field _selectedCategories could be 'final' • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:35:15 • prefer_final_fields
+   info • Statements in an if should be enclosed in a block • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:338:33 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:435:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:449:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:545:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:608:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:656:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:687:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:717:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:720:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:770:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:816:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:872:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:889:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:892:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:906:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:911:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:931:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:954:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:972:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1012:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1019:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1084:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1094:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1150:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1171:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1220:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1243:43 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1270:9 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1366:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1421:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1439:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1442:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1458:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1468:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1471:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1492:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1530:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1539:45 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1600:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1603:41 • use_build_context_synchronously
+   info • Uses 'await' on an instance of 'GroceryListModel', which is not a subtype of 'Future' • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1694:20 • await_only_futures
+   info • Uses 'await' on an instance of 'List<TaskModel>', which is not a subtype of 'Future' • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1722:21 • await_only_futures
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1862:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1865:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1871:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1874:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1903:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1906:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1927:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1932:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1948:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1953:41 • use_build_context_synchronously
+   info • Unnecessary braces in a string interpolation • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1986:56 • unnecessary_brace_in_string_interps
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1989:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1992:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:1998:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2001:39 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2170:64 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2276:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2279:45 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2286:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2289:45 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2374:17 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2454:35 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2567:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2580:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2601:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2606:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2611:53 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2732:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2746:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2767:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2772:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2777:53 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:2998:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3063:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3088:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3092:36 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3189:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3206:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_list_page.dart:3210:36 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_select_page.dart:40:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_select_page.dart:46:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_select_page.dart:53:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_select_page.dart:95:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_list_select_page.dart:112:58 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/groceries/presentation/pages/grocery_template_create_page.dart:68:9 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_create_page.dart:142:70 • deprecated_member_use
+   info • The private field _selectedCategories could be 'final' • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:27:15 • prefer_final_fields
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:223:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:337:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:364:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:394:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:397:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:462:72 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:472:72 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:475:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:525:70 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:549:38 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:552:47 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:558:38 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:561:47 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:623:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:654:78 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:669:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:676:78 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:703:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:722:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:763:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:769:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:776:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1018:64 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1058:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1061:41 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1138:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1155:36 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1282:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1409:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_template_detail_page.dart:1432:36 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_select_page.dart:40:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_select_page.dart:46:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_select_page.dart:53:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_select_page.dart:111:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_template_select_page.dart:128:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:158:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:198:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:272:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:305:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:314:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:336:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:498:64 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:537:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:540:41 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:621:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:638:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/groceries/presentation/pages/grocery_templates_manage_page.dart:642:36 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/home/presentation/widgets/weather_location_picker.dart:204:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/home/presentation/widgets/weather_location_picker.dart:267:56 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:124:7 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:495:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:524:7 • use_build_context_synchronously
+   info • Statements in an if should be enclosed in a block • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:628:15 • curly_braces_in_flow_control_structures
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:675:7 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:927:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:958:59 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:1215:7 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:1327:7 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:1630:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:1638:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:1644:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:2041:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:2070:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_planner_page.dart:2105:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_slot_edit_page.dart:172:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/meal_planner/presentation/pages/meal_slot_edit_page.dart:184:51 • deprecated_member_use
+   info • Unnecessary use of 'toList' in a spread • lib/app/features/meal_planner/presentation/widgets/meal_planner_voting_dialog.dart:129:24 • unnecessary_to_list_in_spreads
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/edit_profile_page.dart:385:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/edit_profile_page.dart:412:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:88:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:116:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:123:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:166:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:173:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:361:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:368:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:829:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:850:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:882:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:887:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:912:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:928:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:933:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/profile/presentation/pages/profile_page.dart:958:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/help_page.dart:183:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/help_page.dart:206:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/settings/presentation/pages/help_page.dart:218:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/settings/presentation/pages/help_page.dart:221:49 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/help_page.dart:238:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/settings/presentation/pages/help_page.dart:250:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/settings/presentation/pages/help_page.dart:253:49 • use_build_context_synchronously
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/app/features/settings/presentation/pages/settings_page.dart:3:8 • unnecessary_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/settings_page.dart:172:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/settings_page.dart:212:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/settings_page.dart:227:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/settings_page.dart:251:62 • deprecated_member_use
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:300:15 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:301:15 • deprecated_member_use
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:306:15 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:307:15 • deprecated_member_use
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:312:15 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/app/features/settings/presentation/pages/settings_page.dart:313:15 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/settings/presentation/pages/settings_page.dart:457:58 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/settings/presentation/pages/settings_page.dart:523:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:162:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:167:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:171:35 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:180:15 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/app/features/tasks/presentation/pages/create_task_page.dart:362:9 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:452:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:469:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:658:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:816:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:876:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1004:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1114:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1165:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1186:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1201:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1213:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1251:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1270:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1334:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1355:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1434:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1466:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1478:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1526:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1553:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1606:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1677:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1713:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1725:51 • deprecated_member_use
+   info • Use a 'SizedBox' to add whitespace to a layout • lib/app/features/tasks/presentation/pages/create_task_page.dart:1793:13 • sized_box_for_whitespace
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1833:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1842:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:1859:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:2010:62 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:2070:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:2074:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/app/features/tasks/presentation/pages/create_task_page.dart:2079:53 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:2137:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:2139:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:2146:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/create_task_page.dart:2160:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:173:51 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/app/features/tasks/presentation/pages/tasks_page.dart:264:33 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/app/features/tasks/presentation/pages/tasks_page.dart:266:33 • curly_braces_in_flow_control_structures
+   info • Unnecessary use of 'toList' in a spread • lib/app/features/tasks/presentation/pages/tasks_page.dart:302:38 • unnecessary_to_list_in_spreads
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:681:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:828:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:894:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:916:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:920:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:954:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1030:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1069:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1131:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1153:53 • deprecated_member_use
+warning • The declaration '_buildFilterButtons' isn't referenced • lib/app/features/tasks/presentation/pages/tasks_page.dart:1234:10 • unused_element
+   info • Statements in an if should be enclosed in a block • lib/app/features/tasks/presentation/pages/tasks_page.dart:1397:9 • curly_braces_in_flow_control_structures
+warning • The declaration '_buildViewModeSelector' isn't referenced • lib/app/features/tasks/presentation/pages/tasks_page.dart:1453:10 • unused_element
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1548:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1556:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1811:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1827:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:1936:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2039:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2062:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2208:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2345:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2472:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2485:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2527:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2565:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/app/features/tasks/presentation/pages/tasks_page.dart:2571:64 • deprecated_member_use
+   info • Don't invoke 'print' in production code • scripts/generate_app_icon.dart:61:3 • avoid_print
+   info • Don't invoke 'print' in production code • scripts/generate_app_icon.dart:62:3 • avoid_print
+   info • Unnecessary braces in a string interpolation • scripts/generate_app_icon.dart:62:27 • unnecessary_brace_in_string_interps
+   info • Don't invoke 'print' in production code • scripts/generate_app_icon.dart:83:3 • avoid_print
+
