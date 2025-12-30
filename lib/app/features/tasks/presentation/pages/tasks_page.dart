@@ -20,7 +20,7 @@ import '../../../../core/extensions/user_extensions.dart';
 final taskFilterProvider = StateProvider<String>((ref) => 'all');
 
 // View mode provider: 'list', 'simple_list', 'grid', 'grouped_category', 'grouped_assignee', 'grouped_due_date'
-final taskViewModeProvider = StateProvider<String>((ref) => 'list');
+final taskViewModeProvider = StateProvider<String>((ref) => 'grouped_due_date');
 
 class TasksPage extends ConsumerStatefulWidget {
   final String? filter;
@@ -270,10 +270,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               ); // earliest first
                             });
 
-                            // Limit to top 5 tasks if not showing all
-                            final tasksToShow = _showAllTasks
-                                ? sortedTasks
-                                : sortedTasks.take(5).toList();
+                            final viewMode = ref.watch(taskViewModeProvider);
+
+                            // For list view, we limit to 5 unless show all is clicked.
+                            // For grouped/grid views, we show all tasks to ensure headers/groups are visible.
+                            final tasksToShow =
+                                (viewMode == 'list' && !_showAllTasks)
+                                ? sortedTasks.take(5).toList()
+                                : sortedTasks;
+
                             final hasMoreTasks = sortedTasks.length > 5;
 
                             final members = familyMembers.when(
@@ -281,8 +286,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               loading: () => <FamilyMemberModel>[],
                               error: (_, __) => <FamilyMemberModel>[],
                             );
-
-                            final viewMode = ref.watch(taskViewModeProvider);
 
                             // Use the view mode to determine how to display tasks
                             if (viewMode == 'list') {
@@ -306,22 +309,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               );
                             } else {
                               // Use the existing _buildTasksView for other view modes
-                              return Column(
-                                children: [
-                                  if (hasMoreTasks && !_showAllTasks)
-                                    _buildViewAllLink(context),
-                                  _buildTasksView(
-                                    context,
-                                    ref,
-                                    tasksToShow,
-                                    members,
-                                    currentFamily.id,
-                                    currentUser?.id,
-                                    viewMode,
-                                  ),
-                                  if (hasMoreTasks && _showAllTasks)
-                                    _buildShowLessLink(context),
-                                ],
+                              // In grouped/grid modes, we show all tasks so entire groups are visible
+                              return _buildTasksView(
+                                context,
+                                ref,
+                                tasksToShow,
+                                members,
+                                currentFamily.id,
+                                currentUser?.id,
+                                viewMode,
                               );
                             }
                           },

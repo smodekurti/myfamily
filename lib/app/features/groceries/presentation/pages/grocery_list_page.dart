@@ -33,6 +33,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
   String? _selectedTemplateId;
   bool _isListView = false; // false = category view, true = list view
   Set<String> _selectedCategories = {}; // Empty set = show all categories
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   bool _isSearchMode = false;
 
   @override
@@ -58,6 +60,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         _registerGroceryListCallback();
       }
     });
+
+    // Add listener to scroll to bottom when focus changes
+    _focusNode.addListener(_onFocusChange);
   }
 
   void _registerGroceryListCallback() {
@@ -78,9 +83,27 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     });
   }
 
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Small delay to allow keyboard to appear and view to resize
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _itemController.dispose();
+    _scrollController.dispose();
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     _searchController.dispose();
     // Don't clear the callback - let the global callback handle it
     // The global callback in main.dart will ensure it's always registered
@@ -93,10 +116,13 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
     final groceryList = ref.watch(groceryListProvider(widget.listId));
     final listItems = ref.watch(groceryListItemsProvider(widget.listId));
 
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return BackgroundWidget(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
+          bottom: !isKeyboardOpen,
           child: Column(
             children: [
               // Custom App Bar
@@ -321,6 +347,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: ResponsiveHelper.padding(
                       horizontal: 16,
                       vertical: 16,
@@ -1037,6 +1064,8 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
 
   Widget _buildBottomInput(BuildContext context) {
     final currentFamily = ref.watch(currentFamilyProvider);
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     final suggestions = currentFamily != null
         ? ref.watch(grocerySuggestionsProvider(currentFamily.id))
         : const AsyncValue.data(<Map<String, dynamic>>[]);
@@ -1142,7 +1171,11 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         ),
         // Input field
         Container(
-          padding: ResponsiveHelper.padding(all: 16),
+          padding: ResponsiveHelper.padding(
+            top: 16,
+            horizontal: 16,
+            bottom: isKeyboardOpen ? 0 : 16,
+          ),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [

@@ -35,7 +35,11 @@ import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/family/presentation/pages/family_settings_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/help_page.dart';
+import '../../features/chat/presentation/pages/chat_landing_page.dart';
+import '../../features/chat/presentation/pages/chat_page.dart';
+
 import '../../features/gamification/presentation/pages/leaderboard_page.dart';
+
 import '../../features/gamification/presentation/pages/points_history_page.dart';
 import '../../features/gamification/presentation/pages/achievements_page.dart';
 import '../../features/gamification/presentation/pages/rewards_page.dart';
@@ -64,6 +68,11 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
   return RouterNotifier(ref);
 });
 
+class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.read(routerNotifierProvider);
   final authRepo = ref.read(
@@ -71,13 +80,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   ); // Use read to ensure stability
 
   return GoRouter(
+    navigatorKey: AppRouter.navigatorKey, // Use global navigator key
     refreshListenable: notifier, // React to state changes
     initialLocation: AppConstants.routeSplash,
     redirect: (context, state) {
       // Get current state dynamically without triggering rebuilds
       final routerState = ref.read(routerStateProvider);
       debugPrint(
-        'Router Redirect: Current State: $routerState, Location: ${state.matchedLocation}',
+        'Router Redirect: Current State: $routerState, Location: \${state.matchedLocation}',
       );
 
       switch (routerState) {
@@ -182,6 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           // Allow access to main app routes (including Tasks, Profile, Family Settings, Settings, Help, Leaderboard)
           if (state.matchedLocation.startsWith(AppConstants.routeHome) ||
+              state.matchedLocation.startsWith(AppConstants.routeChat) ||
               state.matchedLocation.startsWith(AppConstants.routeTasks) ||
               state.matchedLocation.startsWith(AppConstants.routeGroceries) ||
               state.matchedLocation.startsWith('/grocery-list') ||
@@ -336,6 +347,27 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppConstants.routeCalendar,
             name: 'calendar',
             builder: (context, state) => const CalendarPage(),
+          ),
+          GoRoute(
+            path: AppConstants.routeChat,
+            name: 'chat',
+            builder: (context, state) => const ChatLandingPage(),
+            routes: [
+              GoRoute(
+                path: 'details/:channelType/:channelId',
+                name: 'chat-details',
+                builder: (context, state) {
+                  final channelType = state.pathParameters['channelType']!;
+                  final channelId = state.pathParameters['channelId']!;
+                  final title = state.uri.queryParameters['title'];
+                  return ChatPage(
+                    channelId: channelId,
+                    channelType: channelType,
+                    title: title,
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: AppConstants.routeProfile,
@@ -546,16 +578,18 @@ class MainShell extends ConsumerWidget {
     int currentIndex = 0;
     if (currentRoute == AppConstants.routeHome) {
       currentIndex = 0;
+    } else if (currentRoute == AppConstants.routeChat) {
+      currentIndex = 1;
     } else if (currentRoute == AppConstants.routeTasks ||
         currentRoute == AppConstants.routeCreateTask) {
-      currentIndex = 1;
-    } else if (currentRoute == AppConstants.routeGroceries) {
       currentIndex = 2;
+    } else if (currentRoute == AppConstants.routeGroceries) {
+      currentIndex = 3;
     } else if (currentRoute == AppConstants.routeMealPlanner ||
         currentRoute.startsWith(AppConstants.routeRecipes)) {
-      currentIndex = 3;
-    } else if (currentRoute == AppConstants.routeCalendar) {
       currentIndex = 4;
+    } else if (currentRoute == AppConstants.routeCalendar) {
+      currentIndex = 5;
     }
 
     // Update navigation index provider
@@ -592,12 +626,15 @@ class MainShell extends ConsumerWidget {
 
           // Custom Floating Bottom Navigation
           Positioned(
-            left: ResponsiveHelper.w(24),
-            right: ResponsiveHelper.w(24),
+            left: ResponsiveHelper.w(16), // Reduced margin to fit 6 items
+            right: ResponsiveHelper.w(16),
             bottom: 0,
             child: SafeArea(
               child: Container(
-                padding: ResponsiveHelper.padding(horizontal: 12, vertical: 12),
+                padding: ResponsiveHelper.padding(
+                  horizontal: 4,
+                  vertical: 12,
+                ), // Reduced padding
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
@@ -631,33 +668,41 @@ class MainShell extends ConsumerWidget {
                       context,
                       ref,
                       1,
-                      Icons.task_alt_rounded,
-                      'Tasks',
+                      Icons.chat_bubble_rounded,
+                      'Chat',
                       currentIndex == 1,
                     ),
                     _buildNavItem(
                       context,
                       ref,
                       2,
-                      Icons.shopping_bag_outlined,
-                      'Shop',
+                      Icons.task_alt_rounded,
+                      'Tasks',
                       currentIndex == 2,
                     ),
                     _buildNavItem(
                       context,
                       ref,
                       3,
-                      Icons.restaurant_menu_rounded,
-                      'Meals',
+                      Icons.shopping_bag_outlined,
+                      'Shop',
                       currentIndex == 3,
                     ),
                     _buildNavItem(
                       context,
                       ref,
                       4,
-                      Icons.calendar_month_rounded,
-                      'Calendar',
+                      Icons.restaurant_menu_rounded,
+                      'Meals',
                       currentIndex == 4,
+                    ),
+                    _buildNavItem(
+                      context,
+                      ref,
+                      5,
+                      Icons.calendar_month_rounded,
+                      'Cal',
+                      currentIndex == 5,
                     ),
                   ],
                 ),
@@ -693,15 +738,18 @@ class MainShell extends ConsumerWidget {
             context.go(AppConstants.routeHome);
             break;
           case 1:
-            context.go(AppConstants.routeTasks);
+            context.go(AppConstants.routeChat);
             break;
           case 2:
-            context.go(AppConstants.routeGroceries);
+            context.go(AppConstants.routeTasks);
             break;
           case 3:
-            context.go(AppConstants.routeMealPlanner);
+            context.go(AppConstants.routeGroceries);
             break;
           case 4:
+            context.go(AppConstants.routeMealPlanner);
+            break;
+          case 5:
             context.go(AppConstants.routeCalendar);
             break;
         }
@@ -746,6 +794,8 @@ class MainShell extends ConsumerWidget {
     bool showSearch = false;
     if (currentRoute == AppConstants.routeHome) {
       title = 'Family Wall';
+    } else if (currentRoute == AppConstants.routeChat) {
+      title = 'Family Chat';
     } else if (currentRoute == AppConstants.routeTasks) {
       title = 'Household Chores';
       showSearch = true;
@@ -778,6 +828,7 @@ class MainShell extends ConsumerWidget {
         currentRoute == AppConstants.routePointsHistory ||
         currentRoute.startsWith(AppConstants.routeRewards) ||
         currentRoute.startsWith(AppConstants.routeRecipes) ||
+        currentRoute.startsWith(AppConstants.routeChat) ||
         currentRoute.startsWith(AppConstants.routeMealPlanner)) {
       return null;
     }

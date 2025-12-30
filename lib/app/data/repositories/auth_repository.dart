@@ -19,6 +19,8 @@ class AuthRepository {
   GoogleSignIn? _googleSignInInstance;
   GoogleSignIn get _googleSignIn {
     _googleSignInInstance ??= GoogleSignIn(
+      serverClientId:
+          '985416533716-28r12jock8ajote1gqv4dl8fdsl42n2r.apps.googleusercontent.com',
       scopes: ['email', 'profile', 'openid'],
     );
     return _googleSignInInstance!;

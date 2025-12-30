@@ -151,18 +151,18 @@ class FamilyRepository {
 
       // Try to find family using the secure RPC function
       // This bypasses RLS policies that prevent non-members from searching families
-      var response = await _supabase
-          .rpc(
-            'find_family_by_invite_code',
-            params: {'invite_code_param': inviteCode},
-          )
-          .maybeSingle();
+      final response = await _supabase.rpc(
+        'find_family_by_invite_code',
+        params: {'invite_code_param': inviteCode},
+      );
 
-      if (response == null) {
+      if ((response as List).isEmpty) {
         throw Exception('Invalid invite code');
       }
 
-      final family = FamilyModel.fromJson(response);
+      final familyData = response.first;
+
+      final family = FamilyModel.fromJson(familyData);
 
       // Check if user is already a member
       if (family.members.contains(userId)) {
@@ -192,9 +192,18 @@ class FamilyRepository {
         final roleService = RolePermissionService();
         final canAddParent = await roleService.canAddParent(family.id);
 
-        if (!canAddParent && selectedRole == null) {
-          needsRoleSelection = true;
-          return {'family': family, 'needsRoleSelection': true};
+        if (!canAddParent) {
+          if (selectedRole == null) {
+            needsRoleSelection = true;
+            return {'family': family, 'needsRoleSelection': true};
+          } else {
+            // If selectedRole is 'parent' but we can't add a parent, force selection again (or error, but UI should prevent this)
+            if (selectedRole == 'parent') {
+              needsRoleSelection = true;
+              return {'family': family, 'needsRoleSelection': true};
+            }
+            roleToAssign = selectedRole;
+          }
         } else {
           roleToAssign = selectedRole ?? 'parent';
         }
@@ -422,6 +431,7 @@ class FamilyRepository {
     String? name,
     String? address,
     String? themePreference,
+    String? geminiApiKey,
   }) async {
     try {
       final updates = <String, dynamic>{
@@ -432,6 +442,7 @@ class FamilyRepository {
       if (address != null) updates['address'] = address;
       if (themePreference != null)
         updates['theme_preference'] = themePreference;
+      if (geminiApiKey != null) updates['gemini_api_key'] = geminiApiKey;
 
       await _supabase.from('families').update(updates).eq('id', familyId);
     } catch (e) {
@@ -749,6 +760,19 @@ class FamilyRepository {
       if (role != null) updates['role'] = role;
       if (photoURL != null) updates['photo_url'] = photoURL;
 
+      if (role == 'parent') {
+        // Check if user is already a parent (idempotency)
+        final member = await getFamilyMember(familyId: familyId, uid: uid);
+        if (member != null && member.role != 'parent') {
+          // Check if we can add another parent
+          final roleService = RolePermissionService();
+          final canAdd = await roleService.canAddParent(familyId);
+          if (!canAdd) {
+            throw Exception('Family already has maximum number of parents (2)');
+          }
+        }
+      }
+
       await _supabase
           .from('family_members')
           .update(updates)
@@ -905,14 +929,12 @@ class FamilyRepository {
   Future<bool> inviteCodeExists(String inviteCode) async {
     try {
       // Check if code exists globally using secure RPC
-      final response = await _supabase
-          .rpc(
-            'find_family_by_invite_code',
-            params: {'invite_code_param': inviteCode},
-          )
-          .maybeSingle();
+      final response = await _supabase.rpc(
+        'find_family_by_invite_code',
+        params: {'invite_code_param': inviteCode},
+      );
 
-      return response != null;
+      return (response as List).isNotEmpty;
     } catch (e) {
       _logger.e('Check invite code error: $e');
       return false;

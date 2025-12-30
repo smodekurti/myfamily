@@ -33,6 +33,8 @@ mixin _$FamilyModel {
   @JsonKey(name: 'invite_link')
   String? get inviteLink => throw _privateConstructorUsedError;
   String? get address => throw _privateConstructorUsedError;
+  @JsonKey(name: 'gemini_api_key')
+  String? get geminiApiKey => throw _privateConstructorUsedError;
   @JsonKey(name: 'theme_preference')
   String get themePreference => throw _privateConstructorUsedError;
   @JsonKey(name: 'total_points')
@@ -68,6 +70,7 @@ abstract class $FamilyModelCopyWith<$Res> {
     @JsonKey(name: 'child_invite_code') String? childInviteCode,
     @JsonKey(name: 'invite_link') String? inviteLink,
     String? address,
+    @JsonKey(name: 'gemini_api_key') String? geminiApiKey,
     @JsonKey(name: 'theme_preference') String themePreference,
     @JsonKey(name: 'total_points') int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
@@ -98,6 +101,7 @@ class _$FamilyModelCopyWithImpl<$Res, $Val extends FamilyModel>
     Object? childInviteCode = freezed,
     Object? inviteLink = freezed,
     Object? address = freezed,
+    Object? geminiApiKey = freezed,
     Object? themePreference = null,
     Object? totalPoints = null,
     Object? createdAt = freezed,
@@ -136,6 +140,10 @@ class _$FamilyModelCopyWithImpl<$Res, $Val extends FamilyModel>
             address: freezed == address
                 ? _value.address
                 : address // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            geminiApiKey: freezed == geminiApiKey
+                ? _value.geminiApiKey
+                : geminiApiKey // ignore: cast_nullable_to_non_nullable
                       as String?,
             themePreference: null == themePreference
                 ? _value.themePreference
@@ -177,6 +185,7 @@ abstract class _$$FamilyModelImplCopyWith<$Res>
     @JsonKey(name: 'child_invite_code') String? childInviteCode,
     @JsonKey(name: 'invite_link') String? inviteLink,
     String? address,
+    @JsonKey(name: 'gemini_api_key') String? geminiApiKey,
     @JsonKey(name: 'theme_preference') String themePreference,
     @JsonKey(name: 'total_points') int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
@@ -206,6 +215,7 @@ class __$$FamilyModelImplCopyWithImpl<$Res>
     Object? childInviteCode = freezed,
     Object? inviteLink = freezed,
     Object? address = freezed,
+    Object? geminiApiKey = freezed,
     Object? themePreference = null,
     Object? totalPoints = null,
     Object? createdAt = freezed,
@@ -245,6 +255,10 @@ class __$$FamilyModelImplCopyWithImpl<$Res>
             ? _value.address
             : address // ignore: cast_nullable_to_non_nullable
                   as String?,
+        geminiApiKey: freezed == geminiApiKey
+            ? _value.geminiApiKey
+            : geminiApiKey // ignore: cast_nullable_to_non_nullable
+                  as String?,
         themePreference: null == themePreference
             ? _value.themePreference
             : themePreference // ignore: cast_nullable_to_non_nullable
@@ -278,6 +292,7 @@ class _$FamilyModelImpl implements _FamilyModel {
     @JsonKey(name: 'child_invite_code') this.childInviteCode,
     @JsonKey(name: 'invite_link') this.inviteLink,
     this.address,
+    @JsonKey(name: 'gemini_api_key') this.geminiApiKey,
     @JsonKey(name: 'theme_preference') this.themePreference = 'system',
     @JsonKey(name: 'total_points') this.totalPoints = 0,
     @JsonKey(name: 'created_at') this.createdAt,
@@ -315,6 +330,9 @@ class _$FamilyModelImpl implements _FamilyModel {
   @override
   final String? address;
   @override
+  @JsonKey(name: 'gemini_api_key')
+  final String? geminiApiKey;
+  @override
   @JsonKey(name: 'theme_preference')
   final String themePreference;
   @override
@@ -329,7 +347,7 @@ class _$FamilyModelImpl implements _FamilyModel {
 
   @override
   String toString() {
-    return 'FamilyModel(id: $id, name: $name, createdBy: $createdBy, members: $members, inviteCode: $inviteCode, childInviteCode: $childInviteCode, inviteLink: $inviteLink, address: $address, themePreference: $themePreference, totalPoints: $totalPoints, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'FamilyModel(id: $id, name: $name, createdBy: $createdBy, members: $members, inviteCode: $inviteCode, childInviteCode: $childInviteCode, inviteLink: $inviteLink, address: $address, geminiApiKey: $geminiApiKey, themePreference: $themePreference, totalPoints: $totalPoints, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -349,6 +367,8 @@ class _$FamilyModelImpl implements _FamilyModel {
             (identical(other.inviteLink, inviteLink) ||
                 other.inviteLink == inviteLink) &&
             (identical(other.address, address) || other.address == address) &&
+            (identical(other.geminiApiKey, geminiApiKey) ||
+                other.geminiApiKey == geminiApiKey) &&
             (identical(other.themePreference, themePreference) ||
                 other.themePreference == themePreference) &&
             (identical(other.totalPoints, totalPoints) ||
@@ -371,6 +391,7 @@ class _$FamilyModelImpl implements _FamilyModel {
     childInviteCode,
     inviteLink,
     address,
+    geminiApiKey,
     themePreference,
     totalPoints,
     createdAt,
@@ -401,6 +422,7 @@ abstract class _FamilyModel implements FamilyModel {
     @JsonKey(name: 'child_invite_code') final String? childInviteCode,
     @JsonKey(name: 'invite_link') final String? inviteLink,
     final String? address,
+    @JsonKey(name: 'gemini_api_key') final String? geminiApiKey,
     @JsonKey(name: 'theme_preference') final String themePreference,
     @JsonKey(name: 'total_points') final int totalPoints,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
@@ -430,6 +452,9 @@ abstract class _FamilyModel implements FamilyModel {
   String? get inviteLink;
   @override
   String? get address;
+  @override
+  @JsonKey(name: 'gemini_api_key')
+  String? get geminiApiKey;
   @override
   @JsonKey(name: 'theme_preference')
   String get themePreference;

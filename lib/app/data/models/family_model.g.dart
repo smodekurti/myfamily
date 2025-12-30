@@ -20,6 +20,7 @@ _$FamilyModelImpl _$$FamilyModelImplFromJson(Map<String, dynamic> json) =>
       childInviteCode: json['child_invite_code'] as String?,
       inviteLink: json['invite_link'] as String?,
       address: json['address'] as String?,
+      geminiApiKey: json['gemini_api_key'] as String?,
       themePreference: json['theme_preference'] as String? ?? 'system',
       totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
       createdAt: json['created_at'] == null
@@ -40,6 +41,7 @@ Map<String, dynamic> _$$FamilyModelImplToJson(_$FamilyModelImpl instance) =>
       'child_invite_code': instance.childInviteCode,
       'invite_link': instance.inviteLink,
       'address': instance.address,
+      'gemini_api_key': instance.geminiApiKey,
       'theme_preference': instance.themePreference,
       'total_points': instance.totalPoints,
       'created_at': instance.createdAt?.toIso8601String(),

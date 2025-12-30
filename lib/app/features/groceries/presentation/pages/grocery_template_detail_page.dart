@@ -11,25 +11,27 @@ import 'grocery_list_page.dart'; // For groceryTemplatesProvider
 
 class GroceryTemplateDetailPage extends ConsumerStatefulWidget {
   final String templateId;
-  
-  const GroceryTemplateDetailPage({
-    super.key,
-    required this.templateId,
-  });
+
+  const GroceryTemplateDetailPage({super.key, required this.templateId});
 
   @override
-  ConsumerState<GroceryTemplateDetailPage> createState() => _GroceryTemplateDetailPageState();
+  ConsumerState<GroceryTemplateDetailPage> createState() =>
+      _GroceryTemplateDetailPageState();
 }
 
-class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetailPage> {
+class _GroceryTemplateDetailPageState
+    extends ConsumerState<GroceryTemplateDetailPage> {
   final TextEditingController _itemController = TextEditingController();
   bool _isListView = false; // false = category view, true = list view
+
   Set<String> _selectedCategories = {}; // Empty set = show all categories
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    
+
     // Always refresh from server when detail page opens (header-detail relationship)
     // This ensures we have the latest data, especially if items were modified by other users
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -41,11 +43,32 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
         }
       }
     });
+
+    // Add listener to scroll to bottom when focus changes
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Small delay to allow keyboard to appear and view to resize
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _itemController.dispose();
+    _scrollController.dispose();
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -55,106 +78,134 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
     final templates = currentFamily != null
         ? ref.watch(groceryTemplatesProvider(currentFamily.id))
         : const AsyncValue.data(<GroceryTemplateModel>[]);
-    
-    final templateItems = ref.watch(groceryTemplateItemsProvider(widget.templateId));
+
+    final templateItems = ref.watch(
+      groceryTemplateItemsProvider(widget.templateId),
+    );
+
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return BackgroundWidget(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
+          bottom: !isKeyboardOpen,
           child: Column(
             children: [
               // Custom App Bar
               _buildCustomAppBar(context, templates, currentFamily),
-              
+
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
                     // Refresh from server when user pulls to refresh
-                    ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
+                    ref.invalidate(
+                      groceryTemplateItemsProvider(widget.templateId),
+                    );
                     final currentFamily = ref.read(currentFamilyProvider);
                     if (currentFamily != null) {
-                      ref.invalidate(groceryTemplatesProvider(currentFamily.id));
+                      ref.invalidate(
+                        groceryTemplatesProvider(currentFamily.id),
+                      );
                     }
                     // Wait a moment for the stream to fetch new data
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: SingleChildScrollView(
-                    padding: ResponsiveHelper.padding(horizontal: 16, vertical: 16),
+                    controller: _scrollController,
+                    padding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Category Filters (only in category view)
-                      templateItems.when(
-                        data: (items) {
-                          if (items.isEmpty) {
-                            return _buildEmptyState(context);
-                          }
-                          
-                          if (!_isListView) {
-                            // Show category filters
-                            final allCategories = items.map((item) => item.category).toSet().toList()..sort();
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildCategoryFilters(context, allCategories),
-                                SizedBox(height: ResponsiveHelper.h(16)),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                      
-                      // Template Items - Category View or List View
-                      templateItems.when(
-                        data: (items) {
-                          if (items.isEmpty) {
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category Filters (only in category view)
+                        templateItems.when(
+                          data: (items) {
+                            if (items.isEmpty) {
+                              return _buildEmptyState(context);
+                            }
+
+                            if (!_isListView) {
+                              // Show category filters
+                              final allCategories =
+                                  items
+                                      .map((item) => item.category)
+                                      .toSet()
+                                      .toList()
+                                    ..sort();
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCategoryFilters(context, allCategories),
+                                  SizedBox(height: ResponsiveHelper.h(16)),
+                                ],
+                              );
+                            }
                             return const SizedBox.shrink();
-                          }
-                          
-                          // Apply category filter
-                          final filteredItems = _selectedCategories.isEmpty
-                              ? items
-                              : items.where((item) => _selectedCategories.contains(item.category)).toList();
-                          
-                          if (_isListView) {
-                            // List View - all items in one list
-                            return _buildListView(context, filteredItems);
-                          } else {
-                            // Category View - compact, grouped by category
-                            final groupedItems = _groupItemsByCategory(filteredItems);
-                            
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Items by category - compact view
-                                ...groupedItems.entries.map((entry) {
-                                  return _buildCompactCategorySection(
-                                    context,
-                                    entry.key,
-                                    entry.value,
-                                  );
-                                }),
-                              ],
-                            );
-                          }
-                        },
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, _) => Center(
-                          child: Text('Error: $error'),
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
                         ),
-                      ),
-                      
-                      SizedBox(height: ResponsiveHelper.h(80)), // Space for bottom input
-                    ],
+
+                        // Template Items - Category View or List View
+                        templateItems.when(
+                          data: (items) {
+                            if (items.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+
+                            // Apply category filter
+                            final filteredItems = _selectedCategories.isEmpty
+                                ? items
+                                : items
+                                      .where(
+                                        (item) => _selectedCategories.contains(
+                                          item.category,
+                                        ),
+                                      )
+                                      .toList();
+
+                            if (_isListView) {
+                              // List View - all items in one list
+                              return _buildListView(context, filteredItems);
+                            } else {
+                              // Category View - compact, grouped by category
+                              final groupedItems = _groupItemsByCategory(
+                                filteredItems,
+                              );
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Items by category - compact view
+                                  ...groupedItems.entries.map((entry) {
+                                    return _buildCompactCategorySection(
+                                      context,
+                                      entry.key,
+                                      entry.value,
+                                    );
+                                  }),
+                                ],
+                              );
+                            }
+                          },
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, _) =>
+                              Center(child: Text('Error: $error')),
+                        ),
+
+                        SizedBox(
+                          height: ResponsiveHelper.h(80),
+                        ), // Space for bottom input
+                      ],
+                    ),
                   ),
                 ),
-                ),
               ),
-              
+
               // Bottom input and add button
               _buildBottomInput(context),
             ],
@@ -195,10 +246,11 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                     );
                     return Text(
                       template.name,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                     );
                   },
                   loading: () => Text(
@@ -220,7 +272,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                   Text(
                     currentFamily.name,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
               ],
@@ -334,13 +388,17 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                 _selectedCategories.clear();
               });
             },
-            selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            selectedColor: Theme.of(
+              context,
+            ).colorScheme.primary.withOpacity(0.2),
             checkmarkColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
               color: _selectedCategories.isEmpty
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.onSurface,
-              fontWeight: _selectedCategories.isEmpty ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: _selectedCategories.isEmpty
+                  ? FontWeight.w600
+                  : FontWeight.normal,
             ),
           ),
           SizedBox(width: ResponsiveHelper.w(8)),
@@ -361,7 +419,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                     }
                   });
                 },
-                selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                selectedColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(0.2),
                 checkmarkColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
                   color: isSelected
@@ -383,7 +443,7 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
     List<GroceryTemplateItemModel> items,
   ) {
     if (items.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -434,7 +494,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
             borderRadius: ResponsiveHelper.borderRadius(12),
           ),
           child: Column(
-            children: items.map((item) => _buildTemplateItem(context, item)).toList(),
+            children: items
+                .map((item) => _buildTemplateItem(context, item))
+                .toList(),
           ),
         ),
         SizedBox(height: ResponsiveHelper.h(16)),
@@ -442,10 +504,13 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
     );
   }
 
-  Widget _buildTemplateItem(BuildContext context, GroceryTemplateItemModel item) {
+  Widget _buildTemplateItem(
+    BuildContext context,
+    GroceryTemplateItemModel item,
+  ) {
     final hasQuantity = item.unit != null && item.defaultQty > 0;
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
-    
+
     return ListTile(
       contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
       title: Text(item.name),
@@ -459,20 +524,28 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                     Text(
                       '${item.defaultQty} ${item.unit}',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
                         fontSize: ResponsiveHelper.sp(12),
                       ),
                     ),
                   if (hasNotes)
                     Padding(
-                      padding: EdgeInsets.only(top: hasQuantity ? ResponsiveHelper.h(4) : 0),
+                      padding: EdgeInsets.only(
+                        top: hasQuantity ? ResponsiveHelper.h(4) : 0,
+                      ),
                       child: Container(
                         padding: ResponsiveHelper.padding(all: 8),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
                           borderRadius: ResponsiveHelper.borderRadius(8),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
@@ -522,7 +595,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                   child: Text(
                     'Cancel',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ),
@@ -541,10 +616,10 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
             try {
               final templateRepo = ref.read(groceryTemplateRepositoryProvider);
               await templateRepo.deleteTemplateItem(item.id);
-              
+
               // Invalidate provider to refresh the list
               ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
-              
+
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -569,14 +644,17 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
     );
   }
 
-  Widget _buildListView(BuildContext context, List<GroceryTemplateItemModel> items) {
+  Widget _buildListView(
+    BuildContext context,
+    List<GroceryTemplateItemModel> items,
+  ) {
     // Sort items by category, then by name
     items.sort((a, b) {
       final categoryCompare = a.category.compareTo(b.category);
       if (categoryCompare != 0) return categoryCompare;
       return a.name.compareTo(b.name);
     });
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -610,7 +688,7 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
   ) {
     final hasQuantity = item.unit != null && item.defaultQty > 0;
     final hasNotes = item.notes != null && item.notes!.isNotEmpty;
-    
+
     return InkWell(
       onTap: () => _showAddItemDialog(context, item: item),
       child: Container(
@@ -620,7 +698,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
               ? null
               : Border(
                   bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.1),
                     width: 0.5,
                   ),
                 ),
@@ -651,7 +731,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                           child: Text(
                             '${item.defaultQty} ${item.unit}',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                               fontSize: ResponsiveHelper.sp(11),
                             ),
                           ),
@@ -666,14 +748,18 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
                           Icon(
                             Icons.note_outlined,
                             size: ResponsiveHelper.iconSize(12),
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.7),
                           ),
                           SizedBox(width: ResponsiveHelper.w(4)),
                           Expanded(
                             child: Text(
                               item.notes!,
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.8),
                                 fontSize: ResponsiveHelper.sp(11),
                                 fontStyle: FontStyle.italic,
                               ),
@@ -694,8 +780,14 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
   }
 
   Widget _buildBottomInput(BuildContext context) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Container(
-      padding: ResponsiveHelper.padding(all: 16),
+      padding: ResponsiveHelper.padding(
+        top: 16,
+        horizontal: 16,
+        bottom: isKeyboardOpen ? 0 : 16,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
@@ -716,13 +808,19 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
               ),
               child: TextField(
                 controller: _itemController,
+                focusNode: _focusNode,
                 decoration: InputDecoration(
                   hintText: 'Add an item...',
                   hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   border: InputBorder.none,
-                  contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                  contentPadding: ResponsiveHelper.padding(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
@@ -812,44 +910,53 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
       builder: (dialogContext) => _AddTemplateItemDialog(
         item: item,
         initialName: initialName,
-        onSave: (String name, String category, int qty, String? unit, String? notes) async {
-          try {
-            if (item == null) {
-              // Add new item
-              await templateRepo.createTemplateItem(
-                templateId: templateId,
-                name: name,
-                category: category,
-                defaultQty: qty,
-                unit: unit,
-                notes: notes,
-              );
-              _itemController.clear();
-            } else {
-              // Update existing item - delete and recreate
-              await templateRepo.deleteTemplateItem(item.id);
-              await templateRepo.createTemplateItem(
-                templateId: templateId,
-                name: name,
-                category: category,
-                defaultQty: qty,
-                unit: unit,
-                notes: notes,
-              );
-            }
-            return true;
-          } catch (e) {
-            if (dialogContext.mounted) {
-              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-              );
-            }
-            return false;
-          }
-        },
+        onSave:
+            (
+              String name,
+              String category,
+              int qty,
+              String? unit,
+              String? notes,
+            ) async {
+              try {
+                if (item == null) {
+                  // Add new item
+                  await templateRepo.createTemplateItem(
+                    templateId: templateId,
+                    name: name,
+                    category: category,
+                    defaultQty: qty,
+                    unit: unit,
+                    notes: notes,
+                  );
+                  _itemController.clear();
+                } else {
+                  // Update existing item - delete and recreate
+                  await templateRepo.deleteTemplateItem(item.id);
+                  await templateRepo.createTemplateItem(
+                    templateId: templateId,
+                    name: name,
+                    category: category,
+                    defaultQty: qty,
+                    unit: unit,
+                    notes: notes,
+                  );
+                }
+                return true;
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Theme.of(
+                        dialogContext,
+                      ).colorScheme.error,
+                    ),
+                  );
+                }
+                return false;
+              }
+            },
       ),
     );
 
@@ -861,7 +968,11 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
           ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(item == null ? 'Item added successfully!' : 'Item updated successfully!'),
+              content: Text(
+                item == null
+                    ? 'Item added successfully!'
+                    : 'Item updated successfully!',
+              ),
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
@@ -874,7 +985,7 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
     try {
       final currentUser = ref.read(currentUserProvider);
       final currentFamily = ref.read(currentFamilyProvider);
-      
+
       if (currentUser == null || currentFamily == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -886,7 +997,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
       }
 
       // Navigate to create task page with grocery category and template pre-selected
-      context.push('${AppConstants.routeCreateTask}?category=grocery&templateId=${widget.templateId}');
+      context.push(
+        '${AppConstants.routeCreateTask}?category=grocery&templateId=${widget.templateId}',
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -900,7 +1013,8 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
   Future<void> _editTemplateName(BuildContext context) async {
     // Read providers outside the dialog and capture values
     final currentFamily = ref.read(currentFamilyProvider);
-    final familyId = currentFamily?.id; // Capture ID to avoid ref usage in callback
+    final familyId =
+        currentFamily?.id; // Capture ID to avoid ref usage in callback
     final templates = currentFamily != null
         ? ref.read(groceryTemplatesProvider(currentFamily.id))
         : const AsyncValue.data(<GroceryTemplateModel>[]);
@@ -977,7 +1091,8 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
   Future<void> _deleteTemplate(BuildContext context) async {
     // Read providers outside the dialog and capture values
     final currentFamily = ref.read(currentFamilyProvider);
-    final familyId = currentFamily?.id; // Capture ID to avoid ref usage in callback
+    final familyId =
+        currentFamily?.id; // Capture ID to avoid ref usage in callback
     final templates = currentFamily != null
         ? ref.read(groceryTemplatesProvider(currentFamily.id))
         : const AsyncValue.data(<GroceryTemplateModel>[]);
@@ -1008,7 +1123,9 @@ class _GroceryTemplateDetailPageState extends ConsumerState<GroceryTemplateDetai
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Delete Template'),
-        content: Text('Are you sure you want to delete "${template.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${template.name}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -1078,7 +1195,8 @@ class _EditTemplateNameDialog extends StatefulWidget {
   });
 
   @override
-  State<_EditTemplateNameDialog> createState() => _EditTemplateNameDialogState();
+  State<_EditTemplateNameDialog> createState() =>
+      _EditTemplateNameDialogState();
 }
 
 class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
@@ -1117,7 +1235,10 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
               border: OutlineInputBorder(
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
-              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+              contentPadding: ResponsiveHelper.padding(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -1147,7 +1268,9 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
 
                   setState(() => _isLoading = true);
 
-                  final success = await widget.onSave(_nameController.text.trim());
+                  final success = await widget.onSave(
+                    _nameController.text.trim(),
+                  );
 
                   if (mounted) {
                     setState(() => _isLoading = false);
@@ -1181,7 +1304,14 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
 class _AddTemplateItemDialog extends StatefulWidget {
   final GroceryTemplateItemModel? item;
   final String? initialName;
-  final Future<bool> Function(String name, String category, int qty, String? unit, String? notes) onSave;
+  final Future<bool> Function(
+    String name,
+    String category,
+    int qty,
+    String? unit,
+    String? notes,
+  )
+  onSave;
 
   const _AddTemplateItemDialog({
     this.item,
@@ -1205,9 +1335,13 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.item?.name ?? widget.initialName ?? '');
+    _nameController = TextEditingController(
+      text: widget.item?.name ?? widget.initialName ?? '',
+    );
     _notesController = TextEditingController(text: widget.item?.notes ?? '');
-    _qtyController = TextEditingController(text: widget.item?.defaultQty.toString() ?? '1');
+    _qtyController = TextEditingController(
+      text: widget.item?.defaultQty.toString() ?? '1',
+    );
     _unitController = TextEditingController(text: widget.item?.unit ?? '');
     _selectedCategory = widget.item?.category ?? 'produce';
   }
@@ -1230,9 +1364,9 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
       ),
       title: Text(
         widget.item == null ? 'Add Item' : 'Edit Item',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
       content: SizedBox(
         width: ResponsiveHelper.w(400),
@@ -1246,9 +1380,9 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                 // Item Name
                 Text(
                   'Item Name',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 TextFormField(
@@ -1258,7 +1392,10 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1269,13 +1406,13 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                   autofocus: false,
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
-                
+
                 // Category
                 Text(
                   'Category',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 DropdownButtonFormField<String>(
@@ -1284,17 +1421,29 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                     border: OutlineInputBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                     ),
-                    contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                    contentPadding: ResponsiveHelper.padding(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'produce', child: Text('Produce')),
-                    DropdownMenuItem(value: 'dairy', child: Text('Dairy & Eggs')),
+                    DropdownMenuItem(
+                      value: 'dairy',
+                      child: Text('Dairy & Eggs'),
+                    ),
                     DropdownMenuItem(value: 'meat', child: Text('Meat')),
                     DropdownMenuItem(value: 'bakery', child: Text('Bakery')),
                     DropdownMenuItem(value: 'frozen', child: Text('Frozen')),
                     DropdownMenuItem(value: 'pantry', child: Text('Pantry')),
-                    DropdownMenuItem(value: 'beverages', child: Text('Beverages')),
-                    DropdownMenuItem(value: 'household', child: Text('Household')),
+                    DropdownMenuItem(
+                      value: 'beverages',
+                      child: Text('Beverages'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'household',
+                      child: Text('Household'),
+                    ),
                     DropdownMenuItem(value: 'health', child: Text('Health')),
                     DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
@@ -1307,7 +1456,7 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                   },
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
-                
+
                 // Quantity and Unit Row
                 Row(
                   children: [
@@ -1318,9 +1467,8 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                         children: [
                           Text(
                             'Quantity',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           SizedBox(height: ResponsiveHelper.h(8)),
                           TextFormField(
@@ -1331,13 +1479,17 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                               border: OutlineInputBorder(
                                 borderRadius: ResponsiveHelper.borderRadius(12),
                               ),
-                              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                              contentPadding: ResponsiveHelper.padding(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Required';
                               }
-                              if (int.tryParse(value) == null || int.parse(value) < 1) {
+                              if (int.tryParse(value) == null ||
+                                  int.parse(value) < 1) {
                                 return 'Must be ≥ 1';
                               }
                               return null;
@@ -1354,9 +1506,8 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                         children: [
                           Text(
                             'Unit (optional)',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           SizedBox(height: ResponsiveHelper.h(8)),
                           TextFormField(
@@ -1366,7 +1517,10 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                               border: OutlineInputBorder(
                                 borderRadius: ResponsiveHelper.borderRadius(12),
                               ),
-                              contentPadding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+                              contentPadding: ResponsiveHelper.padding(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -1375,13 +1529,13 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                   ],
                 ),
                 SizedBox(height: ResponsiveHelper.h(16)),
-                
+
                 // Notes
                 Text(
                   'Notes (optional)',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: ResponsiveHelper.h(8)),
                 TextFormField(
@@ -1422,8 +1576,12 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
                     _nameController.text.trim(),
                     _selectedCategory,
                     int.parse(_qtyController.text.trim()),
-                    _unitController.text.trim().isEmpty ? null : _unitController.text.trim(),
-                    _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+                    _unitController.text.trim().isEmpty
+                        ? null
+                        : _unitController.text.trim(),
+                    _notesController.text.trim().isEmpty
+                        ? null
+                        : _notesController.text.trim(),
                   );
 
                   if (mounted) {
@@ -1454,7 +1612,11 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
   }
 }
 
-final groceryTemplateItemsProvider = StreamProvider.family<List<GroceryTemplateItemModel>, String>((ref, templateId) {
-  final templateRepo = ref.watch(groceryTemplateRepositoryProvider);
-  return templateRepo.streamTemplateItems(templateId);
-});
+final groceryTemplateItemsProvider =
+    StreamProvider.family<List<GroceryTemplateItemModel>, String>((
+      ref,
+      templateId,
+    ) {
+      final templateRepo = ref.watch(groceryTemplateRepositoryProvider);
+      return templateRepo.streamTemplateItems(templateId);
+    });

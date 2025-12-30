@@ -10,6 +10,8 @@ import 'app/core/config/supabase_config.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/router/app_router.dart';
 import 'app/core/providers/providers.dart';
+import 'app/core/services/notification_service.dart';
+import 'app/core/services/push_notification_service.dart';
 
 void main() async {
   // Run app in a zone to intercept print() calls and filter Supabase INFO messages
@@ -79,8 +81,8 @@ Future<void> _initializeApp() async {
   // Initialize services WITHOUT requesting permissions
   // Permissions will be requested when user actually needs the features
   // This prevents premature permission dialogs on iOS
-  // await NotificationService().initialize(requestPermissions: false);
-  // await PushNotificationService().initialize(requestPermissions: false);
+  await NotificationService().initialize(requestPermissions: false);
+  await PushNotificationService().initialize(requestPermissions: false);
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

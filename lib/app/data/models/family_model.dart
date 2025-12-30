@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_annotation_target
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'family_model.freezed.dart';
@@ -14,13 +15,17 @@ class FamilyModel with _$FamilyModel {
     @JsonKey(name: 'child_invite_code') String? childInviteCode,
     @JsonKey(name: 'invite_link') String? inviteLink,
     String? address,
-    @JsonKey(name: 'theme_preference') @Default('system') String themePreference,
+    @JsonKey(name: 'gemini_api_key') String? geminiApiKey,
+    @JsonKey(name: 'theme_preference')
+    @Default('system')
+    String themePreference,
     @JsonKey(name: 'total_points') @Default(0) int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _FamilyModel;
 
-  factory FamilyModel.fromJson(Map<String, dynamic> json) => _$FamilyModelFromJson(json);
+  factory FamilyModel.fromJson(Map<String, dynamic> json) =>
+      _$FamilyModelFromJson(json);
 }
 
 @freezed
@@ -36,5 +41,6 @@ class FamilyMemberModel with _$FamilyMemberModel {
     DateTime? updatedAt,
   }) = _FamilyMemberModel;
 
-  factory FamilyMemberModel.fromJson(Map<String, dynamic> json) => _$FamilyMemberModelFromJson(json);
+  factory FamilyMemberModel.fromJson(Map<String, dynamic> json) =>
+      _$FamilyMemberModelFromJson(json);
 }

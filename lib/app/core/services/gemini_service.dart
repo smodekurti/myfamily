@@ -3,21 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
+import '../../core/providers/providers.dart';
 
 import 'package:logger/logger.dart';
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
-  return GeminiService();
+  return GeminiService(ref);
 });
 
 /// Service responsible for interacting with the Google Gemini AI API.
 ///
 /// This service handles:
-/// - API Key management (storage and retrieval).
+/// - API Key management (storage, retrieval, and shared family key fallback).
 /// - Content generation for various features (Meal Plans, Recipes, Rewards, etc.).
 /// - Robust error handling and model fallback mechanisms.
 class GeminiService {
+  final Ref _ref;
   final _storage = const FlutterSecureStorage();
+
+  GeminiService(this._ref);
   static const _apiKeyStorageKey = 'gemini_api_key';
   final _logger = Logger();
 
@@ -30,13 +34,37 @@ class GeminiService {
 
   /// Retrieves the stored Gemini API Key.
   ///
-  /// Returns `null` if no key is stored.
+  /// Checks local storage first (Personal Key).
+  /// If missing, falls back to the Family's shared key (from [currentFamilyProvider]).
+  /// Returns `null` if no key is found.
   Future<String?> getApiKey() async {
-    return await _storage.read(key: _apiKeyStorageKey);
+    // 1. Check Personal Key
+    final personalKey = await _storage.read(key: _apiKeyStorageKey);
+    if (personalKey != null && personalKey.isNotEmpty) {
+      return personalKey;
+    }
+
+    // 2. Check Shared Family Key
+    // reading .read() here is safe because this method is called on demand,
+    // and we want the *current* state.
+    final currentFamily = _ref.read(currentFamilyProvider);
+    if (currentFamily?.geminiApiKey != null &&
+        currentFamily!.geminiApiKey!.isNotEmpty) {
+      return currentFamily.geminiApiKey;
+    }
+
+    return null;
   }
 
+  /// Checks if a usable API Key exists (Personal or Shared).
   Future<bool> hasApiKey() async {
     final key = await getApiKey();
+    return key != null && key.isNotEmpty;
+  }
+
+  /// Checks if a Personal API Key is currently set.
+  Future<bool> hasPersonalApiKey() async {
+    final key = await _storage.read(key: _apiKeyStorageKey);
     return key != null && key.isNotEmpty;
   }
 

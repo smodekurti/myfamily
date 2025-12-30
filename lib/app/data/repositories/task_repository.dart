@@ -582,18 +582,26 @@ class TaskRepository {
           ? DateTime.parse(taskResponse['due_date'] as String)
           : null;
 
-      // Only award points if task wasn't already completed
+      // Only award points if task wasn't already completed AND completed by the assignee
       if (currentStatus != 'completed') {
-        final taskTitle = taskResponse['title'] as String?;
-        // Award points to the assigned user
-        await _familyRepo.awardPointsToMember(
-          familyId: familyId,
-          userId: assignedTo,
-          points: points,
-          reason: 'task_completed',
-          taskId: taskId,
-          taskTitle: taskTitle,
-        );
+        final userId = _supabase.auth.currentUser?.id;
+        final createdBy = taskResponse['created_by'] as String;
+
+        // Only award points if:
+        // 1. The person completing it is the assigned person
+        // 2. The task was assigned by someone else (not a personal task)
+        if (userId != null && userId == assignedTo && createdBy != assignedTo) {
+          final taskTitle = taskResponse['title'] as String?;
+          // Award points to the assigned user
+          await _familyRepo.awardPointsToMember(
+            familyId: familyId,
+            userId: assignedTo,
+            points: points,
+            reason: 'task_completed',
+            taskId: taskId,
+            taskTitle: taskTitle,
+          );
+        }
       }
 
       // Update the task status
