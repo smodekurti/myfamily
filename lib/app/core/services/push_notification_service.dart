@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:go_router/go_router.dart';
+import '../router/app_router.dart';
 
 /// Top-level function to handle background messages
 @pragma('vm:entry-point')
@@ -534,54 +536,30 @@ class PushNotificationService {
     // Handle navigation based on message data
     final data = message.data;
     final notificationType = data['type'] as String?;
-    if (notificationType == 'task') {
-      // Trigger callback to refresh tasks when notification is tapped
-      // This ensures tasks are refreshed when user opens app from notification
-      if (_onTaskNotificationReceived != null) {
-        _onTaskNotificationReceived!();
-      }
-      // Navigate to task detail page
-      // You can use a navigation service or router here
-    } else if (notificationType == 'grocery_list' ||
-        notificationType == 'grocery_list_item') {
-      // Trigger callback to refresh grocery lists when notification is tapped
-      if (_onGroceryListNotificationReceived != null) {
-        _onGroceryListNotificationReceived!();
-      }
-      // Navigate to grocery list page if item_id is provided
-      final itemId = data['item_id'] as String?;
-      if (itemId != null) {
-        // Navigate to specific grocery list
-        // You can use a navigation service or router here
-      }
-    } else if (notificationType == 'event' ||
-        notificationType == 'calendar_event') {
-      // Trigger callback to refresh events when notification is tapped
-      if (_onEventNotificationReceived != null) {
-        _onEventNotificationReceived!();
-      }
-      // Navigate to event detail page if item_id is provided
-      final itemId = data['item_id'] as String?;
-      if (itemId != null) {
-        // Navigate to specific event
-        // You can use a navigation service or router here
-      }
-    } else if (notificationType == 'announcement') {
-      // Trigger callback to refresh announcements when notification is tapped
-      if (_onAnnouncementNotificationReceived != null) {
-        _onAnnouncementNotificationReceived!();
-      }
-      // Navigate to announcement detail page if announcement_id is provided
-      final announcementId = data['announcement_id'] as String?;
-      if (announcementId != null) {
-        // Navigate to specific announcement
-        // You can use a navigation service or router here
-      }
-    } else if (notificationType == 'grocery_template' ||
-        notificationType == 'task_template') {
-      // Trigger callback to refresh templates when notification is tapped
-      if (_onTemplateNotificationReceived != null) {
-        _onTemplateNotificationReceived!();
+    // Trigger callbacks
+    if (notificationType == 'task' && _onTaskNotificationReceived != null) {
+      _onTaskNotificationReceived!();
+    } else if (notificationType == 'chat') {
+      // Deep link to Chat
+      final channelId = data['channel_id'] as String?;
+      final channelType = data['channel_type'] as String?;
+
+      if (channelId != null && channelType != null) {
+        // Use the global navigator key to navigate
+        // We use pushNamed to push on top of current stack
+        // Route: details/:channelType/:channelId
+        // Name: chat-details
+
+        final context = AppRouter.navigatorKey.currentContext;
+        if (context != null) {
+          GoRouter.of(context).pushNamed(
+            'chat-details',
+            pathParameters: {
+              'channelType': channelType,
+              'channelId': channelId,
+            },
+          );
+        }
       }
     }
   }

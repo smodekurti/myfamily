@@ -43,6 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/upload-keystore.jks
+/android/app/key.properties
 
 # Sensitive configuration files with API keys
 lib/firebase_options.dart
@@ -56,3 +58,7 @@ lib/app/core/config/supabase_config.dart
 .env.local
 .env.*.local
 *.env
+
+# Supabase CLI
+supabase/.temp/
+

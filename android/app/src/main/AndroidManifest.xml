@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
     <application
-        android:label="myfamily"
+        android:label="MyFamily"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
@@ -38,7 +38,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="myfamily" android:host="auth-callback"/>
+                <data android:scheme="com.smodekurti.myfamily" android:host="auth-callback"/>
             </intent-filter>
             <!-- Google OAuth redirect for Android -->
             <intent-filter>
@@ -46,7 +46,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data 
-                    android:scheme="com.googleusercontent.apps.879363886187-d4oh6t8c7lfsk4979cvkrduta08gk095"
+                    android:scheme="com.googleusercontent.apps.985416533716-gpc5mdmf90vomnviihekkqnijamgecfj"
                     android:host="oauth2redirect"/>
             </intent-filter>
         </activity>

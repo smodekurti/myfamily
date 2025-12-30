@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/background_widget.dart';
 import '../../../../common/widgets/avatar_widget.dart';
 import '../../../../common/responsive/responsive_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/gemini_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../data/models/family_model.dart';
@@ -718,6 +720,31 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                 ),
                                 SizedBox(height: ResponsiveHelper.h(16)),
 
+                                // Magic AI Settings
+                                ModernCard(
+                                  padding: EdgeInsets.zero,
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.auto_awesome,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                    title: const Text('Magic AI Settings'),
+                                    subtitle: const Text(
+                                      'Manage your Shared Gemini API Key',
+                                    ),
+                                    trailing: Icon(
+                                      Icons.chevron_right,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.5),
+                                    ),
+                                    onTap: _showKeyManagementDialog,
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveHelper.h(16)),
+
                                 // Danger Zone
                                 ModernCard(
                                   backgroundColor: Theme.of(
@@ -934,5 +961,305 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _showKeyManagementDialog() async {
+    final geminiService = ref.read(geminiServiceProvider);
+
+    final hasPersonalKey = await geminiService.hasPersonalApiKey();
+    final currentFamily = ref.read(currentFamilyProvider);
+    final currentUser = ref.read(currentUserProvider);
+    final hasFamilyKey =
+        currentFamily?.geminiApiKey != null &&
+        currentFamily!.geminiApiKey!.isNotEmpty;
+
+    bool isParent = false;
+    if (currentUser != null && currentFamily != null) {
+      // Simple check: Creator is always a parent/admin
+      if (currentFamily.createdBy == currentUser.id) {
+        isParent = true;
+      }
+      // TODO: Add role check properly if needed
+    }
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Gemini API Settings'),
+        children: [
+          // Status Section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasPersonalKey)
+                  _buildStatusBadge('Using Personal Key', Colors.green)
+                else if (hasFamilyKey)
+                  _buildStatusBadge('Using Family Key', Colors.blue)
+                else
+                  _buildStatusBadge('No Key Set', Colors.grey),
+                const SizedBox(height: 8),
+                Text(
+                  hasPersonalKey
+                      ? 'Your personal key overrides the family key.'
+                      : hasFamilyKey
+                      ? 'Sharing the key set by the family admin.'
+                      : 'Set a key to enable Magic AI features.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+
+          // Personal Key Options
+          if (hasPersonalKey)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                _showApiKeyDialog(isPersonal: true);
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 12),
+                    Text('Update Personal Key'),
+                  ],
+                ),
+              ),
+            )
+          else
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                _showApiKeyDialog(isPersonal: true);
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add),
+                    SizedBox(width: 12),
+                    Text('Set Personal Key'),
+                  ],
+                ),
+              ),
+            ),
+
+          if (hasPersonalKey)
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.pop(context);
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Remove Personal Key?'),
+                    content: Text(
+                      hasFamilyKey
+                          ? 'You will switch back to using the Family Key.'
+                          : 'Magic AI features will stop working until a new key is set.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Remove'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  await ref.read(geminiServiceProvider).deleteApiKey();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Personal API Key removed')),
+                    );
+                  }
+                }
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_remove, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text(
+                      'Remove Personal Key',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Family Key Options (Admins only)
+          if (isParent && currentFamily != null) ...[
+            const Divider(),
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                _showApiKeyDialog(isPersonal: false);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.family_restroom,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      currentFamily.geminiApiKey != null
+                          ? 'Update Family Key'
+                          : 'Set Family Key',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showApiKeyDialog({required bool isPersonal}) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isPersonal ? 'Enter Personal API Key' : 'Enter Family API Key',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isPersonal
+                  ? 'This key will be stored securely on THIS device only.'
+                  : 'This key will be shared with ALL family members to enable AI features for them.',
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Don\'t have a key?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse(
+                  'https://aistudio.google.com/app/apikey',
+                );
+                if (!await launchUrl(url)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch URL')),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'Get a free API Key here ↗',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Paste API Key',
+                hintText: 'AIzaSy...',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (value) => Navigator.pop(context, value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      if (isPersonal) {
+        await ref.read(geminiServiceProvider).setApiKey(result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Personal API Key saved successfully'),
+            ),
+          );
+        }
+      } else {
+        // Save Family Key
+        final currentFamily = ref.read(currentFamilyProvider);
+        if (currentFamily != null) {
+          try {
+            await ref
+                .read(familyRepositoryProvider)
+                .updateFamily(familyId: currentFamily.id, geminiApiKey: result);
+            // Force refresh of family data if needed, or rely on subscription
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Family API Key updated successfully'),
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to update Family Key: $e')),
+              );
+            }
+          }
+        }
+      }
+    }
   }
 }

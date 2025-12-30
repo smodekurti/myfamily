@@ -287,6 +287,7 @@ class AppConstants {
   static const String routeEditProfile = '/profile/edit';
   static const String routeCalendar = '/calendar';
   static const String routeTasks = '/tasks';
+  static const String routeChat = '/chat';
   static const String routeCreateTask = '/tasks/create';
   static const String routeEditTask = '/tasks/edit';
   static const String routeGroceries = '/groceries';

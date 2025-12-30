@@ -1,4 +1,4 @@
-package com.example.myfamily
+package com.smodekurti.myfamily
 
 import io.flutter.embedding.android.FlutterActivity
 

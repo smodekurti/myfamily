@@ -12,6 +12,7 @@ import '../../../../data/repositories/grocery_list_repository.dart';
 import '../../../../data/repositories/grocery_template_repository.dart';
 import '../../../groceries/presentation/pages/grocery_list_page.dart'; // For groceryTemplatesProvider and standaloneGroceryListsProvider
 import 'package:intl/intl.dart';
+import '../../../../core/services/notification_service.dart';
 
 class CreateTaskPage extends ConsumerStatefulWidget {
   final String? initialCategory;
@@ -47,6 +48,22 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    // Set default assignee to current user if not already set
+    if (_selectedAssignee == null) {
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) {
+        // Use addPostFrameCallback to avoid setting state during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedAssignee = currentUser.id;
+            });
+          }
+        });
+      }
+    }
+
     // Check for templateId in query parameters
     final route = GoRouterState.of(context);
     final templateId = route.uri.queryParameters['templateId'];
@@ -90,7 +107,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   }
 
   Future<void> _selectDueDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate:
           _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
@@ -98,10 +115,38 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
-    if (picked != null) {
-      setState(() {
-        _selectedDueDate = picked;
-      });
+    if (pickedDate != null && mounted) {
+      // After selecting date, show time picker
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(
+          _selectedDueDate ?? DateTime.now().add(const Duration(hours: 1)),
+        ),
+      );
+
+      if (pickedTime != null && mounted) {
+        setState(() {
+          _selectedDueDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      } else {
+        // If user cancels time picker, just set the date (default to end of day or current time?)
+        // Let's default to noon if no time picked, or keep it nullable
+        setState(() {
+          _selectedDueDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            12, // Default to noon if time cancelled but date picked? Or maybe just keep date part?
+            0,
+          );
+        });
+      }
     }
   }
 
@@ -357,6 +402,21 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
+
+        // Schedule local notification if due date is set
+        if (_selectedDueDate != null) {
+          try {
+            await NotificationService().scheduleTaskDueReminder(
+              taskId: task.id,
+              taskTitle: task.title,
+              dueDate: _selectedDueDate!,
+            );
+          } catch (e) {
+            // Log error but don't fail task creation
+            debugPrint('Failed to schedule notification: $e');
+          }
+        }
+
         // Small delay to ensure the stream picks up the change
         await Future.delayed(const Duration(milliseconds: 300));
         context.pop();
@@ -646,6 +706,61 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDueDateField(BuildContext context) {
+    String dateText = 'Select Due Date';
+    if (_selectedDueDate != null) {
+      if (_selectedDueDate!.hour == 0 && _selectedDueDate!.minute == 0) {
+        dateText = DateFormat('MMM d, yyyy').format(_selectedDueDate!);
+      } else {
+        dateText = DateFormat('MMM d, yyyy h:mm a').format(_selectedDueDate!);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Due Date',
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: ResponsiveHelper.h(8)),
+        InkWell(
+          onTap: () => _selectDueDate(context),
+          borderRadius: ResponsiveHelper.borderRadius(12),
+          child: Container(
+            padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+              ),
+              borderRadius: ResponsiveHelper.borderRadius(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: ResponsiveHelper.iconSize(20),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                SizedBox(width: ResponsiveHelper.w(12)),
+                Text(
+                  dateText,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: _selectedDueDate == null
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1225,52 +1340,6 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 ),
               );
             }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDueDateField(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Due Date',
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        SizedBox(height: ResponsiveHelper.h(8)),
-        InkWell(
-          onTap: () => _selectDueDate(context),
-          child: Container(
-            padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-              ),
-              borderRadius: ResponsiveHelper.borderRadius(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedDueDate == null
-                        ? 'Select date'
-                        : DateFormat('MM/dd/yyyy').format(_selectedDueDate!),
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  size: ResponsiveHelper.iconSize(20),
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ],
-            ),
           ),
         ),
       ],
