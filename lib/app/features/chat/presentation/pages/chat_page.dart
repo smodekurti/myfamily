@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../../common/responsive/responsive_helper.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../data/models/message_model.dart';
+import '../../../../data/models/family_model.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../widgets/message_bubble.dart';
 
@@ -31,11 +33,86 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
 
+  // Typing indicators
+  Timer? _typingDebounce;
+  StreamSubscription? _typingSubscription;
+  final Set<String> _typingUserIds = {};
+  Timer? _typingUiResetTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToTypingEvents();
+  }
+
+  void _subscribeToTypingEvents() {
+    final currentFamily = ref.read(currentFamilyProvider);
+    if (currentFamily == null) return;
+
+    final repo = ref.read(chatRepositoryProvider);
+    _typingSubscription = repo
+        .subscribeToTyping(
+          familyId: currentFamily.id,
+          channelId: widget.channelId,
+        )
+        .listen((payload) {
+          final userId = payload['user_id'] as String?;
+          final isTyping = payload['is_typing'] as bool?;
+          final currentUser = ref.read(currentUserProvider);
+
+          if (userId != null && isTyping != null && userId != currentUser?.id) {
+            setState(() {
+              if (isTyping) {
+                _typingUserIds.add(userId);
+                // Auto-remove after 3 seconds if no more events
+                _typingUiResetTimer?.cancel();
+                _typingUiResetTimer = Timer(const Duration(seconds: 3), () {
+                  if (mounted) {
+                    setState(() {
+                      _typingUserIds.remove(userId);
+                    });
+                  }
+                });
+              } else {
+                _typingUserIds.remove(userId);
+              }
+            });
+          }
+        });
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _typingDebounce?.cancel();
+    _typingSubscription?.cancel();
+    _typingUiResetTimer?.cancel();
     super.dispose();
+  }
+
+  void _onTextChanged(String text) {
+    if (_typingDebounce?.isActive ?? false) _typingDebounce?.cancel();
+
+    _typingDebounce = Timer(const Duration(milliseconds: 500), () {
+      _sendTypingStatus(text.isNotEmpty);
+    });
+  }
+
+  Future<void> _sendTypingStatus(bool isTyping) async {
+    final currentFamily = ref.read(currentFamilyProvider);
+    final currentUser = ref.read(currentUserProvider);
+
+    if (currentFamily != null && currentUser != null) {
+      await ref
+          .read(chatRepositoryProvider)
+          .sendTypingStatus(
+            familyId: currentFamily.id,
+            userId: currentUser.id,
+            channelId: widget.channelId,
+            isTyping: isTyping,
+          );
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -63,6 +140,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           );
 
       _messageController.clear();
+      _sendTypingStatus(false); // Stop typing immediately
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -328,59 +406,71 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     ),
                   ],
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.5),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
+                    // Typing Indicator
+                    _buildTypingIndicator(),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            onChanged: _onTextChanged,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                            ),
+                            minLines: 1,
+                            maxLines: 4,
                           ),
                         ),
-                        minLines: 1,
-                        maxLines: 4,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: _isSending
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                ),
-                              )
-                            : Icon(
-                                Icons.send_rounded,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: 20,
-                              ),
-                        onPressed: _isSending ? null : _sendMessage,
-                      ),
+                        const SizedBox(width: 8),
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: _isSending
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.send_rounded,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                    size: 20,
+                                  ),
+                            onPressed: _isSending ? null : _sendMessage,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -389,6 +479,64 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    final currentFamily = ref.watch(currentFamilyProvider);
+    if (_typingUserIds.isEmpty || currentFamily == null) {
+      return const SizedBox.shrink();
+    }
+
+    final familyMembersAsync = ref.watch(
+      familyMembersProvider(currentFamily.id),
+    );
+
+    return familyMembersAsync.when(
+      data: (members) {
+        final typingNames = _typingUserIds.map((id) {
+          final member = members.firstWhere(
+            (m) => m.uid == id,
+            orElse: () => FamilyMemberModel(
+              uid: id,
+              displayName: 'Unknown',
+              role: 'member',
+            ),
+          );
+          // Return first name only for brevity
+          return member.displayName.split(' ').first;
+        }).toList();
+
+        if (typingNames.isEmpty) return const SizedBox.shrink();
+
+        String text;
+        if (typingNames.length == 1) {
+          text = '${typingNames.first} is typing...';
+        } else if (typingNames.length == 2) {
+          text = '${typingNames.join(' and ')} are typing...';
+        } else if (typingNames.length == 3) {
+          text =
+              '${typingNames[0]}, ${typingNames[1]} and ${typingNames[2]} are typing...';
+        } else {
+          // 4+ people
+          text =
+              '${typingNames[0]}, ${typingNames[1]} and ${typingNames.length - 2} others are typing...';
+        }
+
+        return Container(
+          padding: const EdgeInsets.only(bottom: 8, left: 4),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

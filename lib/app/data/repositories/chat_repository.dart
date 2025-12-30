@@ -1,6 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import '../models/message_model.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -97,7 +100,7 @@ class ChatRepository {
         // Initial fetch
         fetchMessages();
 
-        final channelName = 'chat:$familyId:$channelId';
+        final channelName = 'chat_${familyId}_$channelId';
         subscription = _supabase.channel(channelName);
 
         // Listen for changes in messages
@@ -191,5 +194,81 @@ class ChatRepository {
     } catch (e) {
       // Ignore duplicates
     }
+  }
+
+  // Cache active typing channels to reuse connections
+  final Map<String, RealtimeChannel> _activeTypingChannels = {};
+
+  String _getTypingChannelName(String familyId, String channelId) {
+    // Supabase/Postgres might have channel name length limits (often 63 chars).
+    // DM channel IDs combined with Family IDs can exceed 100 chars.
+    // We hash the composite name to ensure it's always short and safe.
+    final rawName = 'typing_${familyId}_$channelId';
+    final hashed = md5.convert(utf8.encode(rawName)).toString();
+    return 'typing_$hashed';
+  }
+
+  Future<void> sendTypingStatus({
+    required String familyId,
+    required String userId,
+    String channelId = 'general',
+    required bool isTyping,
+  }) async {
+    try {
+      final channelName = _getTypingChannelName(familyId, channelId);
+      final channel = _activeTypingChannels[channelName];
+
+      if (channel == null) {
+        return;
+      }
+
+      await (channel as dynamic).sendBroadcastMessage(
+        event: 'typing',
+        payload: {'user_id': userId, 'is_typing': isTyping},
+      );
+    } catch (e) {
+      // Fail silently
+    }
+  }
+
+  Stream<Map<String, dynamic>> subscribeToTyping({
+    required String familyId,
+    String channelId = 'general',
+  }) {
+    late StreamController<Map<String, dynamic>> controller;
+
+    // Calculate name once
+    final channelName = _getTypingChannelName(familyId, channelId);
+
+    controller = StreamController<Map<String, dynamic>>(
+      onListen: () {
+        // Create or reuse channel
+        // Note: supabase.channel() returns an existing channel topic is already joined,
+        // but we cache explicitly to be sure we have the right reference.
+        final channel = _supabase.channel(channelName);
+        _activeTypingChannels[channelName] = channel;
+
+        channel
+            .onBroadcast(
+              event: 'typing',
+              callback: (payload) {
+                if (!controller.isClosed) {
+                  controller.add(payload);
+                }
+              },
+            )
+            .subscribe((status, error) {
+              // Handle status updates if needed
+            });
+      },
+      onCancel: () {
+        final channel = _activeTypingChannels[channelName];
+        channel?.unsubscribe();
+        _activeTypingChannels.remove(channelName);
+        controller.close();
+      },
+    );
+
+    return controller.stream;
   }
 }
