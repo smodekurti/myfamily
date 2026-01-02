@@ -139,7 +139,7 @@ class _GroceryTemplateCreatePageState extends ConsumerState<GroceryTemplateCreat
                   Text(
                     'After creating the template, you can add items to it and then create shopping lists from it.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

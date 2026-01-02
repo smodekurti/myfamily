@@ -179,7 +179,7 @@ class AppTheme {
       bodySmall: TextStyle(
         fontSize: 12.0,
         fontWeight: FontWeight.normal,
-        color: baseTextColor.withOpacity(0.7),
+        color: baseTextColor.withValues(alpha: 0.7),
       ),
       labelLarge: TextStyle(
         fontSize: 14.0,
@@ -194,7 +194,7 @@ class AppTheme {
       labelSmall: TextStyle(
         fontSize: 10.0,
         fontWeight: FontWeight.w500,
-        color: baseTextColor.withOpacity(0.7),
+        color: baseTextColor.withValues(alpha: 0.7),
       ),
     );
   }
@@ -225,7 +225,7 @@ class AppTheme {
                 .dark // Dark icons for light theme
           : SystemUiOverlayStyle.light, // Light icons for dark theme
       shadowColor: brightness == Brightness.light
-          ? Colors.black.withOpacity(0.05)
+          ? Colors.black.withValues(alpha: 0.05)
           : Colors.transparent,
     );
   }
@@ -246,7 +246,7 @@ class AppTheme {
       color: brightness == Brightness.light ? lightCardColor : cardColor,
       margin: EdgeInsets.zero,
       shadowColor: brightness == Brightness.light
-          ? Colors.black.withOpacity(0.05)
+          ? Colors.black.withValues(alpha: 0.05)
           : Colors.transparent,
     );
   }

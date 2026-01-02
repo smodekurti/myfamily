@@ -85,7 +85,7 @@ class ProfilePage extends ConsumerWidget {
                                   ?.copyWith(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                                   ),
                             ),
                             SizedBox(height: ResponsiveHelper.h(12)),
@@ -113,14 +113,14 @@ class ProfilePage extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.primary.withOpacity(0.1),
+                                  ).colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: ResponsiveHelper.borderRadius(
                                     20,
                                   ),
                                   border: Border.all(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.primary.withOpacity(0.3),
+                                    ).colorScheme.primary.withValues(alpha: 0.3),
                                     width: ResponsiveHelper.w(1),
                                   ),
                                 ),
@@ -163,14 +163,14 @@ class ProfilePage extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.secondary.withOpacity(0.1),
+                                    ).colorScheme.secondary.withValues(alpha: 0.1),
                                     borderRadius: ResponsiveHelper.borderRadius(
                                       20,
                                     ),
                                     border: Border.all(
                                       color: Theme.of(
                                         context,
-                                      ).colorScheme.secondary.withOpacity(0.3),
+                                      ).colorScheme.secondary.withValues(alpha: 0.3),
                                       width: ResponsiveHelper.w(1),
                                     ),
                                   ),
@@ -358,14 +358,14 @@ class ProfilePage extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.tertiary.withOpacity(0.1),
+                                    ).colorScheme.tertiary.withValues(alpha: 0.1),
                                     borderRadius: ResponsiveHelper.borderRadius(
                                       20,
                                     ),
                                     border: Border.all(
                                       color: Theme.of(
                                         context,
-                                      ).colorScheme.tertiary.withOpacity(0.3),
+                                      ).colorScheme.tertiary.withValues(alpha: 0.3),
                                       width: ResponsiveHelper.w(1),
                                     ),
                                   ),
@@ -826,7 +826,7 @@ class ProfilePage extends ConsumerWidget {
                 width: ResponsiveHelper.w(40),
                 height: ResponsiveHelper.h(40),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: ResponsiveHelper.borderRadius(20),
                 ),
                 child: Icon(
@@ -847,7 +847,7 @@ class ProfilePage extends ConsumerWidget {
               Icon(
                 Icons.arrow_forward_ios,
                 size: ResponsiveHelper.iconSize(16),
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ],
           ),
@@ -879,12 +879,12 @@ class ProfilePage extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
-                  ).colorScheme.primaryContainer.withOpacity(0.3),
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: ResponsiveHelper.borderRadius(12),
                   border: Border.all(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.3),
+                    ).colorScheme.primary.withValues(alpha: 0.3),
                     width: ResponsiveHelper.w(1),
                   ),
                 ),
@@ -909,7 +909,7 @@ class ProfilePage extends ConsumerWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                         fontSize: ResponsiveHelper.sp(10),
                       ),
                     ),
@@ -925,12 +925,12 @@ class ProfilePage extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
-                  ).colorScheme.secondaryContainer.withOpacity(0.3),
+                  ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
                   borderRadius: ResponsiveHelper.borderRadius(12),
                   border: Border.all(
                     color: Theme.of(
                       context,
-                    ).colorScheme.secondary.withOpacity(0.3),
+                    ).colorScheme.secondary.withValues(alpha: 0.3),
                     width: ResponsiveHelper.w(1),
                   ),
                 ),
@@ -955,7 +955,7 @@ class ProfilePage extends ConsumerWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                         fontSize: ResponsiveHelper.sp(10),
                       ),
                     ),

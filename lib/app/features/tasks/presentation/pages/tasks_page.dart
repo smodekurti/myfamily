@@ -170,7 +170,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           Icons.search_rounded,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -260,10 +260,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               if (!aCompleted && bCompleted) return -1;
 
                               // Then sort by due date
-                              if (a.dueDate == null && b.dueDate == null)
+                              if (a.dueDate == null && b.dueDate == null) {
                                 return 0;
-                              if (a.dueDate == null)
+                              }
+                              if (a.dueDate == null) {
                                 return 1; // null dates go to end
+                              }
                               if (b.dueDate == null) return -1;
                               return a.dueDate!.compareTo(
                                 b.dueDate!,
@@ -302,7 +304,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                                       currentFamily.id,
                                       currentUser?.id,
                                     );
-                                  }).toList(),
+                                  }),
                                   if (hasMoreTasks && _showAllTasks)
                                     _buildShowLessLink(context),
                                 ],
@@ -674,7 +676,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         padding: ResponsiveHelper.padding(all: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: ResponsiveHelper.borderRadius(12),
           border: isSelected
@@ -821,7 +823,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         padding: ResponsiveHelper.padding(all: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: ResponsiveHelper.borderRadius(12),
           border: isSelected
@@ -887,7 +889,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     Color statusColor;
     if (task.status == 'completed') {
       statusText = 'Done';
-      statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+      statusColor = Theme.of(
+        context,
+      ).colorScheme.onSurface.withValues(alpha: 0.5);
     } else if (task.dueDate != null) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -909,11 +913,15 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         statusColor = Theme.of(context).colorScheme.primary;
       } else {
         statusText = 'Due in $difference days';
-        statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
+        statusColor = Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.7);
       }
     } else {
       statusText = 'No due date';
-      statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+      statusColor = Theme.of(
+        context,
+      ).colorScheme.onSurface.withValues(alpha: 0.5);
     }
 
     final initialAvatarUrl = assignedMember.photoURL;
@@ -947,7 +955,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               borderRadius: BorderRadius.circular(6),
             ),
             side: BorderSide(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
               width: 1.5,
             ),
             onChanged: (value) async {
@@ -1023,7 +1033,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 ? TextDecoration.lineThrough
                 : null,
             color: task.status == 'completed'
-                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
                 : Theme.of(context).colorScheme.onSurface,
           ),
           maxLines: 1,
@@ -1062,7 +1072,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1124,7 +1134,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             IconButton(
               icon: Icon(
                 Icons.more_vert_rounded,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               onPressed: () {
                 showModalBottomSheet(
@@ -1146,7 +1158,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           decoration: BoxDecoration(
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.1),
+                            ).colorScheme.onSurface.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -1223,57 +1235,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFilterButtons(BuildContext context, String currentFilter) {
-    final filters = [
-      {'id': 'all', 'label': 'All Chores'},
-      {'id': 'my', 'label': 'My Chores'},
-      {'id': 'today', 'label': 'Due Today'},
-      {'id': 'high', 'label': 'High Priority'},
-      {'id': 'completed', 'label': 'Completed'},
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: filters.map((filter) {
-          final isSelected = currentFilter == filter['id'];
-          return Padding(
-            padding: EdgeInsets.only(right: ResponsiveHelper.w(12)),
-            child: Material(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).cardColor,
-              borderRadius: ResponsiveHelper.borderRadius(20),
-              child: InkWell(
-                onTap: () {
-                  ref.read(taskFilterProvider.notifier).state = filter['id']!;
-                },
-                borderRadius: ResponsiveHelper.borderRadius(20),
-                child: Padding(
-                  padding: ResponsiveHelper.padding(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    filter['label']!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }
@@ -1389,8 +1350,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
       // Search in description
       if (task.description != null &&
-          task.description!.toLowerCase().contains(lowerQuery))
+          task.description!.toLowerCase().contains(lowerQuery)) {
         return true;
+      }
 
       // Search in category
       if (task.category.toLowerCase().contains(lowerQuery)) return true;
@@ -1443,119 +1405,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       members,
       familyId,
       currentUserId,
-    );
-  }
-
-  Widget _buildViewModeSelector(BuildContext context) {
-    final viewMode = ref.watch(taskViewModeProvider);
-
-    return Container(
-      padding: ResponsiveHelper.padding(all: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: ResponsiveHelper.borderRadius(12),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildViewModeButton(
-              context,
-              icon: Icons.view_list,
-              label: 'List',
-              mode: 'list',
-              isSelected: viewMode == 'list',
-            ),
-            SizedBox(width: ResponsiveHelper.w(4)),
-            _buildViewModeButton(
-              context,
-              icon: Icons.format_list_bulleted,
-              label: 'Simple',
-              mode: 'simple_list',
-              isSelected: viewMode == 'simple_list',
-            ),
-            SizedBox(width: ResponsiveHelper.w(4)),
-            _buildViewModeButton(
-              context,
-              icon: Icons.grid_view,
-              label: 'Grid',
-              mode: 'grid',
-              isSelected: viewMode == 'grid',
-            ),
-            SizedBox(width: ResponsiveHelper.w(4)),
-            _buildViewModeButton(
-              context,
-              icon: Icons.category,
-              label: 'Category',
-              mode: 'grouped_category',
-              isSelected: viewMode == 'grouped_category',
-            ),
-            SizedBox(width: ResponsiveHelper.w(4)),
-            _buildViewModeButton(
-              context,
-              icon: Icons.person,
-              label: 'Assignee',
-              mode: 'grouped_assignee',
-              isSelected: viewMode == 'grouped_assignee',
-            ),
-            SizedBox(width: ResponsiveHelper.w(4)),
-            _buildViewModeButton(
-              context,
-              icon: Icons.calendar_today,
-              label: 'Due Date',
-              mode: 'grouped_due_date',
-              isSelected: viewMode == 'grouped_due_date',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildViewModeButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String mode,
-    required bool isSelected,
-  }) {
-    return InkWell(
-      onTap: () {
-        ref.read(taskViewModeProvider.notifier).state = mode;
-      },
-      borderRadius: ResponsiveHelper.borderRadius(8),
-      child: Container(
-        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Colors.transparent,
-          borderRadius: ResponsiveHelper.borderRadius(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: ResponsiveHelper.iconSize(16),
-              color: isSelected
-                  ? Colors.white
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-            SizedBox(width: ResponsiveHelper.w(6)),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isSelected
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1734,36 +1583,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       task.id,
                     );
                     if (context.mounted && completedTask.points > 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: ResponsiveHelper.iconSize(20),
-                              ),
-                              SizedBox(width: ResponsiveHelper.w(8)),
-                              Expanded(
-                                child: Text(
-                                  '+${completedTask.points} points earned!',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      // Removed SnackBar as per user request
                     }
                   } else {
                     await taskActions.updateTask(
@@ -1804,7 +1624,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
                   color: isCompleted
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5)
                       : Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                   fontSize: ResponsiveHelper.sp(14),
@@ -1820,7 +1642,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             icon: Icon(
               Icons.edit,
               size: ResponsiveHelper.iconSize(18),
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             onPressed: () {
               // Navigate to grocery list if grocery task, else task detail/edit page
@@ -1929,7 +1753,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   Container(
                     padding: ResponsiveHelper.padding(all: 6),
                     decoration: BoxDecoration(
-                      color: category.color.withOpacity(0.1),
+                      color: category.color.withValues(alpha: 0.1),
                       borderRadius: ResponsiveHelper.borderRadius(6),
                     ),
                     child: Icon(
@@ -1969,38 +1793,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       );
                       // Show points earned feedback
                       if (context.mounted && completedTask.points > 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(
-                                  Icons.star_rounded,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  size: ResponsiveHelper.iconSize(20),
-                                ),
-                                SizedBox(width: ResponsiveHelper.w(8)),
-                                Expanded(
-                                  child: Text(
-                                    '+${completedTask.points} points earned!',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        // Removed SnackBar as per user request
                       }
                     } else {
                       await taskActions.updateTask(
@@ -2032,7 +1825,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       ? TextDecoration.lineThrough
                       : null,
                   color: task.status == 'completed'
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5)
                       : Theme.of(context).colorScheme.onSurface,
                 ),
                 maxLines: 2,
@@ -2055,7 +1850,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.1),
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: ResponsiveHelper.borderRadius(6),
                       ),
                       child: Text(
@@ -2201,7 +1996,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       color:
                           (category?.color ??
                                   Theme.of(context).colorScheme.primary)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                       borderRadius: ResponsiveHelper.borderRadius(8),
                     ),
                     child: Text(
@@ -2338,7 +2133,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: ResponsiveHelper.borderRadius(8),
                     ),
                     child: Text(
@@ -2465,7 +2260,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             members,
             familyId,
             currentUserId,
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           SizedBox(height: ResponsiveHelper.h(16)),
         ],
@@ -2478,7 +2273,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             members,
             familyId,
             currentUserId,
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
         ],
       ],
@@ -2520,7 +2315,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               Container(
                 padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: ResponsiveHelper.borderRadius(8),
                 ),
                 child: Text(
@@ -2550,6 +2345,11 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final currentFamily = ref.watch(currentFamilyProvider);
+    final hasTasksAsync = ref.watch(
+      familyHasTasksProvider(currentFamily?.id ?? ''),
+    );
+
     return Padding(
       padding: ResponsiveHelper.padding(vertical: 32),
       child: Center(
@@ -2558,23 +2358,44 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             Icon(
               Icons.task_outlined,
               size: ResponsiveHelper.iconSize(60),
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             SizedBox(height: ResponsiveHelper.h(16)),
             Text(
               'No chores found',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             SizedBox(height: ResponsiveHelper.h(24)),
-            ElevatedButton.icon(
-              onPressed: () => context.push(AppConstants.routeCreateTask),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Your First Chore'),
-              style: ElevatedButton.styleFrom(
-                padding: ResponsiveHelper.padding(horizontal: 24, vertical: 12),
-              ),
+
+            // Only show "Add Your First Chore" if there are truly no tasks for the family
+            hasTasksAsync.when(
+              data: (hasTasks) {
+                // If hasTasks is false, it means there are 0 tasks in the DB for this family (visible to user)
+                // So we show the onboarding button.
+                // If hasTasks is true, it means tasks exist but were filtered out (e.g. completed/assigned to others/search)
+                if (!hasTasks) {
+                  return ElevatedButton.icon(
+                    onPressed: () => context.push(AppConstants.routeCreateTask),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Your First Chore'),
+                    style: ElevatedButton.styleFrom(
+                      padding: ResponsiveHelper.padding(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
           ],
         ),

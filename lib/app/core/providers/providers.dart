@@ -383,6 +383,17 @@ final taskStatsProvider = FutureProvider.family<Map<String, int>, String>((
   return taskRepo.getTaskStats(familyId);
 });
 
+final familyHasTasksProvider = FutureProvider.family<bool, String>((
+  ref,
+  familyId,
+) async {
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  // Invalidate this provider when tasks change to keep it fresh
+  // We match the dependency of familyTasksProvider
+  ref.watch(familyTasksProvider(familyId));
+  return taskRepo.hasAnyTasks(familyId);
+});
+
 /// Task actions provider.
 ///
 /// Exposes [TaskActions] class to perform side-effects (create, update, delete)

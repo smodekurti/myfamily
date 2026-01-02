@@ -201,7 +201,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                           ),
                         ],
@@ -264,7 +264,7 @@ class _WeatherLocationPickerState extends ConsumerState<WeatherLocationPicker> {
       return ListTile(
         leading: Icon(
           Icons.location_city,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
         ),
         title: Text(cityName),
         subtitle: Text(city['country'] as String),

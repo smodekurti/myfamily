@@ -459,7 +459,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                       ),
                                       SizedBox(height: ResponsiveHelper.h(16)),
                                       Text(
@@ -473,7 +473,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .onSurface
-                                                  .withOpacity(0.7),
+                                                  .withValues(alpha: 0.7),
                                             ),
                                       ),
                                     ],
@@ -569,7 +569,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             Text(
               'IMPORT ITEMS FROM TEMPLATE',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.w500,
               ),
@@ -632,7 +632,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       },
       child: ModernCard(
         backgroundColor: isSelected
-            ? Theme.of(context).cardColor.withOpacity(0.8)
+            ? Theme.of(context).cardColor.withValues(alpha: 0.8)
             : Theme.of(context).cardColor,
         border: isSelected
             ? Border.all(color: iconColor, width: ResponsiveHelper.w(2))
@@ -680,7 +680,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             },
             selectedColor: Theme.of(
               context,
-            ).colorScheme.primary.withOpacity(0.2),
+            ).colorScheme.primary.withValues(alpha: 0.2),
             checkmarkColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
               color: _selectedCategories.isEmpty
@@ -711,7 +711,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 },
                 selectedColor: Theme.of(
                   context,
-                ).colorScheme.primary.withOpacity(0.2),
+                ).colorScheme.primary.withValues(alpha: 0.2),
                 checkmarkColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
                   color: isSelected
@@ -741,10 +741,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         Container(
           padding: ResponsiveHelper.padding(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: ResponsiveHelper.borderRadius(8),
             border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -794,7 +794,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       thickness: 0.5,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.1),
+                      ).colorScheme.onSurface.withValues(alpha: 0.1),
                     ),
                 ],
               );
@@ -840,7 +840,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       thickness: 0.5,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.1),
+                      ).colorScheme.onSurface.withValues(alpha: 0.1),
                     ),
                 ],
               );
@@ -896,7 +896,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
         style: TextStyle(
           decoration: item.checked ? TextDecoration.lineThrough : null,
           color: item.checked
-              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
               : Theme.of(context).colorScheme.onSurface,
         ),
       ),
@@ -913,10 +913,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                         color: item.checked
                             ? Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.4)
+                              ).colorScheme.onSurface.withValues(alpha: 0.4)
                             : Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.7),
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
                         fontSize: ResponsiveHelper.sp(12),
                       ),
                     ),
@@ -930,12 +930,12 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                         decoration: BoxDecoration(
                           color: Theme.of(
                             context,
-                          ).colorScheme.primary.withOpacity(0.1),
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: ResponsiveHelper.borderRadius(8),
                           border: Border.all(
                             color: Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.3),
+                            ).colorScheme.primary.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -955,7 +955,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                   color: item.checked
                                       ? Theme.of(
                                           context,
-                                        ).colorScheme.onSurface.withOpacity(0.4)
+                                        ).colorScheme.onSurface.withValues(alpha: 0.4)
                                       : Theme.of(context).colorScheme.primary,
                                   fontSize: ResponsiveHelper.sp(12),
                                   fontStyle: FontStyle.italic,
@@ -978,7 +978,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             child: IconButton(
               icon: Icon(
                 Icons.edit_outlined,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 size: ResponsiveHelper.iconSize(20),
               ),
               onPressed: () => _showAddItemDialog(context, item: item),
@@ -996,7 +996,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 child: IconButton(
                   icon: Icon(
                     Icons.delete_outline,
-                    color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
                     size: ResponsiveHelper.iconSize(20),
                   ),
                   onPressed: () => _deleteItem(context, item),
@@ -1036,14 +1036,14 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   fontWeight: FontWeight.w600,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               SizedBox(width: ResponsiveHelper.w(8)),
               Icon(
                 _showCompleted ? Icons.expand_less : Icons.expand_more,
                 size: ResponsiveHelper.iconSize(20),
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ],
           ),
@@ -1110,7 +1110,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               padding: ResponsiveHelper.padding(horizontal: 16, vertical: 8),
               color: Theme.of(
                 context,
-              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -1120,7 +1120,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1180,7 +1180,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: Offset(0, -ResponsiveHelper.h(2)),
               ),
@@ -1201,7 +1201,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       hintStyle: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       border: InputBorder.none,
                       contentPadding: ResponsiveHelper.padding(
@@ -1250,7 +1250,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               Container(
                 padding: ResponsiveHelper.padding(all: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1273,7 +1273,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1396,7 +1396,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   bottom: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.1),
+                    ).colorScheme.onSurface.withValues(alpha: 0.1),
                     width: 0.5,
                   ),
                 ),
@@ -1451,7 +1451,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                             color: item.checked
                                 ? Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.5)
+                                  ).colorScheme.onSurface.withValues(alpha: 0.5)
                                 : Theme.of(context).colorScheme.onSurface,
                             fontSize: ResponsiveHelper.sp(14),
                             fontWeight: FontWeight.w500,
@@ -1469,10 +1469,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                           color: item.checked
                               ? Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.4)
+                                ).colorScheme.onSurface.withValues(alpha: 0.4)
                               : Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontSize: ResponsiveHelper.sp(12),
                           fontWeight: FontWeight.w500,
                         ),
@@ -1488,7 +1488,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                             size: ResponsiveHelper.iconSize(12),
                             color: Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.7),
+                            ).colorScheme.primary.withValues(alpha: 0.7),
                           ),
                           SizedBox(width: ResponsiveHelper.w(4)),
                           Expanded(
@@ -1498,10 +1498,10 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                                 color: item.checked
                                     ? Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.withOpacity(0.4)
+                                      ).colorScheme.onSurface.withValues(alpha: 0.4)
                                     : Theme.of(
                                         context,
-                                      ).colorScheme.primary.withOpacity(0.8),
+                                      ).colorScheme.primary.withValues(alpha: 0.8),
                                 fontSize: ResponsiveHelper.sp(11),
                                 fontStyle: FontStyle.italic,
                               ),
@@ -1522,7 +1522,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               IconButton(
                 icon: Icon(
                   Icons.delete_outline,
-                  color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
                   size: ResponsiveHelper.iconSize(18),
                 ),
                 onPressed: () => _deleteItem(context, item),
@@ -1560,7 +1560,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                       : Icons.keyboard_arrow_right,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   size: ResponsiveHelper.iconSize(20),
                 ),
                 SizedBox(width: ResponsiveHelper.w(8)),
@@ -1569,7 +1569,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                   style: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: ResponsiveHelper.sp(13),
                   ),
@@ -1770,7 +1770,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       if (allChecked) {
         // All items are checked - mark task as complete if not already
         if (task.status != 'completed') {
-          final completedTask = await taskActions.completeTask(task.id);
+          await taskActions.completeTask(task.id);
 
           // Invalidate task and family member providers immediately to refresh UI
           if (mounted && context.mounted) {
@@ -1780,34 +1780,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           }
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    Icon(
-                      Icons.star,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: ResponsiveHelper.iconSize(20),
-                    ),
-                    SizedBox(width: ResponsiveHelper.w(8)),
-                    Expanded(
-                      child: Text(
-                        completedTask.points > 0
-                            ? 'All items completed! +${completedTask.points} points earned!'
-                            : 'All items completed! Task marked as complete.',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            if (mounted) {
+              // Success SnackBar removed as per user request
+            }
           }
         }
       } else {
@@ -1823,13 +1798,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           }
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Task marked as incomplete.'),
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            if (mounted) {
+              // Success SnackBar removed as per user request
+            }
           }
         }
       }
@@ -1892,12 +1863,9 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('"${item.name}" deleted'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        if (mounted) {
+          // Success SnackBar removed as per user request
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -2014,17 +1982,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
       }
 
       if (mounted) {
-        final skippedCount = templateItems.length - itemsToImport.length;
-        final message = skippedCount > 0
-            ? 'Imported ${itemsToImport.length} items (${skippedCount} duplicates skipped)'
-            : 'Imported ${itemsToImport.length} items from template';
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        // Success message for import removed as per user request
       }
     } catch (e) {
       if (mounted) {
@@ -2096,12 +2054,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
                 ref.invalidate(groceryTemplatesProvider(currentFamily.id));
               }
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Template created successfully!'),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            // Success message for template creation removed as per user request
           }
         },
       ),
@@ -2154,12 +2107,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
 
     // Handle result and show success message outside the dialog
     if (result == true && mounted && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('List name updated successfully!'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
+      // Success message for list name update removed as per user request
     }
   }
 
@@ -2200,7 +2148,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -2230,12 +2178,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
           }
           context.pop(); // Go back to groceries page
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('List deleted successfully'),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            // Success message for list deletion removed as per user request
           }
         }
       } catch (e) {
@@ -2306,12 +2249,7 @@ class _GroceryListPageState extends ConsumerState<GroceryListPage> {
               ref.invalidate(familyTasksProvider(currentFamily.id));
               ref.invalidate(groceryListProvider(list.id));
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Grocery task created successfully!'),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                ),
-              );
+              // Success message for task creation removed as per user request
             }
             return true;
           } catch (e) {
@@ -2597,7 +2535,7 @@ class _SaveAsTemplateDialogInlineState
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -2610,7 +2548,7 @@ class _SaveAsTemplateDialogInlineState
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -2762,7 +2700,7 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -2776,7 +2714,7 @@ class _SaveAsTemplateDialogState extends State<_SaveAsTemplateDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -3093,7 +3031,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -3219,7 +3157,7 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),

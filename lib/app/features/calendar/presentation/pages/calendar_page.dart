@@ -172,7 +172,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                           Icons.search_rounded,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -324,7 +324,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               Icon(
                 Icons.filter_list,
                 size: ResponsiveHelper.iconSize(18),
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               SizedBox(width: ResponsiveHelper.w(8)),
               Expanded(
@@ -336,7 +336,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       fontSize: ResponsiveHelper.sp(14),
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     contentPadding: ResponsiveHelper.padding(
                       horizontal: 12,
@@ -347,7 +347,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       borderSide: BorderSide(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.2),
+                        ).colorScheme.onSurface.withValues(alpha: 0.2),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
@@ -355,7 +355,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       borderSide: BorderSide(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.2),
+                        ).colorScheme.onSurface.withValues(alpha: 0.2),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -513,11 +513,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             calendarStyle: CalendarStyle(
               outsideDaysVisible: true,
               outsideTextStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                 fontSize: ResponsiveHelper.sp(12),
               ),
               weekendTextStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: ResponsiveHelper.sp(12),
               ),
               defaultTextStyle: TextStyle(
@@ -575,12 +575,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
               weekdayStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
                 fontSize: ResponsiveHelper.sp(10),
               ),
               weekendStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
                 fontSize: ResponsiveHelper.sp(10),
               ),
@@ -608,7 +608,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     style: TextStyle(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w500,
                       fontSize: ResponsiveHelper.sp(10),
                     ),
@@ -789,7 +789,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     size: ResponsiveHelper.iconSize(64),
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.3),
+                    ).colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
                   SizedBox(height: ResponsiveHelper.h(16)),
                   Text(
@@ -797,7 +797,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -901,7 +901,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -970,7 +970,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               Icon(
                 Icons.access_time,
                 size: ResponsiveHelper.sp(10),
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               SizedBox(width: ResponsiveHelper.w(4)),
               Text(
@@ -978,7 +978,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   fontSize: ResponsiveHelper.sp(11),
                 ),
               ),
@@ -986,7 +986,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               Icon(
                 Icons.people,
                 size: ResponsiveHelper.sp(10),
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               SizedBox(width: ResponsiveHelper.w(4)),
               Expanded(
@@ -995,7 +995,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: ResponsiveHelper.sp(11),
                   ),
                   maxLines: 1,
@@ -1026,7 +1026,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       radius: ResponsiveHelper.r(10),
                       backgroundColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.3),
+                      ).colorScheme.primary.withValues(alpha: 0.3),
                       child: SizedBox(
                         width: ResponsiveHelper.w(10),
                         height: ResponsiveHelper.h(10),
@@ -1074,7 +1074,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     size: ResponsiveHelper.iconSize(18),
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   onSelected: (value) async {
                     if (value == 'edit') {
@@ -1724,9 +1724,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                   Container(
                     padding: ResponsiveHelper.padding(all: 12),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: ResponsiveHelper.borderRadius(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -1760,7 +1760,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -2157,7 +2157,7 @@ class _EditEventDialogState extends State<_EditEventDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),

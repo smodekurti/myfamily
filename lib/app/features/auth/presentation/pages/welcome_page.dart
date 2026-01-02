@@ -43,7 +43,7 @@ class WelcomePage extends StatelessWidget {
                 Text(
                   'Make day-to-day coordination effortless with tasks, calendar, shopping, finances, and habits—all gamified to reduce friction.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),

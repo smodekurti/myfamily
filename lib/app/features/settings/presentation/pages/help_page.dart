@@ -180,7 +180,7 @@ class _HelpPageState extends ConsumerState<HelpPage> {
                   height: 1,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.1),
+                  ).colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
             ],
           );
@@ -203,7 +203,7 @@ class _HelpPageState extends ConsumerState<HelpPage> {
             subtitle: const Text('support@myfamily.app'),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () async {
               final emailUri = Uri(
@@ -235,7 +235,7 @@ class _HelpPageState extends ConsumerState<HelpPage> {
             subtitle: const Text('Help us improve the app'),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () async {
               final emailUri = Uri(

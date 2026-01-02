@@ -152,7 +152,7 @@ class _CreateRewardPageState extends ConsumerState<CreateRewardPage> {
                       padding: EdgeInsets.all(12.r),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryColor.withOpacity(0.1)
+                            ? AppTheme.primaryColor.withValues(alpha: 0.1)
                             : Colors.transparent,
                         border: Border.all(
                           color: isSelected

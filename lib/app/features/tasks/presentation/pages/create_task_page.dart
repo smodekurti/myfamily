@@ -117,6 +117,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
     if (pickedDate != null && mounted) {
       // After selecting date, show time picker
+
+      if (!mounted) return;
+
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(
@@ -150,7 +153,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     }
   }
 
-  Future<void> _attachShoppingList(BuildContext context) async {
+  Future<void> _attachShoppingList() async {
     // Navigate to template selection or create new list
     final result = await context.push('/grocery-list-select');
     if (result != null && result is String) {
@@ -160,7 +163,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     }
   }
 
-  Future<void> _createNewShoppingList(BuildContext context) async {
+  Future<void> _createNewShoppingList() async {
     final currentUser = ref.read(currentUserProvider);
     final currentFamily = ref.read(currentFamilyProvider);
     final listRepo = ref.read(groceryListRepositoryProvider);
@@ -396,12 +399,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Chore created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        // Removed success SnackBar as per user request
 
         // Schedule local notification if due date is set
         if (_selectedDueDate != null) {
@@ -419,7 +417,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
         // Small delay to ensure the stream picks up the change
         await Future.delayed(const Duration(milliseconds: 300));
-        context.pop();
+        if (mounted) {
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -509,7 +509,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -526,7 +526,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 style: TextStyle(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -736,7 +736,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             padding: ResponsiveHelper.padding(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.5),
               ),
               borderRadius: ResponsiveHelper.borderRadius(12),
             ),
@@ -770,7 +772,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.1),
             width: ResponsiveHelper.w(1),
           ),
         ),
@@ -928,7 +932,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               side: BorderSide(
                 color: isSelected
                     ? category.color
-                    : category.color.withOpacity(0.3),
+                    : category.color.withValues(alpha: 0.3),
                 width: isSelected ? 2 : 1,
               ),
             );
@@ -988,7 +992,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     side: BorderSide(
                       color: isSelected
                           ? category.color
-                          : category.color.withOpacity(0.3),
+                          : category.color.withValues(alpha: 0.3),
                       width: isSelected ? 2 : 1,
                     ),
                   );
@@ -1114,9 +1118,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           border: Border.all(
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.2),
+                                : Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.2),
                             width: ResponsiveHelper.w(isSelected ? 3 : 2),
                           ),
                         ),
@@ -1226,7 +1229,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         case 'low':
           return Colors.green;
         default:
-          return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+          return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
       }
     }
 
@@ -1277,7 +1280,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   ),
                   child: Material(
                     color: isSelected
-                        ? priorityColor.withOpacity(0.1)
+                        ? priorityColor.withValues(alpha: 0.1)
                         : Theme.of(context).cardColor,
                     borderRadius: ResponsiveHelper.borderRadius(8),
                     child: InkWell(
@@ -1296,9 +1299,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           border: Border.all(
                             color: isSelected
                                 ? priorityColor
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.2),
+                                : Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.2),
                             width: ResponsiveHelper.w(isSelected ? 2 : 1),
                           ),
                           borderRadius: ResponsiveHelper.borderRadius(8),
@@ -1311,9 +1313,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               size: ResponsiveHelper.iconSize(16),
                               color: isSelected
                                   ? priorityColor
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
+                                  : Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                             ),
                             SizedBox(width: ResponsiveHelper.w(4)),
                             Text(
@@ -1325,7 +1326,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                                         : Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.6),
+                                              .withValues(alpha: 0.6),
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : FontWeight.normal,
@@ -1400,7 +1401,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 border: Border.all(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.2),
+                  ).colorScheme.onSurface.withValues(alpha: 0.2),
                 ),
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
@@ -1421,7 +1422,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     size: ResponsiveHelper.iconSize(20),
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ],
               ),
@@ -1488,7 +1489,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   ),
                   SizedBox(height: ResponsiveHelper.h(8)),
                   InkWell(
-                    onTap: () => _attachShoppingList(context),
+                    onTap: () => _attachShoppingList(),
                     child: Container(
                       padding: ResponsiveHelper.padding(all: 16),
                       decoration: BoxDecoration(
@@ -1500,7 +1501,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         borderRadius: ResponsiveHelper.borderRadius(12),
                         color: Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.1),
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                       ),
                       child: Row(
                         children: [
@@ -1532,7 +1533,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.7),
+                                            .withValues(alpha: 0.7),
                                       ),
                                 ),
                               ],
@@ -1544,7 +1545,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               size: ResponsiveHelper.iconSize(20),
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.7),
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
                             onPressed: () {
                               setState(() {
@@ -1582,7 +1583,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         SizedBox(height: ResponsiveHelper.h(8)),
         // Create New List Button
         InkWell(
-          onTap: () => _createNewShoppingList(context),
+          onTap: () => _createNewShoppingList(),
           child: Container(
             padding: ResponsiveHelper.padding(all: 16),
             decoration: BoxDecoration(
@@ -1592,7 +1593,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 width: ResponsiveHelper.w(2),
               ),
               borderRadius: ResponsiveHelper.borderRadius(12),
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: 0.1),
             ),
             child: Row(
               children: [
@@ -1619,7 +1622,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -1636,7 +1639,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         SizedBox(height: ResponsiveHelper.h(12)),
         // Attach Existing List Button
         InkWell(
-          onTap: () => _attachShoppingList(context),
+          onTap: () => _attachShoppingList(),
           child: Container(
             padding: ResponsiveHelper.padding(all: 16),
             decoration: BoxDecoration(
@@ -1672,7 +1675,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -1743,7 +1746,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.primary,
                       width: ResponsiveHelper.w(2),
@@ -1777,9 +1780,10 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               'Items will be imported from this template',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                             ),
                           ],
@@ -1791,7 +1795,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                           size: ResponsiveHelper.iconSize(20),
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                         onPressed: () {
                           setState(() {
@@ -1899,16 +1903,15 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.2),
+                                ).colorScheme.onSurface.withValues(alpha: 0.2),
                           width: isSelected
                               ? ResponsiveHelper.w(2)
                               : ResponsiveHelper.w(1),
                         ),
                         borderRadius: ResponsiveHelper.borderRadius(12),
                         color: isSelected
-                            ? Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer.withOpacity(0.3)
+                            ? Theme.of(context).colorScheme.primaryContainer
+                                  .withValues(alpha: 0.3)
                             : Theme.of(
                                 context,
                               ).colorScheme.surfaceContainerHighest,
@@ -1923,9 +1926,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                             size: ResponsiveHelper.iconSize(24),
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                           ),
                           SizedBox(height: ResponsiveHelper.h(8)),
                           Text(
@@ -1996,7 +1998,7 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext buildContext) {
     return AlertDialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
@@ -2076,7 +2078,9 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -2203,16 +2207,18 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                   padding: ResponsiveHelper.padding(all: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1)
                         : Theme.of(context).colorScheme.surfaceContainerHighest
-                              .withOpacity(0.3),
+                              .withValues(alpha: 0.3),
                     borderRadius: ResponsiveHelper.borderRadius(8),
                     border: Border.all(
                       color: isSelected
                           ? Theme.of(context).colorScheme.primary
                           : Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.1),
+                            ).colorScheme.onSurface.withValues(alpha: 0.1),
                       width: isSelected
                           ? ResponsiveHelper.w(2)
                           : ResponsiveHelper.w(1),
@@ -2226,7 +2232,7 @@ class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
                         size: ResponsiveHelper.iconSize(20),
                       ),
                       SizedBox(width: ResponsiveHelper.w(12)),

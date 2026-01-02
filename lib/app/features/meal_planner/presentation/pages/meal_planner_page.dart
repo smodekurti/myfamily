@@ -970,7 +970,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.green),
                     ),
@@ -1001,7 +1001,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                         .map(
                           (s) => Chip(
                             label: Text(s),
-                            backgroundColor: Colors.amber.withOpacity(0.2),
+                            backgroundColor: Colors.amber.withValues(alpha: 0.2),
                             avatar: const Icon(
                               Icons.warning_amber,
                               size: 16,
@@ -1709,7 +1709,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                 color: isSelected
                     ? AppTheme.primaryColor
                     : isToday
-                    ? AppTheme.primaryColor.withOpacity(0.1)
+                    ? AppTheme.primaryColor.withValues(alpha: 0.1)
                     : Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(30.r), // Pill shape
                 border: Border.all(
@@ -1717,13 +1717,13 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                       ? AppTheme.primaryColor
                       : isToday
                       ? AppTheme.primaryColor
-                      : Colors.grey.withOpacity(0.2),
+                      : Colors.grey.withValues(alpha: 0.2),
                   width: isToday && !isSelected ? 1.5 : 0,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -2120,7 +2120,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -2155,7 +2155,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Icon(icon, color: color, size: 20.sp),
@@ -2190,7 +2190,7 @@ class _MealPlannerPageState extends ConsumerState<MealPlannerPage> {
                                       : FontWeight.normal,
                                   color: isPlanned
                                       ? null
-                                      : Colors.grey.withOpacity(0.5),
+                                      : Colors.grey.withValues(alpha: 0.5),
                                   fontStyle: isPlanned
                                       ? FontStyle.normal
                                       : FontStyle.italic,

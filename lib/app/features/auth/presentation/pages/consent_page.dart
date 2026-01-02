@@ -294,7 +294,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
                 Text(
                   'Please review and accept the following agreements to continue using MyFamily',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.h(32)),
@@ -392,7 +392,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
                 Text(
                   'By continuing, you acknowledge that you have read, understood, and agree to be bound by all the above terms and policies.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontStyle: FontStyle.italic,
                   ),
                   textAlign: TextAlign.center,
@@ -437,7 +437,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
                       Text(
                         description,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -468,7 +468,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: hasRead
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -499,7 +499,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
             Text(
               'We collect and process the following data to provide our services:',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             SizedBox(height: ResponsiveHelper.h(12)),
@@ -548,7 +548,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -575,7 +575,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
             Text(
               'You must be at least 13 years old (or the age of majority in your jurisdiction) to use this app. By continuing, you confirm that you meet this requirement.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             SizedBox(height: ResponsiveHelper.h(12)),

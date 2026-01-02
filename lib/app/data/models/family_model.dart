@@ -22,6 +22,7 @@ class FamilyModel with _$FamilyModel {
     @JsonKey(name: 'total_points') @Default(0) int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @JsonKey(name: 'deleted_at') DateTime? deletedAt,
   }) = _FamilyModel;
 
   factory FamilyModel.fromJson(Map<String, dynamic> json) =>

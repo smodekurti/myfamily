@@ -152,7 +152,7 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.1),
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: ResponsiveHelper.borderRadius(75),
                       ),
                       child: Icon(
@@ -177,7 +177,7 @@ class _JoinFamilyPageState extends ConsumerState<JoinFamilyPage> {
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),

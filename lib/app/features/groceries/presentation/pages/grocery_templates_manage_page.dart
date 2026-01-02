@@ -143,7 +143,7 @@ class _GroceryTemplatesManagePageState
                               ?.copyWith(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.7),
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
                               ),
                           textAlign: TextAlign.center,
                         ),
@@ -183,7 +183,7 @@ class _GroceryTemplatesManagePageState
             Text(
               'Create your first shopping template to quickly add items to your lists',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -257,7 +257,7 @@ class _GroceryTemplatesManagePageState
                 width: ResponsiveHelper.w(56),
                 height: ResponsiveHelper.h(56),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: ResponsiveHelper.borderRadius(12),
                 ),
                 child: Icon(
@@ -290,7 +290,7 @@ class _GroceryTemplatesManagePageState
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                           ),
                           loading: () => Text(
@@ -299,7 +299,7 @@ class _GroceryTemplatesManagePageState
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                           ),
                           error: (_, __) => Text(
@@ -321,7 +321,7 @@ class _GroceryTemplatesManagePageState
                   size: ResponsiveHelper.iconSize(20),
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
@@ -483,7 +483,7 @@ class _GroceryTemplatesManagePageState
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -606,7 +606,7 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),

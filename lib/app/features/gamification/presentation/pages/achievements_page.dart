@@ -107,7 +107,7 @@ class AchievementsPage extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       SizedBox(height: ResponsiveHelper.h(24)),
@@ -201,7 +201,7 @@ class AchievementsPage extends ConsumerWidget {
         decoration: BoxDecoration(
           borderRadius: ResponsiveHelper.borderRadius(12),
           color: isUnlocked
-              ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
               : Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         child: Padding(
@@ -215,7 +215,7 @@ class AchievementsPage extends ConsumerWidget {
                 size: ResponsiveHelper.iconSize(48),
                 color: isUnlocked
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               SizedBox(height: ResponsiveHelper.h(12)),
 
@@ -228,7 +228,7 @@ class AchievementsPage extends ConsumerWidget {
                       ? Theme.of(context).colorScheme.onSurface
                       : Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -241,10 +241,10 @@ class AchievementsPage extends ConsumerWidget {
                 achievement.description,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: isUnlocked
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
                       : Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.4),
+                        ).colorScheme.onSurface.withValues(alpha: 0.4),
                   fontSize: ResponsiveHelper.sp(10),
                 ),
                 textAlign: TextAlign.center,

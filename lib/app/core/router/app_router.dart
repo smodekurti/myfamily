@@ -757,7 +757,7 @@ class MainShell extends ConsumerWidget {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: ResponsiveHelper.padding(horizontal: 12, vertical: 10),
+        padding: ResponsiveHelper.padding(horizontal: 6, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)

@@ -333,7 +333,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                         decoration: BoxDecoration(
                           color: Theme.of(
                             context,
-                          ).colorScheme.primary.withOpacity(0.1),
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -357,7 +357,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -459,7 +459,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
               width: ResponsiveHelper.w(40),
               height: ResponsiveHelper.h(40),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: ResponsiveHelper.borderRadius(12),
               ),
               child: Icon(
@@ -487,7 +487,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -514,7 +514,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
                         size: ResponsiveHelper.iconSize(20),
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       color: Theme.of(
                         context,
@@ -752,7 +752,7 @@ class _GroceriesPageState extends ConsumerState<GroceriesPage> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -926,7 +926,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -1034,10 +1034,10 @@ class _CreateListDialogState extends State<_CreateListDialog> {
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
-              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: ResponsiveHelper.borderRadius(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               ),
             ),
             child: Row(
@@ -1047,7 +1047,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                   size: ResponsiveHelper.iconSize(20),
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 SizedBox(width: ResponsiveHelper.w(12)),
                 Expanded(
@@ -1056,7 +1056,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -1069,7 +1069,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
           constraints: BoxConstraints(maxHeight: ResponsiveHelper.h(200)),
           decoration: BoxDecoration(
             border: Border.all(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             ),
             borderRadius: ResponsiveHelper.borderRadius(12),
           ),
@@ -1090,13 +1090,13 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                   padding: ResponsiveHelper.padding(all: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
                         : Colors.transparent,
                     border: Border(
                       bottom: BorderSide(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.1),
+                        ).colorScheme.onSurface.withValues(alpha: 0.1),
                         width: index < templates.length - 1 ? 1 : 0,
                       ),
                     ),
@@ -1113,7 +1113,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.3),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.3),
                             width: 2,
                           ),
                           color: isSelected
@@ -1159,7 +1159,7 @@ class _CreateListDialogState extends State<_CreateListDialog> {
       error: (error, _) => Container(
         padding: ResponsiveHelper.padding(all: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
           borderRadius: ResponsiveHelper.borderRadius(12),
         ),
         child: Text(
@@ -1239,7 +1239,7 @@ class _EditListNameDialogState extends State<_EditListNameDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
