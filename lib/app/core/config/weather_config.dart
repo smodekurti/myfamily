@@ -20,4 +20,8 @@ class WeatherConfig {
 
   /// Weather API (Open-Meteo - free, no key, global coverage)
   static const String openMeteoWeatherUrl = 'https://api.open-meteo.com/v1';
+
+  /// Reverse Geocoding API (BigDataCloud - free, no key)
+  static const String reverseGeocodingUrl =
+      'https://api.bigdatacloud.net/data/reverse-geocode-client';
 }

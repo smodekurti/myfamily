@@ -274,7 +274,7 @@ class _GroceryTemplateDetailPageState
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
               ],
@@ -390,7 +390,7 @@ class _GroceryTemplateDetailPageState
             },
             selectedColor: Theme.of(
               context,
-            ).colorScheme.primary.withOpacity(0.2),
+            ).colorScheme.primary.withValues(alpha: 0.2),
             checkmarkColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
               color: _selectedCategories.isEmpty
@@ -421,7 +421,7 @@ class _GroceryTemplateDetailPageState
                 },
                 selectedColor: Theme.of(
                   context,
-                ).colorScheme.primary.withOpacity(0.2),
+                ).colorScheme.primary.withValues(alpha: 0.2),
                 checkmarkColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
                   color: isSelected
@@ -451,10 +451,10 @@ class _GroceryTemplateDetailPageState
         Container(
           padding: ResponsiveHelper.padding(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: ResponsiveHelper.borderRadius(8),
             border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -526,7 +526,7 @@ class _GroceryTemplateDetailPageState
                       style: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                         fontSize: ResponsiveHelper.sp(12),
                       ),
                     ),
@@ -540,12 +540,12 @@ class _GroceryTemplateDetailPageState
                         decoration: BoxDecoration(
                           color: Theme.of(
                             context,
-                          ).colorScheme.primary.withOpacity(0.1),
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: ResponsiveHelper.borderRadius(8),
                           border: Border.all(
                             color: Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.3),
+                            ).colorScheme.primary.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -597,7 +597,7 @@ class _GroceryTemplateDetailPageState
                     style: TextStyle(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -621,12 +621,7 @@ class _GroceryTemplateDetailPageState
               ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
 
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Item deleted successfully'),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  ),
-                );
+                // Success SnackBar removed as per user request
               }
             } catch (e) {
               if (mounted) {
@@ -700,7 +695,7 @@ class _GroceryTemplateDetailPageState
                   bottom: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.1),
+                    ).colorScheme.onSurface.withValues(alpha: 0.1),
                     width: 0.5,
                   ),
                 ),
@@ -733,7 +728,7 @@ class _GroceryTemplateDetailPageState
                             style: TextStyle(
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.6),
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                               fontSize: ResponsiveHelper.sp(11),
                             ),
                           ),
@@ -750,7 +745,7 @@ class _GroceryTemplateDetailPageState
                             size: ResponsiveHelper.iconSize(12),
                             color: Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.7),
+                            ).colorScheme.primary.withValues(alpha: 0.7),
                           ),
                           SizedBox(width: ResponsiveHelper.w(4)),
                           Expanded(
@@ -759,7 +754,7 @@ class _GroceryTemplateDetailPageState
                               style: TextStyle(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.primary.withOpacity(0.8),
+                                ).colorScheme.primary.withValues(alpha: 0.8),
                                 fontSize: ResponsiveHelper.sp(11),
                                 fontStyle: FontStyle.italic,
                               ),
@@ -792,7 +787,7 @@ class _GroceryTemplateDetailPageState
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: Offset(0, -ResponsiveHelper.h(2)),
           ),
@@ -814,7 +809,7 @@ class _GroceryTemplateDetailPageState
                   hintStyle: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   contentPadding: ResponsiveHelper.padding(
@@ -858,20 +853,20 @@ class _GroceryTemplateDetailPageState
             Icon(
               Icons.shopping_cart_outlined,
               size: ResponsiveHelper.iconSize(60),
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             SizedBox(height: ResponsiveHelper.h(16)),
             Text(
               'No items yet',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             SizedBox(height: ResponsiveHelper.h(8)),
             Text(
               'Add items to this template',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -966,16 +961,7 @@ class _GroceryTemplateDetailPageState
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && context.mounted) {
           ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                item == null
-                    ? 'Item added successfully!'
-                    : 'Item updated successfully!',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
+          // Success SnackBar removed as per user request
         }
       });
     }
@@ -1077,12 +1063,7 @@ class _GroceryTemplateDetailPageState
             ref.invalidate(groceryTemplatesProvider(familyId));
             ref.invalidate(groceryTemplateItemsProvider(widget.templateId));
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Template name updated successfully!'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
+          // Success SnackBar removed as per user request
         }
       });
     }
@@ -1132,7 +1113,7 @@ class _GroceryTemplateDetailPageState
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -1162,12 +1143,7 @@ class _GroceryTemplateDetailPageState
           }
           if (mounted && context.mounted) {
             context.pop(); // Go back to templates/groceries page
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Template deleted successfully'),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            // Success SnackBar removed as per user request
           }
         }
       } catch (e) {
@@ -1256,7 +1232,7 @@ class _EditTemplateNameDialogState extends State<_EditTemplateNameDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -1560,7 +1536,7 @@ class _AddTemplateItemDialogState extends State<_AddTemplateItemDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),

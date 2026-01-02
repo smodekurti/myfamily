@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 
 class LocationService {
@@ -11,73 +10,56 @@ class LocationService {
     return await Geolocator.isLocationServiceEnabled();
   }
 
-  /// Check location permission status
-  Future<bool> checkLocationPermission() async {
-    final status = await Permission.location.status;
-    return status.isGranted;
-  }
-
-  /// Request location permission
-  Future<bool> requestLocationPermission() async {
-    final status = await Permission.location.request();
-    return status.isGranted;
-  }
-
   /// Get current location
-  /// Returns null if permission denied or location unavailable
-  /// Falls back to last known position if current position times out
-  /// Proactively requests permission and prompts to enable location services if needed
   Future<Position?> getCurrentLocation() async {
     try {
-      // First, check and request permission if needed
-      var permission = await Permission.location.status;
+      _logger.d('Getting current location...');
 
-      if (permission.isDenied) {
-        // Request permission proactively
-        permission = await Permission.location.request();
+      // 1. Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _logger.w('Location services are disabled.');
+        // Services are disabled. We cannot query the location.
+        // We can request the user to enable it, but fail gracefully for now.
+        // Or specific to Android, request to open settings.
+        return null;
+      }
 
-        if (permission.isDenied) {
+      // 2. Check permissions using Geolocator (not permission_handler)
+      LocationPermission permission = await Geolocator.checkPermission();
+      _logger.d('Location permission status: $permission');
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        _logger.d('Location permission requested. Result: $permission');
+        if (permission == LocationPermission.denied) {
+          _logger.w('Location permission denied.');
+          // Permissions are denied, next time you could try requesting again
           return null;
         }
       }
 
-      if (permission.isPermanentlyDenied) {
-        // Do not open app settings automatically as it disrupts user experience
-        // Just return null so we fall back to default location
+      if (permission == LocationPermission.deniedForever) {
+        _logger.w('Location permission denied forever.');
+        // Permissions are denied forever, handle appropriately
         return null;
       }
 
-      if (!permission.isGranted) {
-        return null;
-      }
-
-      // Check if location services are enabled
-      final serviceEnabled = await isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // Prompt user to enable location services
-        final enabled = await Geolocator.openLocationSettings();
-        if (!enabled) {
-          // Try to get last known position as fallback
-          return await _getLastKnownPosition();
-        }
-        // Wait a moment for location services to initialize
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-
-      // Try to get current position with lower accuracy for faster results
-      // Lower accuracy works better on emulators and devices with poor GPS signal
+      // 3. Get position
+      // Using medium accuracy is usually sufficient for weather and faster/battery efficient
       try {
         final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy:
-              LocationAccuracy.low, // Lower accuracy for faster results
-          timeLimit: const Duration(seconds: 10), // Reduced timeout
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 10),
+          ),
         );
+        _logger.d('Got position: ${position.latitude}, ${position.longitude}');
         return position;
-      } on TimeoutException {
-        // Fallback to last known position if current position times out
-        return await _getLastKnownPosition();
       } catch (e) {
-        // Fallback to last known position on any error
+        _logger.w(
+          'Failed to get current position ($e). Trying last known position.',
+        );
         return await _getLastKnownPosition();
       }
     } catch (e, stackTrace) {
@@ -86,7 +68,7 @@ class LocationService {
         error: e,
         stackTrace: stackTrace,
       );
-      // Final fallback to last known position
+      // Fallback to last known position
       return await _getLastKnownPosition();
     }
   }
@@ -96,10 +78,15 @@ class LocationService {
     try {
       final position = await Geolocator.getLastKnownPosition();
       if (position != null) {
-        return position;
+        _logger.d(
+          'Got last known position: ${position.latitude}, ${position.longitude}',
+        );
+      } else {
+        _logger.w('Last known position is null.');
       }
-      return null;
+      return position;
     } catch (e) {
+      _logger.e('Error getting last known position: $e');
       return null;
     }
   }

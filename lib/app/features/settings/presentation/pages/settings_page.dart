@@ -162,7 +162,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             subtitle: Text(_getThemeDescription(currentTheme)),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () => _showThemeSelector(),
           ),
@@ -202,7 +202,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: const Text('Edit Profile'),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () {
               context.push(AppConstants.routeEditProfile);
@@ -217,7 +217,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: const Text('Family Settings'),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () {
               context.push(AppConstants.routeFamilySettings);
@@ -241,7 +241,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: const Text('Help & Support'),
             trailing: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onTap: () {
               context.push(AppConstants.routeHelp);

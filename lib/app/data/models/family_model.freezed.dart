@@ -43,6 +43,8 @@ mixin _$FamilyModel {
   DateTime? get createdAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'updated_at')
   DateTime? get updatedAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'deleted_at')
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this FamilyModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -75,6 +77,7 @@ abstract class $FamilyModelCopyWith<$Res> {
     @JsonKey(name: 'total_points') int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @JsonKey(name: 'deleted_at') DateTime? deletedAt,
   });
 }
 
@@ -106,6 +109,7 @@ class _$FamilyModelCopyWithImpl<$Res, $Val extends FamilyModel>
     Object? totalPoints = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -161,6 +165,10 @@ class _$FamilyModelCopyWithImpl<$Res, $Val extends FamilyModel>
                 ? _value.updatedAt
                 : updatedAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            deletedAt: freezed == deletedAt
+                ? _value.deletedAt
+                : deletedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -190,6 +198,7 @@ abstract class _$$FamilyModelImplCopyWith<$Res>
     @JsonKey(name: 'total_points') int totalPoints,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @JsonKey(name: 'deleted_at') DateTime? deletedAt,
   });
 }
 
@@ -220,6 +229,7 @@ class __$$FamilyModelImplCopyWithImpl<$Res>
     Object? totalPoints = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _$FamilyModelImpl(
@@ -275,6 +285,10 @@ class __$$FamilyModelImplCopyWithImpl<$Res>
             ? _value.updatedAt
             : updatedAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        deletedAt: freezed == deletedAt
+            ? _value.deletedAt
+            : deletedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -297,6 +311,7 @@ class _$FamilyModelImpl implements _FamilyModel {
     @JsonKey(name: 'total_points') this.totalPoints = 0,
     @JsonKey(name: 'created_at') this.createdAt,
     @JsonKey(name: 'updated_at') this.updatedAt,
+    @JsonKey(name: 'deleted_at') this.deletedAt,
   }) : _members = members;
 
   factory _$FamilyModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -344,10 +359,13 @@ class _$FamilyModelImpl implements _FamilyModel {
   @override
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
+  @override
+  @JsonKey(name: 'deleted_at')
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'FamilyModel(id: $id, name: $name, createdBy: $createdBy, members: $members, inviteCode: $inviteCode, childInviteCode: $childInviteCode, inviteLink: $inviteLink, address: $address, geminiApiKey: $geminiApiKey, themePreference: $themePreference, totalPoints: $totalPoints, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'FamilyModel(id: $id, name: $name, createdBy: $createdBy, members: $members, inviteCode: $inviteCode, childInviteCode: $childInviteCode, inviteLink: $inviteLink, address: $address, geminiApiKey: $geminiApiKey, themePreference: $themePreference, totalPoints: $totalPoints, createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
   }
 
   @override
@@ -376,7 +394,9 @@ class _$FamilyModelImpl implements _FamilyModel {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                other.updatedAt == updatedAt) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -396,6 +416,7 @@ class _$FamilyModelImpl implements _FamilyModel {
     totalPoints,
     createdAt,
     updatedAt,
+    deletedAt,
   );
 
   /// Create a copy of FamilyModel
@@ -427,6 +448,7 @@ abstract class _FamilyModel implements FamilyModel {
     @JsonKey(name: 'total_points') final int totalPoints,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
     @JsonKey(name: 'updated_at') final DateTime? updatedAt,
+    @JsonKey(name: 'deleted_at') final DateTime? deletedAt,
   }) = _$FamilyModelImpl;
 
   factory _FamilyModel.fromJson(Map<String, dynamic> json) =
@@ -467,6 +489,9 @@ abstract class _FamilyModel implements FamilyModel {
   @override
   @JsonKey(name: 'updated_at')
   DateTime? get updatedAt;
+  @override
+  @JsonKey(name: 'deleted_at')
+  DateTime? get deletedAt;
 
   /// Create a copy of FamilyModel
   /// with the given fields replaced by the non-null parameter values.

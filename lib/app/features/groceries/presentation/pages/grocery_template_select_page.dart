@@ -37,20 +37,20 @@ class GroceryTemplateSelectPage extends ConsumerWidget {
                         Icon(
                           Icons.shopping_bag_outlined,
                           size: ResponsiveHelper.iconSize(60),
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         SizedBox(height: ResponsiveHelper.h(16)),
                         Text(
                           'No templates available',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         SizedBox(height: ResponsiveHelper.h(8)),
                         Text(
                           'Create a template first to use it here',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -108,7 +108,7 @@ class GroceryTemplateSelectPage extends ConsumerWidget {
           width: ResponsiveHelper.w(48),
           height: ResponsiveHelper.h(48),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: ResponsiveHelper.borderRadius(12),
           ),
           child: Icon(
@@ -125,7 +125,7 @@ class GroceryTemplateSelectPage extends ConsumerWidget {
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
         onTap: () {
           // Return the template ID

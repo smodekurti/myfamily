@@ -173,10 +173,14 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     if (confirmed != true) return;
 
     try {
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser == null) return;
+
       final familyRepo = ref.read(familyRepositoryProvider);
       await familyRepo.removeFamilyMember(
         familyId: currentFamily.id,
-        uid: memberId,
+        targetUserId: memberId,
+        requesterId: currentUser.id,
       );
 
       // Invalidate to refresh
@@ -254,60 +258,6 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to leave family: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  /// Delete the family (Creator only).
-  ///
-  /// PERMANENT ACTION. Deletes all family data. Defaults to [AppConstants.routeFamilySelection] on success.
-  Future<void> _deleteFamily() async {
-    final currentFamily = ref.read(currentFamilyProvider);
-    if (currentFamily == null) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Family'),
-        content: const Text(
-          'Are you sure you want to delete this family? This action cannot be undone. All family data will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      final familyRepo = ref.read(familyRepositoryProvider);
-      await familyRepo.deleteFamily(currentFamily.id);
-
-      // Clear current family and navigate to family selection
-      ref.read(currentFamilyIdProvider.notifier).state = null;
-      ref.invalidate(currentFamilyProvider);
-
-      if (!mounted) return;
-      context.go(AppConstants.routeFamilySelection);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete family: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -486,7 +436,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .onSurface
-                                                  .withOpacity(0.6),
+                                                  .withValues(alpha: 0.6),
                                             ),
                                       ),
                                     ],
@@ -620,7 +570,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                                         color: Theme.of(context)
                                                             .colorScheme
                                                             .onSurface
-                                                            .withOpacity(0.6),
+                                                            .withValues(alpha: 0.6),
                                                       ),
                                                 ),
                                               ),
@@ -738,7 +688,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                       Icons.chevron_right,
                                       color: Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
+                                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                                     ),
                                     onTap: _showKeyManagementDialog,
                                   ),
@@ -749,7 +699,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                 ModernCard(
                                   backgroundColor: Theme.of(
                                     context,
-                                  ).colorScheme.errorContainer.withOpacity(0.3),
+                                  ).colorScheme.errorContainer.withValues(alpha: 0.3),
                                   padding: ResponsiveHelper.padding(all: 16),
                                   child: Column(
                                     crossAxisAlignment:
@@ -791,32 +741,6 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                                           onPressed: _leaveFamily,
                                         ),
                                       ),
-
-                                      // Delete Family (only for creator)
-                                      if (isCreator) ...[
-                                        const Divider(),
-                                        ListTile(
-                                          leading: Icon(
-                                            Icons.delete_forever,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.error,
-                                          ),
-                                          title: const Text('Delete Family'),
-                                          subtitle: const Text(
-                                            'Permanently delete this family and all its data',
-                                          ),
-                                          trailing: IconButton(
-                                            icon: Icon(
-                                              Icons.chevron_right,
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.error,
-                                            ),
-                                            onPressed: _deleteFamily,
-                                          ),
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 ),
@@ -850,7 +774,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -864,7 +788,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -886,7 +810,7 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
-              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -1140,9 +1064,9 @@ class _FamilySettingsPageState extends ConsumerState<FamilySettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         text,

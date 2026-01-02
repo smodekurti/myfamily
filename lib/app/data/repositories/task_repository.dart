@@ -803,4 +803,23 @@ class TaskRepository {
       return {'total': 0, 'pending': 0, 'in_progress': 0, 'completed': 0};
     }
   }
+
+  /// Check if the family has any tasks at all (regardless of status/filter)
+  /// Used to determine if strict empty state should be shown
+  Future<bool> hasAnyTasks(String familyId) async {
+    try {
+      final response = await _supabase
+          .from('tasks')
+          .select('id')
+          .eq('family_id', familyId)
+          .limit(1)
+          .count(CountOption.exact);
+
+      final count = response.count;
+      return count > 0;
+    } catch (e) {
+      _logger.e('Has any tasks check error: $e');
+      return false;
+    }
+  }
 }

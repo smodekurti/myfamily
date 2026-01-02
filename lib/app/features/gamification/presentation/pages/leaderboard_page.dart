@@ -133,7 +133,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.7),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                           ),
                         ],
@@ -277,7 +277,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     return ModernCard(
       margin: ResponsiveHelper.padding(bottom: 12),
       backgroundColor: isCurrentUser
-          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
           : Theme.of(context).cardColor,
       padding: EdgeInsets.zero,
       child: Container(
@@ -328,7 +328,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                 displayName: member.displayName,
                 backgroundColor: Theme.of(
                   context,
-                ).colorScheme.primary.withOpacity(0.1),
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 textColor: Theme.of(context).colorScheme.primary,
               ),
             ],

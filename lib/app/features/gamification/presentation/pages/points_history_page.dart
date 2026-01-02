@@ -97,7 +97,7 @@ class PointsHistoryPage extends ConsumerWidget {
                             size: ResponsiveHelper.iconSize(64),
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.3),
+                            ).colorScheme.onSurface.withValues(alpha: 0.3),
                           ),
                           SizedBox(height: ResponsiveHelper.h(16)),
                           Text(
@@ -106,7 +106,7 @@ class PointsHistoryPage extends ConsumerWidget {
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                           ),
                           SizedBox(height: ResponsiveHelper.h(8)),
@@ -116,7 +116,7 @@ class PointsHistoryPage extends ConsumerWidget {
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.5),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                           ),
                         ],
@@ -253,7 +253,7 @@ class PointsHistoryPage extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               )
             : null,

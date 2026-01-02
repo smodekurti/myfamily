@@ -47,6 +47,13 @@ class WeatherRepository {
       // If coordinates provided, use them directly
       else if (lat != null && lon != null) {
         // Coordinates already set
+        // Try to get city name from coordinates if not provided
+        if (city == null || city.isEmpty) {
+          final reverseGeoCity = await _getCityNameFromCoordinates(lat, lon);
+          if (reverseGeoCity != null) {
+            city = reverseGeoCity;
+          }
+        }
       }
       // Fallback to default location
       else {
@@ -58,12 +65,68 @@ class WeatherRepository {
       // At this point, lat and lon are guaranteed to be non-null due to fallback
       // Get weather from Open-Meteo API (Global coverage)
       return await _getWeatherFromOpenMeteo(
-        latitude: lat!,
-        longitude: lon!,
-        city: city ?? AppConstants.defaultWeatherCity,
+        latitude: lat,
+        longitude: lon,
+        city: city ?? 'Unknown Location',
       );
     } catch (e, stackTrace) {
       _logger.e('Get weather error: $e', error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  /// Get city name from coordinates using BigDataCloud API (Reverse Geocoding)
+  Future<String?> _getCityNameFromCoordinates(double lat, double lon) async {
+    try {
+      final url = Uri.parse(
+        '${WeatherConfig.reverseGeocodingUrl}?latitude=$lat&longitude=$lon&localityLanguage=en',
+      );
+      _logger.d('Reverse geocoding URL: $url');
+      final response = await http.get(url).timeout(AppConstants.requestTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+
+        // Prioritize locality (e.g. "Buffalo Grove") over city (e.g. "Chicago")
+        // BigDataCloud often puts the metro area in 'city' and the specific town in 'locality'
+        String? locality = data['locality'] as String?;
+        String? city = data['city'] as String?;
+
+        String cityName = '';
+        if (locality != null && locality.isNotEmpty) {
+          cityName = locality;
+        } else if (city != null && city.isNotEmpty) {
+          cityName = city;
+        }
+
+        final state = data['principalSubdivision'] as String?;
+        final stateCode =
+            data['principalSubdivisionCode'] as String?; // e.g. "US-IL"
+        final countryCode = data['countryCode'] as String?;
+
+        if (cityName.isNotEmpty) {
+          // For US, try to show "City, State"
+          if (countryCode == 'US') {
+            // Try to use state abbreviation (e.g. "IL") from "US-IL"
+            if (stateCode != null && stateCode.startsWith('US-')) {
+              final shortState = stateCode.split('-').last;
+              return '$cityName, $shortState';
+            }
+            // Fallback to full state name
+            if (state != null && state.isNotEmpty) {
+              return '$cityName, $state';
+            }
+          }
+          return cityName;
+        }
+      } else {
+        _logger.w(
+          'Reverse geocoding failed with status: ${response.statusCode}',
+        );
+      }
+      return null;
+    } catch (e) {
+      _logger.w('Reverse geocoding failed: $e');
       return null;
     }
   }

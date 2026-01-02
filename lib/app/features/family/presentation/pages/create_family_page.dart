@@ -349,7 +349,7 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: ResponsiveHelper.borderRadius(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -358,7 +358,7 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
                         Text(
                           'Family Code',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         SizedBox(height: ResponsiveHelper.h(8)),
@@ -392,7 +392,7 @@ class _CreateFamilyPageState extends ConsumerState<CreateFamilyPage> {
                         Text(
                           'Share this code with family members to invite them',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],

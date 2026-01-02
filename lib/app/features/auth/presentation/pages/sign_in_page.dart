@@ -31,7 +31,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     // Delay biometric check to allow native plugins to initialize
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        // _checkBiometricAvailability();
+        _checkBiometricAvailability();
       }
     });
   }
@@ -44,7 +44,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   Future<void> _checkBiometricAvailability() async {
-    if (!Platform.isIOS) return;
+    // Platform check removed to support both iOS and Android
+    // if (!Platform.isIOS) return;
 
     try {
       final biometricService = ref.read(biometricAuthServiceProvider);
@@ -164,57 +165,59 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     setState(() => _isLoading = true);
 
     try {
-      final authRepo = ref.read(authRepositoryProvider);
       final email = _emailController.text.trim();
       final password = _passwordController.text;
+      bool shouldSaveBiometrics = false;
 
+      // Capture services before async calls to avoid "ref disposed" errors
+      final biometricService = ref.read(biometricAuthServiceProvider);
+      final authRepo = ref.read(authRepositoryProvider);
+
+      // Check if we should ask for biometric enablement BEFORE sign in
+      // This ensures we have a valid context/widget is mounted
+      if (_isBiometricAvailable && !_isBiometricEnabled && mounted) {
+        final shouldEnable = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Enable $_biometricTypeName?'),
+            content: Text(
+              'Would you like to use $_biometricTypeName to sign in quickly next time?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Not Now'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Enable'),
+              ),
+            ],
+          ),
+        );
+        shouldSaveBiometrics = shouldEnable == true;
+      }
+
+      // Attempt sign in
       await authRepo.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Save credentials for biometric login if on iOS
-      if (Platform.isIOS && mounted) {
+      // If sign in was successful (didn't throw), save credentials if requested
+      // We use the captured service instance, so this works even if widget unmounted
+      if (shouldSaveBiometrics) {
         try {
-          final biometricService = ref.read(biometricAuthServiceProvider);
-          final isAvailable = await biometricService.isAvailable();
-          if (isAvailable && mounted) {
-            // Ask user if they want to enable Face ID
-            final shouldEnable = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Enable $_biometricTypeName?'),
-                content: Text(
-                  'Would you like to use $_biometricTypeName to sign in quickly next time?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text('Not Now'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text('Enable'),
-                  ),
-                ],
-              ),
-            );
-
-            if (shouldEnable == true && mounted) {
-              await biometricService.saveCredentials(
-                email: email,
-                password: password,
-              );
-              if (mounted) {
-                await _checkBiometricAvailability(); // Refresh state
-              }
-            }
-          }
+          await biometricService.saveCredentials(
+            email: email,
+            password: password,
+          );
         } catch (e) {
-          // Silently fail - don't block sign-in
+          debugPrint('Failed to save biometric credentials: $e');
         }
       }
 
+      // AppRouter redirects automatically on auth state change
       if (mounted) {
         context.go(AppConstants.routeHome);
       }
@@ -320,10 +323,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           ),
                           SizedBox(height: ResponsiveHelper.h(20)),
 
-                          // Face ID / Touch ID button (iOS only, if enabled)
-                          if (Platform.isIOS &&
-                              _isBiometricAvailable &&
-                              _isBiometricEnabled) ...[
+                          // Face ID / Touch ID / Fingerprint button (if enabled)
+                          if (_isBiometricAvailable && _isBiometricEnabled) ...[
                             SizedBox(
                               width: double.infinity,
                               height: ResponsiveHelper.buttonHeight(56),

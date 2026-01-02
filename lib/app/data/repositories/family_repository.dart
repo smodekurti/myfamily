@@ -467,6 +467,45 @@ class FamilyRepository {
     required String userId,
   }) async {
     try {
+      final members = await getFamilyMembers(familyId);
+
+      // 1. Soft Delete if last member
+      if (members.length <= 1) {
+        // User is the last one. Archive (Soft Delete) the family.
+        await _supabase
+            .from('families')
+            .update({
+              'deleted_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', familyId);
+
+        // Remove the member so their UI clears
+        await _supabase
+            .from('family_members')
+            .delete()
+            .eq('family_id', familyId)
+            .eq('user_id', userId);
+
+        return;
+      }
+
+      // 2. Prevent leaving if last parent (orphning check)
+      // If there are other members, but this is the only parent, they must assign a new parent first.
+      final leavingMember = members.firstWhere(
+        (m) => m.uid == userId,
+        orElse: () => throw Exception('User not found'),
+      );
+
+      if (leavingMember.role == 'parent') {
+        final parentCount = members.where((m) => m.role == 'parent').length;
+        if (parentCount <= 1) {
+          throw Exception(
+            'You are the only parent. Promote another member to parent before leaving.',
+          );
+        }
+      }
+
       // Remove from family_members table
       await _supabase
           .from('family_members')
@@ -909,16 +948,54 @@ class FamilyRepository {
   }
 
   /// Remove family member
+  /// Remove family member (Restricted to parents removing non-parents)
   Future<void> removeFamilyMember({
     required String familyId,
-    required String uid,
+    required String targetUserId,
+    required String requesterId,
   }) async {
     try {
+      // 1. Verify requester is a parent
+      final requester = await getFamilyMember(
+        familyId: familyId,
+        uid: requesterId,
+      );
+      if (requester == null || requester.role != 'parent') {
+        throw Exception('Only parents can remove members.');
+      }
+
+      // 2. Verify target is NOT a parent
+      final target = await getFamilyMember(
+        familyId: familyId,
+        uid: targetUserId,
+      );
+      if (target == null) {
+        throw Exception('User not found in family.');
+      }
+      if (target.role == 'parent') {
+        throw Exception('Parents cannot remove other parents.');
+      }
+
       await _supabase
           .from('family_members')
           .delete()
           .eq('family_id', familyId)
-          .eq('user_id', uid);
+          .eq('user_id', targetUserId);
+
+      // Ensure family "members" array is also updated if needed
+      final family = await getFamily(familyId);
+      if (family != null) {
+        final updatedMembers = family.members
+            .where((id) => id != targetUserId)
+            .toList();
+        await _supabase
+            .from('families')
+            .update({
+              'members': updatedMembers,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', familyId);
+      }
     } catch (e) {
       _logger.e('Remove family member error: $e');
       rethrow;

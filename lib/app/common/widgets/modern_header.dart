@@ -48,7 +48,7 @@ class ModernHeader extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: ResponsiveHelper.borderRadius(12),
                       side: BorderSide(
-                        color: theme.colorScheme.outline.withOpacity(0.1),
+                        color: theme.colorScheme.outline.withValues(alpha: 0.1),
                       ),
                     ),
                   ),
@@ -71,7 +71,7 @@ class ModernHeader extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
