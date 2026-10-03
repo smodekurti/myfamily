@@ -2,16 +2,15 @@
 class SupabaseConfig {
 
   
-  // TODO: Replace with your actual Supabase project URL and anon key
-  // Get these from https://supabase.com/dashboard/project/_/settings/api
+  // Supply these with --dart-define or CI build settings.
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://vovfhxnmiximhzdjadvu.supabase.co',
+    defaultValue: '',
   );
   
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'REMOVED_SECRET',
+    defaultValue: '',
   );
   
   /// Whether deep linking is enabled for OAuth flows
